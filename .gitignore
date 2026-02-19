@@ -1,0 +1,18 @@
+# colcon / ROS
+build/
+install/
+log/
+
+# VSCode / JetBrains
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Bags
+*.db3
+*.mcap
+bags/
