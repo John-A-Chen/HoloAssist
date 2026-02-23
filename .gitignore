@@ -45,3 +45,7 @@ Thumbs.db
 # Large sim artefacts (optional, if they appear)
 .gazebo/
 .ignition/
+# VSCode C/C++ IntelliSense DB (bloat)
+.vscode/*.db
+.vscode/*.db-*
+.vscode/ipch/
