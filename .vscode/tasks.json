@@ -1,0 +1,57 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ROS: colcon build (ros2_ws)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "cd ${workspaceFolder}/ros2_ws && source /opt/ros/humble/setup.bash && colcon build --symlink-install"
+      ],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "ROS: source workspace",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/ros/humble/setup.bash && source ${workspaceFolder}/ros2_ws/install/setup.bash && echo 'sourced ✅'"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "URSim: start (ur3e)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/ros/humble/setup.bash && ros2 run ur_client_library start_ursim.sh -m ur3e"
+      ],
+      "problemMatcher": [],
+      "isBackground": false
+    },
+    {
+      "label": "UR Driver: start (URSim ur3e)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/ros/humble/setup.bash && source ${workspaceFolder}/ros2_ws/install/setup.bash && ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=192.168.56.101 launch_rviz:=true"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MoveIt: start (UR ur3e)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/ros/humble/setup.bash && source ${workspaceFolder}/ros2_ws/install/setup.bash && ros2 launch ur_moveit_config ur_moveit.launch.py ur_type:=ur3e launch_rviz:=true"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

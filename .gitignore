@@ -3,6 +3,17 @@ build/
 install/
 log/
 
+#anywhere else
+**/build/
+**/install/
+**/log/
+
+# docker workspaces / bind mounts
+docker/**/ws/
+docker/**/build/
+docker/**/install/
+docker/**/log/
+
 # ROS tooling caches
 .ros/
 .rosinstall
@@ -45,7 +56,15 @@ Thumbs.db
 # Large sim artefacts (optional, if they appear)
 .gazebo/
 .ignition/
+
 # VSCode C/C++ IntelliSense DB (bloat)
 .vscode/*.db
 .vscode/*.db-*
 .vscode/ipch/
+
+# VSCode bloat
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
