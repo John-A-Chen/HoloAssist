@@ -3,16 +3,45 @@ build/
 install/
 log/
 
-# VSCode / JetBrains
-.vscode/
+# ROS tooling caches
+.ros/
+.rosinstall
+.rosinstall.bak
+.rosinstall.catkin
+*.repos.bak
+
+# VS Code (keep settings, ignore caches)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/c_cpp_properties.json
+.vscode/*.db
+.vscode/*.db-shm
+.vscode/*.db-wal
+
+# JetBrains
 .idea/
 
 # Python
 __pycache__/
 *.pyc
 .venv/
+venv/
 
 # Bags
 *.db3
 *.mcap
 bags/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Large sim artefacts (optional, if they appear)
+.gazebo/
+.ignition/
