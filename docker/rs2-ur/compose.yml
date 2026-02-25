@@ -2,10 +2,10 @@ services:
   ursim:
     image: universalrobots/ursim_e-series:5.25.0
     container_name: ursim
-    profiles: ["sim"]   # <-- only runs when using simulation
+    profiles: ["sim"]
     networks:
       ursim_net:
-        ipv4_address: ${ROBOT_IP}
+        ipv4_address: 192.168.56.101
     ports:
       - "6080:6080"
       - "29999:29999"
@@ -15,19 +15,47 @@ services:
       - "30004:30004"
     shm_size: "1gb"
 
-  ros:
+  ros_sim:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: rs2_ros
+    profiles: ["sim"]
     networks:
-      ursim_net: {}
+      ursim_net:
+        ipv4_address: 192.168.56.2
     volumes:
-        - ../../ros2_ws:/ws:rw
+      - ../../ros2_ws:/ws:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority:rw
     environment:
       - ROS_DISTRO=humble
-      - ROBOT_IP=${ROBOT_IP}
       - UR_TYPE=${UR_TYPE}
+      - ROBOT_IP=${ROBOT_IP}
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    tty: true
+    stdin_open: true
+
+  ros_real:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rs2_ros_real
+    profiles: ["real"]
+    network_mode: host
+    volumes:
+      - ../../ros2_ws:/ws:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority:rw
+    environment:
+      - ROS_DISTRO=humble
+      - UR_TYPE=${UR_TYPE}
+      - ROBOT_IP=${ROBOT_IP}
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     tty: true
     stdin_open: true
 
@@ -37,3 +65,4 @@ networks:
     ipam:
       config:
         - subnet: 192.168.56.0/24
+          gateway: 192.168.56.1
