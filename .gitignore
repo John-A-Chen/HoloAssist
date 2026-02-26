@@ -1,3 +1,20 @@
+# External packages — clone manually per SETUP.md
+ROS-TCP-Connector/
+URDF-Importer/
+ros2_ws/src/ROS-TCP-Endpoint/
+ros2_ws/src/Universal_Robots_ROS2_Driver/
+
+# Unity generated files
+Unity/My project/Library/
+Unity/My project/Temp/
+Unity/My project/Logs/
+Unity/My project/obj/
+Unity/My project/Builds/
+Unity/My project/UserSettings/
+Unity/My project/.utmp/
+Unity/My project/*.sln
+Unity/My project/*.csproj
+
 # colcon / ROS
 build/
 install/
