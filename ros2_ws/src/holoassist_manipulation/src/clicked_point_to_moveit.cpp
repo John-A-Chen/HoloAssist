@@ -29,11 +29,18 @@ public:
     RCLCPP_INFO(get_logger(), "Ready. Click points in RViz (Publish Point tool) on /clicked_point");
   }
 
+  rclcpp::Node::SharedPtr getMoveItNode() const
+  {
+    return moveit_node_;
+  }
+
 private:
   void onClickedPoint(const geometry_msgs::msg::PointStamped::SharedPtr msg)
   {
     auto planning_frame = get_parameter("planning_frame").as_string();
     auto yaw = get_parameter("tcp_yaw_rad").as_double();
+    (void)yaw;
+    auto tcp_frame = get_parameter("tcp_frame").as_string();
 
     geometry_msgs::msg::PoseStamped target;
     target.header.stamp = now();
@@ -51,6 +58,10 @@ private:
 
     publishMarker(target);
 
+    if (!tcp_frame.empty()) {
+      move_group_->setEndEffectorLink(tcp_frame);
+    }
+    move_group_->setPoseReferenceFrame(planning_frame);
     move_group_->setPoseTarget(target);
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
@@ -95,7 +106,7 @@ int main(int argc, char** argv)
   // Need executor that spins both nodes (main node + moveit helper node)
   rclcpp::executors::MultiThreadedExecutor exec;
   exec.add_node(node);
-  exec.add_node(node->get_node_base_interface()); // harmless; keeps node alive
+  exec.add_node(node->getMoveItNode());
   exec.spin();
 
   rclcpp::shutdown();
