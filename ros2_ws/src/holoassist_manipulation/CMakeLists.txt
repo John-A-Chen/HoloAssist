@@ -15,6 +15,15 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+add_executable(clicked_point_to_moveit src/clicked_point_to_moveit.cpp)
+ament_target_dependencies(clicked_point_to_moveit
+  rclcpp geometry_msgs visualization_msgs
+  moveit_ros_planning_interface
+)
+
+install(TARGETS clicked_point_to_moveit
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
