@@ -57,14 +57,12 @@ Thumbs.db
 .gazebo/
 .ignition/
 
-# VSCode C/C++ IntelliSense DB (bloat)
-.vscode/*.db
-.vscode/*.db-*
-.vscode/ipch/
-
-# VSCode bloat
+# VS Code (keep team config, ignore everything else)
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/c_cpp_properties.json
+.vscode/*.db*
+.vscode/ipch/
