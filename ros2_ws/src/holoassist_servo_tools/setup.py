@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+                "pose_to_twist_servo = holoassist_servo_tools.pose_to_twist_servo:main",
         ],
     },
 )
