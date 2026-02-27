@@ -1,0 +1,19 @@
+{
+    "ROS2.distro": "humble",
+    "python.autoComplete.extraPaths": [
+        "/home/john/git/RS2-HoloAssist/john/build/holoassist_servo_tools",
+        "/home/john/git/RS2-HoloAssist/john/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/home/john/git/RS2-HoloAssist/john/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages",
+        "/home/john/git/RS2-HoloAssist/john/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/john/git/RS2-HoloAssist/john/build/holoassist_servo_tools",
+        "/home/john/git/RS2-HoloAssist/john/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/home/john/git/RS2-HoloAssist/john/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages",
+        "/home/john/git/RS2-HoloAssist/john/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
