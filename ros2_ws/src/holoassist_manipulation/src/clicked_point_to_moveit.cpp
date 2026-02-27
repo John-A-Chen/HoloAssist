@@ -21,8 +21,10 @@ public:
       "/clicked_point", 10,
       std::bind(&ClickedPointToMoveIt::onClickedPoint, this, std::placeholders::_1));
 
-    // MoveGroupInterface needs a separate node handle (recommended pattern)
-    moveit_node_ = rclcpp::Node::make_shared("moveit_helper_node");
+    // Ignore global launch remaps for the helper node so it keeps a unique name.
+    // Otherwise launch's `name:=...` remap can rename both nodes in this process.
+    auto moveit_node_options = rclcpp::NodeOptions().use_global_arguments(false);
+    moveit_node_ = std::make_shared<rclcpp::Node>("clicked_point_to_moveit_moveit", moveit_node_options);
     move_group_name_ = get_parameter("move_group_name").as_string();
     move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(moveit_node_, move_group_name_);
 
