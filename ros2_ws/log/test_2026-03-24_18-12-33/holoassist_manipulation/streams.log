@@ -1,0 +1,141 @@
+[0.161s] Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+[0.167s] UpdateCTestConfiguration  from :/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini
+[0.167s] Parse Config file:/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini
+[0.167s]    Site: ubuntu-22
+[0.167s]    Build name: (empty)
+[0.167s]  Add coverage exclude regular expressions.
+[0.167s] Create new tag: 20260324-0712 - Experimental
+[0.167s] UpdateCTestConfiguration  from :/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini
+[0.167s] Parse Config file:/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini
+[0.167s] Test project /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation
+[0.167s] Constructing a list of tests
+[0.167s] Done constructing a list of tests
+[0.167s] Updating test list for fixtures
+[0.168s] Added 0 tests to meet fixture requirements
+[0.168s] Checking test dependency graph...
+[0.168s] Checking test dependency graph end
+[0.168s] test 1
+[0.168s]     Start 1: cppcheck
+[0.168s] 
+[0.168s] 1: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_cppcheck/cppcheck.txt" "--command" "/opt/ros/humble/bin/ament_cppcheck" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml"
+[0.168s] 1: Test timeout computed to be: 300
+[0.205s] 1: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.205s] 1:  - /opt/ros/humble/bin/ament_cppcheck --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml
+[0.265s] 1: cppcheck 2.7 has known performance issues and therefore will not be used, set the AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS environment variable to override this.
+[0.273s] 1: -- run_test.py: return code 0
+[0.273s] 1: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml'
+[0.280s] 1/6 Test #1: cppcheck .........................   Passed    0.11 sec
+[0.280s] test 2
+[0.280s]     Start 2: flake8
+[0.280s] 
+[0.280s] 2: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_flake8/flake8.txt" "--command" "/opt/ros/humble/bin/ament_flake8" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml"
+[0.280s] 2: Test timeout computed to be: 60
+[0.316s] 2: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.316s] 2:  - /opt/ros/humble/bin/ament_flake8 --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml
+[0.420s] 2: 
+[0.421s] 2: 1 files checked
+[0.421s] 2: No problems found
+[0.421s] 2: 
+[0.421s] 2: Checked files:
+[0.421s] 2: 
+[0.421s] 2: * ./launch/click_to_plan.launch.py
+[0.431s] 2: -- run_test.py: return code 0
+[0.431s] 2: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml'
+[0.443s] 2/6 Test #2: flake8 ...........................   Passed    0.16 sec
+[0.443s] test 3
+[0.443s]     Start 3: lint_cmake
+[0.443s] 
+[0.443s] 3: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_lint_cmake/lint_cmake.txt" "--command" "/opt/ros/humble/bin/ament_lint_cmake" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml"
+[0.443s] 3: Test timeout computed to be: 60
+[0.480s] 3: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.480s] 3:  - /opt/ros/humble/bin/ament_lint_cmake --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml
+[0.525s] 3: 
+[0.525s] 3: No problems found
+[0.531s] 3: -- run_test.py: return code 0
+[0.531s] 3: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml'
+[0.537s] 3/6 Test #3: lint_cmake .......................   Passed    0.09 sec
+[0.537s] test 4
+[0.537s]     Start 4: pep257
+[0.537s] 
+[0.537s] 4: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_pep257/pep257.txt" "--command" "/opt/ros/humble/bin/ament_pep257" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml"
+[0.537s] 4: Test timeout computed to be: 60
+[0.576s] 4: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.576s] 4:  - /opt/ros/humble/bin/ament_pep257 --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml
+[0.649s] 4: checking ./launch/click_to_plan.launch.py
+[0.649s] 4: No problems found
+[0.659s] 4: -- run_test.py: return code 0
+[0.660s] 4: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml'
+[0.667s] 4/6 Test #4: pep257 ...........................   Passed    0.13 sec
+[0.667s] test 5
+[0.667s]     Start 5: uncrustify
+[0.667s] 
+[0.667s] 5: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_uncrustify/uncrustify.txt" "--command" "/opt/ros/humble/bin/ament_uncrustify" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml"
+[0.668s] 5: Test timeout computed to be: 60
+[0.706s] 5: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.707s] 5:  - /opt/ros/humble/bin/ament_uncrustify --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml
+[0.771s] 5: Code style divergence in file 'src/clicked_point_to_moveit.cpp':
+[0.771s] 5: 
+[0.771s] 5: --- src/clicked_point_to_moveit.cpp
+[0.771s] 5: +++ src/clicked_point_to_moveit.cpp.uncrustify
+[0.771s] 5: @@ -11 +11,2 @@
+[0.771s] 5: -  ClickedPointToMoveIt() : Node("clicked_point_to_moveit")
+[0.771s] 5: +  ClickedPointToMoveIt()
+[0.771s] 5: +  : Node("clicked_point_to_moveit")
+[0.771s] 5: @@ -27 +28,3 @@
+[0.771s] 5: -    moveit_node_ = std::make_shared<rclcpp::Node>("clicked_point_to_moveit_moveit", moveit_node_options);
+[0.772s] 5: +    moveit_node_ = std::make_shared<rclcpp::Node>(
+[0.772s] 5: +      "clicked_point_to_moveit_moveit",
+[0.772s] 5: +      moveit_node_options);
+[0.772s] 5: @@ -29 +32,3 @@
+[0.772s] 5: -    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(moveit_node_, move_group_name_);
+[0.772s] 5: +    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
+[0.772s] 5: +      moveit_node_,
+[0.772s] 5: +      move_group_name_);
+[0.772s] 5: @@ -66,2 +71 @@
+[0.772s] 5: -    if (!ok)
+[0.772s] 5: -    {
+[0.772s] 5: +    if (!ok) {
+[0.772s] 5: @@ -76 +80 @@
+[0.773s] 5: -  void publishMarker(const geometry_msgs::msg::PoseStamped& pose)
+[0.773s] 5: +  void publishMarker(const geometry_msgs::msg::PoseStamped & pose)
+[0.773s] 5: @@ -98 +102 @@
+[0.773s] 5: -int main(int argc, char** argv)
+[0.773s] 5: +int main(int argc, char ** argv)
+[0.773s] 5: 
+[0.773s] 5: 1 files with code style divergence
+[0.778s] 5: -- run_test.py: return code 1
+[0.778s] 5: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml'
+[0.784s] 5/6 Test #5: uncrustify .......................***Failed    0.12 sec
+[0.784s] test 6
+[0.785s]     Start 6: xmllint
+[0.785s] 
+[0.785s] 6: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_xmllint/xmllint.txt" "--command" "/opt/ros/humble/bin/ament_xmllint" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml"
+[0.785s] 6: Test timeout computed to be: 60
+[0.823s] 6: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+[0.823s] 6:  - /opt/ros/humble/bin/ament_xmllint --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml
+[1.892s] 6: File 'package.xml' is valid
+[1.892s] 6: 
+[1.892s] 6: No problems found
+[1.899s] 6: -- run_test.py: return code 0
+[1.899s] 6: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml'
+[1.906s] 6/6 Test #6: xmllint ..........................   Passed    1.12 sec
+[1.906s] 
+[1.906s] 83% tests passed, 1 tests failed out of 6
+[1.906s] 
+[1.906s] Label Time Summary:
+[1.906s] cppcheck      =   0.11 sec*proc (1 test)
+[1.906s] flake8        =   0.16 sec*proc (1 test)
+[1.906s] lint_cmake    =   0.09 sec*proc (1 test)
+[1.906s] linter        =   1.74 sec*proc (6 tests)
+[1.906s] pep257        =   0.13 sec*proc (1 test)
+[1.906s] uncrustify    =   0.12 sec*proc (1 test)
+[1.906s] xmllint       =   1.12 sec*proc (1 test)
+[1.906s] 
+[1.906s] Total Test time (real) =   1.74 sec
+[1.906s] 
+[1.906s] The following tests FAILED:
+[1.906s] 	  5 - uncrustify (Failed)
+[1.909s] Errors while running CTest
+[1.909s] Output from these tests are in: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/Testing/Temporary/LastTest.log
+[1.909s] Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.
+[1.911s] Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '8': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process

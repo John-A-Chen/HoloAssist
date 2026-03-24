@@ -1,0 +1,10 @@
+-- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':
+ - /opt/ros/humble/bin/ament_uncrustify --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml
+
+No code style divergence in file 'src/clicked_point_to_moveit.cpp'
+
+No problems found
+
+
+-- run_test.py: return code 0
+-- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml'

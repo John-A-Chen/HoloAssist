@@ -1,0 +1,319 @@
+[0.000000] (-) TimerEvent: {}
+[0.000168] (holoassist_manipulation) JobQueued: {'identifier': 'holoassist_manipulation', 'dependencies': OrderedDict([('holoassist_manipulation', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation')])}
+[0.000432] (holoassist_servo_tools) JobQueued: {'identifier': 'holoassist_servo_tools', 'dependencies': OrderedDict([('holoassist_servo_tools', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools')])}
+[0.000559] (holoassist_unity_bridge) JobQueued: {'identifier': 'holoassist_unity_bridge', 'dependencies': OrderedDict([('holoassist_manipulation', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation'), ('holoassist_servo_tools', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools'), ('holoassist_unity_bridge', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge')])}
+[0.000649] (holoassist_manipulation) JobStarted: {'identifier': 'holoassist_manipulation'}
+[0.004652] (holoassist_servo_tools) JobStarted: {'identifier': 'holoassist_servo_tools'}
+[0.099860] (-) TimerEvent: {}
+[0.158127] (holoassist_servo_tools) Command: {'cmd': ['/usr/bin/python3', '-m', 'pytest'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/ollie/git/1HoloAssist/ollie', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'CODEX_CI': '1', 'LANGUAGE': 'en_AU:en', 'USER': 'ollie', 'SNAP_COMMON': '/var/snap/code/common', 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE': 'codex_vscode', 'VSCODE_NLS_CONFIG': '{"userLocale":"en-gb","osLocale":"en-au","resolvedLanguage":"en","defaultMessagesFile":"/snap/code/230/usr/share/code/resources/app/out/nls.messages.json","locale":"en-gb","availableLanguages":{}}', 'FONTCONFIG_PATH': '/etc/fonts', 'GIO_MODULE_DIR': '/home/ollie/snap/code/common/.cache/gio-modules', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'wayland', 'DEBUG': 'release', 'SNAP_UID': '1000', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib', 'HOME': '/home/ollie', 'CHROME_DESKTOP': 'code.desktop', 'SNAP_LIBRARY_PATH': '/var/lib/snapd/lib/gl:/var/lib/snapd/lib/gl32', 'OLDPWD': '/home/ollie/git/1HoloAssist/ollie', 'DESKTOP_SESSION': 'ubuntu', 'SNAP_USER_DATA': '/home/ollie/snap/code/230', 'GTK_PATH': '/snap/code/230/usr/lib/x86_64-linux-gnu/gtk-3.0', 'VSCODE_IPC_HOOK': '/run/user/1000/vscode-1097eb75-1.11-main.sock', 'GTK_IM_MODULE_FILE': '/home/ollie/snap/code/common/.cache/immodules/immodules.cache', 'APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL': '1', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'PAGER': 'cat', 'LC_CTYPE': 'C.UTF-8', 'DBUS_STARTER_BUS_TYPE': 'session', 'SYSTEMD_EXEC_PID': '1319', 'IM_CONFIG_CHECK_ENV': '1', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300', 'SNAP_REVISION': '230', 'COLORTERM': 'truecolor', 'VSCODE_CRASH_REPORTER_PROCESS_TYPE': 'extensionHost', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'ollie', 'SNAP_CONTEXT': 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_CONFIG_DIRS_VSCODE_SNAP_ORIG': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_SESSION_CLASS': 'user', 'SNAP_VERSION': '07ff9d61', 'XDG_DATA_DIRS_VSCODE_SNAP_ORIG': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'RUST_LOG': 'warn', 'USERNAME': 'ollie', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'SNAP_INSTANCE_NAME': 'code', 'FC_FONTATIONS': '1', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/home/ollie/.codex/tmp/arg0/codex-arg0kfpw4d:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/ollie/.vscode/extensions/openai.chatgpt-26.318.11754-linux-x64/bin/linux-x86_64', 'SESSION_MANAGER': 'local/ubuntu-22:@/tmp/.ICE-unix/1319,unix/ubuntu-22:/tmp/.ICE-unix/1319', 'GTK_EXE_PREFIX': '/snap/code/230/usr', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_TERMINAL_SCREEN': '/org/gnome/Terminal/screen/86e1b8b2_97ae_42c0_b5c2_64251d42099e', 'GNOME_SETUP_DISPLAY': ':1', 'SNAP_DATA': '/var/snap/code/230', 'XDG_RUNTIME_DIR': '/run/user/1000', 'GDK_BACKEND': 'x11', 'DISPLAY': ':0', 'LOCPATH': '/snap/code/230/usr/lib/locale', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'XDG_DATA_HOME': '/home/ollie/snap/code/230/.local/share', 'XMODIFIERS': '@im=ibus', 'GH_PAGER': 'cat', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.8L1NM3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'GNOME_TERMINAL_SERVICE': ':1.157', 'SSH_AGENT_LAUNCHER': 'gnome-keyring', 'SNAP_USER_COMMON': '/home/ollie/snap/code/common', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'GSETTINGS_SCHEMA_DIR': '/home/ollie/snap/code/230/.local/share/glib-2.0/schemas', 'SNAP_ARCH': 'amd64', 'AMENT_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble', 'SNAP_COOKIE': 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3', 'SHELL': '/bin/bash', 'GDK_PIXBUF_MODULEDIR': '/snap/code/230/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders', 'QT_ACCESSIBILITY': '1', 'ELECTRON_RUN_AS_NODE': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'SNAP_NAME': 'code', 'FONTCONFIG_FILE': '/etc/fonts/fonts.conf', 'CODEX_THREAD_ID': '019d1e91-4e81-7893-b390-00c5289d1ffd', 'GDK_PIXBUF_MODULE_FILE': '/home/ollie/snap/code/common/.cache/gdk-pixbuf-loaders.cache', 'SNAP_LAUNCHER_ARCH_TRIPLET': 'x86_64-linux-gnu', 'GIT_PAGER': 'cat', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools', 'VSCODE_CLI': '1', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'SNAP_REAL_HOME': '/home/ollie', 'VSCODE_CODE_CACHE_PATH': '/home/ollie/.config/Code/CachedData/07ff9d6178ede9a1bd12ad3399074d726ebe6e43', 'DBUS_STARTER_ADDRESS': 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300', 'XDG_DATA_DIRS': '/home/ollie/snap/code/230/.local/share:/home/ollie/snap/code/230:/snap/code/230/usr/share:/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'SNAP_EUID': '1000', 'PYTHONPATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'SNAP': '/snap/code/230', 'COLCON': '1', 'VTE_VERSION': '6800', 'ELECTRON_NO_ATTACH_CONSOLE': '1', 'CMAKE_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation', 'VSCODE_PID': '9192', 'PYTHONDONTWRITEBYTECODE': '1', 'PYTEST_ADDOPTS': '--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache'}, 'shell': False}
+[0.161514] (holoassist_manipulation) Command: {'cmd': ['/usr/bin/ctest', '-C', 'Release', '-D', 'ExperimentalTest', '--no-compress-output', '-V', '--force-new-ctest-process'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('VSCODE_CWD', '/home/ollie/git/1HoloAssist/ollie'), ('VSCODE_ESM_ENTRYPOINT', 'vs/workbench/api/node/extensionHostProcess'), ('CODEX_CI', '1'), ('LANGUAGE', 'en_AU:en'), ('USER', 'ollie'), ('SNAP_COMMON', '/var/snap/code/common'), ('CODEX_INTERNAL_ORIGINATOR_OVERRIDE', 'codex_vscode'), ('VSCODE_NLS_CONFIG', '{"userLocale":"en-gb","osLocale":"en-au","resolvedLanguage":"en","defaultMessagesFile":"/snap/code/230/usr/share/code/resources/app/out/nls.messages.json","locale":"en-gb","availableLanguages":{}}'), ('FONTCONFIG_PATH', '/etc/fonts'), ('GIO_MODULE_DIR', '/home/ollie/snap/code/common/.cache/gio-modules'), ('VSCODE_HANDLES_UNCAUGHT_ERRORS', 'true'), ('XDG_SESSION_TYPE', 'wayland'), ('DEBUG', 'release'), ('SNAP_UID', '1000'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/ollie'), ('CHROME_DESKTOP', 'code.desktop'), ('SNAP_LIBRARY_PATH', '/var/lib/snapd/lib/gl:/var/lib/snapd/lib/gl32'), ('OLDPWD', '/home/ollie/git/1HoloAssist/ollie'), ('DESKTOP_SESSION', 'ubuntu'), ('SNAP_USER_DATA', '/home/ollie/snap/code/230'), ('GTK_PATH', '/snap/code/230/usr/lib/x86_64-linux-gnu/gtk-3.0'), ('VSCODE_IPC_HOOK', '/run/user/1000/vscode-1097eb75-1.11-main.sock'), ('GTK_IM_MODULE_FILE', '/home/ollie/snap/code/common/.cache/immodules/immodules.cache'), ('APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL', '1'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('PAGER', 'cat'), ('LC_CTYPE', 'C.UTF-8'), ('DBUS_STARTER_BUS_TYPE', 'session'), ('SYSTEMD_EXEC_PID', '1319'), ('IM_CONFIG_CHECK_ENV', '1'), ('NO_COLOR', '1'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300'), ('SNAP_REVISION', '230'), ('COLORTERM', 'truecolor'), ('VSCODE_CRASH_REPORTER_PROCESS_TYPE', 'extensionHost'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('VSCODE_L10N_BUNDLE_LOCATION', ''), ('COLCON_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'ollie'), ('SNAP_CONTEXT', 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_CONFIG_DIRS_VSCODE_SNAP_ORIG', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_SESSION_CLASS', 'user'), ('SNAP_VERSION', '07ff9d61'), ('XDG_DATA_DIRS_VSCODE_SNAP_ORIG', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('RUST_LOG', 'warn'), ('USERNAME', 'ollie'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('SNAP_INSTANCE_NAME', 'code'), ('FC_FONTATIONS', '1'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/home/ollie/.codex/tmp/arg0/codex-arg0kfpw4d:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/ollie/.vscode/extensions/openai.chatgpt-26.318.11754-linux-x64/bin/linux-x86_64'), ('SESSION_MANAGER', 'local/ubuntu-22:@/tmp/.ICE-unix/1319,unix/ubuntu-22:/tmp/.ICE-unix/1319'), ('GTK_EXE_PREFIX', '/snap/code/230/usr'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/86e1b8b2_97ae_42c0_b5c2_64251d42099e'), ('GNOME_SETUP_DISPLAY', ':1'), ('SNAP_DATA', '/var/snap/code/230'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('GDK_BACKEND', 'x11'), ('DISPLAY', ':0'), ('LOCPATH', '/snap/code/230/usr/lib/locale'), ('CODEX_SANDBOX_NETWORK_DISABLED', '1'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XDG_DATA_HOME', '/home/ollie/snap/code/230/.local/share'), ('XMODIFIERS', '@im=ibus'), ('GH_PAGER', 'cat'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.8L1NM3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.157'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SNAP_USER_COMMON', '/home/ollie/snap/code/common'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('GSETTINGS_SCHEMA_DIR', '/home/ollie/snap/code/230/.local/share/glib-2.0/schemas'), ('SNAP_ARCH', 'amd64'), ('AMENT_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble'), ('SNAP_COOKIE', 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3'), ('SHELL', '/bin/bash'), ('GDK_PIXBUF_MODULEDIR', '/snap/code/230/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'), ('QT_ACCESSIBILITY', '1'), ('ELECTRON_RUN_AS_NODE', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('SNAP_NAME', 'code'), ('FONTCONFIG_FILE', '/etc/fonts/fonts.conf'), ('CODEX_THREAD_ID', '019d1e91-4e81-7893-b390-00c5289d1ffd'), ('GDK_PIXBUF_MODULE_FILE', '/home/ollie/snap/code/common/.cache/gdk-pixbuf-loaders.cache'), ('SNAP_LAUNCHER_ARCH_TRIPLET', 'x86_64-linux-gnu'), ('GIT_PAGER', 'cat'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation'), ('VSCODE_CLI', '1'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('SNAP_REAL_HOME', '/home/ollie'), ('VSCODE_CODE_CACHE_PATH', '/home/ollie/.config/Code/CachedData/07ff9d6178ede9a1bd12ad3399074d726ebe6e43'), ('DBUS_STARTER_ADDRESS', 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300'), ('XDG_DATA_DIRS', '/home/ollie/snap/code/230/.local/share:/home/ollie/snap/code/230:/snap/code/230/usr/share:/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('SNAP_EUID', '1000'), ('PYTHONPATH', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('SNAP', '/snap/code/230'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('ELECTRON_NO_ATTACH_CONSOLE', '1'), ('CMAKE_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation'), ('VSCODE_PID', '9192')]), 'shell': False}
+[0.167317] (holoassist_manipulation) StdoutLine: {'line': b'UpdateCTestConfiguration  from :/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini\n'}
+[0.167569] (holoassist_manipulation) StdoutLine: {'line': b'Parse Config file:/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini\n'}
+[0.167621] (holoassist_manipulation) StdoutLine: {'line': b'   Site: ubuntu-22\n'}
+[0.167662] (holoassist_manipulation) StdoutLine: {'line': b'   Build name: (empty)\n'}
+[0.167699] (holoassist_manipulation) StdoutLine: {'line': b' Add coverage exclude regular expressions.\n'}
+[0.167736] (holoassist_manipulation) StdoutLine: {'line': b'Create new tag: 20260324-0712 - Experimental\n'}
+[0.167773] (holoassist_manipulation) StdoutLine: {'line': b'UpdateCTestConfiguration  from :/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini\n'}
+[0.167814] (holoassist_manipulation) StdoutLine: {'line': b'Parse Config file:/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/CTestConfiguration.ini\n'}
+[0.168063] (holoassist_manipulation) StdoutLine: {'line': b'Test project /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation\n'}
+[0.168099] (holoassist_manipulation) StdoutLine: {'line': b'Constructing a list of tests\n'}
+[0.168130] (holoassist_manipulation) StdoutLine: {'line': b'Done constructing a list of tests\n'}
+[0.168162] (holoassist_manipulation) StdoutLine: {'line': b'Updating test list for fixtures\n'}
+[0.168198] (holoassist_manipulation) StdoutLine: {'line': b'Added 0 tests to meet fixture requirements\n'}
+[0.168233] (holoassist_manipulation) StdoutLine: {'line': b'Checking test dependency graph...\n'}
+[0.168262] (holoassist_manipulation) StdoutLine: {'line': b'Checking test dependency graph end\n'}
+[0.168293] (holoassist_manipulation) StdoutLine: {'line': b'test 1\n'}
+[0.168324] (holoassist_manipulation) StdoutLine: {'line': b'    Start 1: cppcheck\n'}
+[0.168362] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.168398] (holoassist_manipulation) StdoutLine: {'line': b'1: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_cppcheck/cppcheck.txt" "--command" "/opt/ros/humble/bin/ament_cppcheck" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml"\n'}
+[0.168444] (holoassist_manipulation) StdoutLine: {'line': b'1: Test timeout computed to be: 300\n'}
+[0.199958] (-) TimerEvent: {}
+[0.205469] (holoassist_manipulation) StdoutLine: {'line': b"1: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.205699] (holoassist_manipulation) StdoutLine: {'line': b'1:  - /opt/ros/humble/bin/ament_cppcheck --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml\n'}
+[0.265061] (holoassist_manipulation) StdoutLine: {'line': b'1: cppcheck 2.7 has known performance issues and therefore will not be used, set the AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS environment variable to override this.\n'}
+[0.273924] (holoassist_manipulation) StdoutLine: {'line': b'1: -- run_test.py: return code 0\n'}
+[0.274035] (holoassist_manipulation) StdoutLine: {'line': b"1: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/cppcheck.xunit.xml'\n"}
+[0.280389] (holoassist_manipulation) StdoutLine: {'line': b'1/6 Test #1: cppcheck .........................   Passed    0.11 sec\n'}
+[0.280532] (holoassist_manipulation) StdoutLine: {'line': b'test 2\n'}
+[0.280599] (holoassist_manipulation) StdoutLine: {'line': b'    Start 2: flake8\n'}
+[0.280658] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.280717] (holoassist_manipulation) StdoutLine: {'line': b'2: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_flake8/flake8.txt" "--command" "/opt/ros/humble/bin/ament_flake8" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml"\n'}
+[0.280785] (holoassist_manipulation) StdoutLine: {'line': b'2: Test timeout computed to be: 60\n'}
+[0.300059] (-) TimerEvent: {}
+[0.316879] (holoassist_manipulation) StdoutLine: {'line': b"2: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.317005] (holoassist_manipulation) StdoutLine: {'line': b'2:  - /opt/ros/humble/bin/ament_flake8 --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml\n'}
+[0.392100] (holoassist_servo_tools) StdoutLine: {'line': b'============================= test session starts ==============================\n'}
+[0.392319] (holoassist_servo_tools) StdoutLine: {'line': b'platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0\n'}
+[0.392386] (holoassist_servo_tools) StdoutLine: {'line': b'cachedir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache\n'}
+[0.392438] (holoassist_servo_tools) StdoutLine: {'line': b'rootdir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools\n'}
+[0.392485] (holoassist_servo_tools) StdoutLine: {'line': b'plugins: ament-pep257-0.12.15, ament-xmllint-0.12.15, launch-testing-1.0.14, launch-testing-ros-0.19.13, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-lint-0.12.15, colcon-core-0.20.1, cov-3.0.0\n'}
+[0.392535] (holoassist_servo_tools) StdoutLine: {'line': b'collected 3 items\n'}
+[0.392582] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.395740] (holoassist_servo_tools) StdoutLine: {'line': b'test/test_copyright.py s                                                 [ 33%]\n'}
+[0.400129] (-) TimerEvent: {}
+[0.420976] (holoassist_manipulation) StdoutLine: {'line': b'2: \n'}
+[0.421147] (holoassist_manipulation) StdoutLine: {'line': b'2: 1 files checked\n'}
+[0.421230] (holoassist_manipulation) StdoutLine: {'line': b'2: No problems found\n'}
+[0.421298] (holoassist_manipulation) StdoutLine: {'line': b'2: \n'}
+[0.421359] (holoassist_manipulation) StdoutLine: {'line': b'2: Checked files:\n'}
+[0.421419] (holoassist_manipulation) StdoutLine: {'line': b'2: \n'}
+[0.421479] (holoassist_manipulation) StdoutLine: {'line': b'2: * ./launch/click_to_plan.launch.py\n'}
+[0.431918] (holoassist_manipulation) StdoutLine: {'line': b'2: -- run_test.py: return code 0\n'}
+[0.432087] (holoassist_manipulation) StdoutLine: {'line': b"2: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/flake8.xunit.xml'\n"}
+[0.443502] (holoassist_manipulation) StdoutLine: {'line': b'2/6 Test #2: flake8 ...........................   Passed    0.16 sec\n'}
+[0.443708] (holoassist_manipulation) StdoutLine: {'line': b'test 3\n'}
+[0.443783] (holoassist_manipulation) StdoutLine: {'line': b'    Start 3: lint_cmake\n'}
+[0.443848] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.443911] (holoassist_manipulation) StdoutLine: {'line': b'3: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_lint_cmake/lint_cmake.txt" "--command" "/opt/ros/humble/bin/ament_lint_cmake" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml"\n'}
+[0.443996] (holoassist_manipulation) StdoutLine: {'line': b'3: Test timeout computed to be: 60\n'}
+[0.478806] (holoassist_servo_tools) StdoutLine: {'line': b'test/test_flake8.py F                                                    [ 66%]\n'}
+[0.480342] (holoassist_manipulation) StdoutLine: {'line': b"3: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.480496] (holoassist_manipulation) StdoutLine: {'line': b'3:  - /opt/ros/humble/bin/ament_lint_cmake --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml\n'}
+[0.494393] (holoassist_servo_tools) StderrLine: {'line': b'=============================== warnings summary ===============================\n'}
+[0.494589] (holoassist_servo_tools) StderrLine: {'line': b'test/test_flake8.py::test_flake8\n'}
+[0.494657] (holoassist_servo_tools) StderrLine: {'line': b'test/test_flake8.py::test_flake8\n'}
+[0.494723] (holoassist_servo_tools) StderrLine: {'line': b'  Warning: SelectableGroups dict interface is deprecated. Use select.\n'}
+[0.494993] (holoassist_servo_tools) StderrLine: {'line': b'\n'}
+[0.495060] (holoassist_servo_tools) StderrLine: {'line': b'-- Docs: https://docs.pytest.org/en/stable/warnings.html\n'}
+[0.495119] (holoassist_servo_tools) StdoutLine: {'line': b'test/test_pep257.py .                                                    [100%]\n'}
+[0.495183] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.495250] (holoassist_servo_tools) StdoutLine: {'line': b'=================================== FAILURES ===================================\n'}
+[0.495305] (holoassist_servo_tools) StdoutLine: {'line': b'_________________________________ test_flake8 __________________________________\n'}
+[0.495365] (holoassist_servo_tools) StdoutLine: {'line': b'test/test_flake8.py:23: in test_flake8\n'}
+[0.495426] (holoassist_servo_tools) StdoutLine: {'line': b'    assert rc == 0, \\\n'}
+[0.495481] (holoassist_servo_tools) StdoutLine: {'line': b'E   AssertionError: Found 5 code style errors / warnings:\n'}
+[0.495536] (holoassist_servo_tools) StdoutLine: {'line': b"E     ./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused\n"}
+[0.495589] (holoassist_servo_tools) StdoutLine: {'line': b'E     ./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1\n'}
+[0.495637] (holoassist_servo_tools) StdoutLine: {'line': b'E     ./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1\n'}
+[0.495689] (holoassist_servo_tools) StdoutLine: {'line': b'E     ./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1\n'}
+[0.495750] (holoassist_servo_tools) StdoutLine: {'line': b'E     ./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file\n'}
+[0.495803] (holoassist_servo_tools) StdoutLine: {'line': b'E   assert 1 == 0\n'}
+[0.495851] (holoassist_servo_tools) StdoutLine: {'line': b'----------------------------- Captured stdout call -----------------------------\n'}
+[0.495906] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.495972] (holoassist_servo_tools) StdoutLine: {'line': b"./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused\n"}
+[0.496027] (holoassist_servo_tools) StdoutLine: {'line': b'import math\n'}
+[0.496080] (holoassist_servo_tools) StdoutLine: {'line': b'^\n'}
+[0.496132] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.496190] (holoassist_servo_tools) StdoutLine: {'line': b'./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1\n'}
+[0.496260] (holoassist_servo_tools) StdoutLine: {'line': b'class PoseToTwistServo(Node):\n'}
+[0.496319] (holoassist_servo_tools) StdoutLine: {'line': b'^\n'}
+[0.496378] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.496433] (holoassist_servo_tools) StdoutLine: {'line': b'./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1\n'}
+[0.496493] (holoassist_servo_tools) StdoutLine: {'line': b'def main():\n'}
+[0.496550] (holoassist_servo_tools) StdoutLine: {'line': b'^\n'}
+[0.496604] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.496661] (holoassist_servo_tools) StdoutLine: {'line': b'./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1\n'}
+[0.496716] (holoassist_servo_tools) StdoutLine: {'line': b'if __name__ == "__main__":\n'}
+[0.496769] (holoassist_servo_tools) StdoutLine: {'line': b'^\n'}
+[0.496824] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.496880] (holoassist_servo_tools) StdoutLine: {'line': b'./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file\n'}
+[0.496940] (holoassist_servo_tools) StdoutLine: {'line': b'    main()          ^\n'}
+[0.497000] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.497054] (holoassist_servo_tools) StdoutLine: {'line': b'2     E302 expected 2 blank lines, found 1\n'}
+[0.497111] (holoassist_servo_tools) StdoutLine: {'line': b'1     E305 expected 2 blank lines after class or function definition, found 1\n'}
+[0.497173] (holoassist_servo_tools) StdoutLine: {'line': b"1     F401 'math' imported but unused\n"}
+[0.497238] (holoassist_servo_tools) StdoutLine: {'line': b'1     W292 no newline at end of file\n'}
+[0.497298] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.497354] (holoassist_servo_tools) StdoutLine: {'line': b'7 files checked\n'}
+[0.497411] (holoassist_servo_tools) StdoutLine: {'line': b'5 errors\n'}
+[0.497469] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.497524] (holoassist_servo_tools) StdoutLine: {'line': b"'E'-type errors: 3\n"}
+[0.497578] (holoassist_servo_tools) StdoutLine: {'line': b"'F'-type errors: 1\n"}
+[0.497631] (holoassist_servo_tools) StdoutLine: {'line': b"'W'-type errors: 1\n"}
+[0.497684] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.497736] (holoassist_servo_tools) StdoutLine: {'line': b'Checked files:\n'}
+[0.497793] (holoassist_servo_tools) StdoutLine: {'line': b'\n'}
+[0.497852] (holoassist_servo_tools) StdoutLine: {'line': b'* ./setup.py\n'}
+[0.497905] (holoassist_servo_tools) StdoutLine: {'line': b'* ./test/test_copyright.py\n'}
+[0.497956] (holoassist_servo_tools) StdoutLine: {'line': b'* ./test/test_pep257.py\n'}
+[0.498008] (holoassist_servo_tools) StdoutLine: {'line': b'* ./test/test_flake8.py\n'}
+[0.498062] (holoassist_servo_tools) StdoutLine: {'line': b'* ./launch/pose_to_twist_servo.launch.py\n'}
+[0.498121] (holoassist_servo_tools) StdoutLine: {'line': b'* ./holoassist_servo_tools/pose_to_twist_servo.py\n'}
+[0.498172] (holoassist_servo_tools) StdoutLine: {'line': b'* ./holoassist_servo_tools/__init__.py\n'}
+[0.498239] (holoassist_servo_tools) StdoutLine: {'line': b'----------------------------- Captured stderr call -----------------------------\n'}
+[0.498295] (holoassist_servo_tools) StdoutLine: {'line': b'option --max-complexity: please update from optparse string `type=` to argparse callable `type=` -- this will be an error in the future\n'}
+[0.498351] (holoassist_servo_tools) StdoutLine: {'line': b'- generated xml file: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml -\n'}
+[0.498412] (holoassist_servo_tools) StdoutLine: {'line': b'=========================== short test summary info ============================\n'}
+[0.498464] (holoassist_servo_tools) StdoutLine: {'line': b'FAILED test/test_flake8.py::test_flake8 - AssertionError: Found 5 code style ...\n'}
+[0.498517] (holoassist_servo_tools) StdoutLine: {'line': b'============== 1 failed, 1 passed, 1 skipped, 2 warnings in 0.16s ==============\n'}
+[0.500221] (-) TimerEvent: {}
+[0.525247] (holoassist_manipulation) StdoutLine: {'line': b'3: \n'}
+[0.525452] (holoassist_manipulation) StdoutLine: {'line': b'3: No problems found\n'}
+[0.531155] (holoassist_manipulation) StdoutLine: {'line': b'3: -- run_test.py: return code 0\n'}
+[0.531295] (holoassist_manipulation) StdoutLine: {'line': b"3: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/lint_cmake.xunit.xml'\n"}
+[0.537425] (holoassist_manipulation) StdoutLine: {'line': b'3/6 Test #3: lint_cmake .......................   Passed    0.09 sec\n'}
+[0.537619] (holoassist_manipulation) StdoutLine: {'line': b'test 4\n'}
+[0.537701] (holoassist_manipulation) StdoutLine: {'line': b'    Start 4: pep257\n'}
+[0.537783] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.537846] (holoassist_manipulation) StdoutLine: {'line': b'4: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_pep257/pep257.txt" "--command" "/opt/ros/humble/bin/ament_pep257" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml"\n'}
+[0.537913] (holoassist_manipulation) StdoutLine: {'line': b'4: Test timeout computed to be: 60\n'}
+[0.542392] (holoassist_servo_tools) CommandEnded: {'returncode': 1}
+[0.542869] (holoassist_servo_tools) TestFailure: {'identifier': 'holoassist_servo_tools'}
+[0.542896] (holoassist_servo_tools) JobEnded: {'identifier': 'holoassist_servo_tools', 'rc': 0}
+[0.576107] (holoassist_manipulation) StdoutLine: {'line': b"4: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.576323] (holoassist_manipulation) StdoutLine: {'line': b'4:  - /opt/ros/humble/bin/ament_pep257 --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml\n'}
+[0.600353] (-) TimerEvent: {}
+[0.649754] (holoassist_manipulation) StdoutLine: {'line': b'4: checking ./launch/click_to_plan.launch.py\n'}
+[0.649994] (holoassist_manipulation) StdoutLine: {'line': b'4: No problems found\n'}
+[0.660043] (holoassist_manipulation) StdoutLine: {'line': b'4: -- run_test.py: return code 0\n'}
+[0.660268] (holoassist_manipulation) StdoutLine: {'line': b"4: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/pep257.xunit.xml'\n"}
+[0.667672] (holoassist_manipulation) StdoutLine: {'line': b'4/6 Test #4: pep257 ...........................   Passed    0.13 sec\n'}
+[0.667896] (holoassist_manipulation) StdoutLine: {'line': b'test 5\n'}
+[0.667982] (holoassist_manipulation) StdoutLine: {'line': b'    Start 5: uncrustify\n'}
+[0.668043] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.668101] (holoassist_manipulation) StdoutLine: {'line': b'5: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_uncrustify/uncrustify.txt" "--command" "/opt/ros/humble/bin/ament_uncrustify" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml"\n'}
+[0.668183] (holoassist_manipulation) StdoutLine: {'line': b'5: Test timeout computed to be: 60\n'}
+[0.700461] (-) TimerEvent: {}
+[0.706926] (holoassist_manipulation) StdoutLine: {'line': b"5: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.707159] (holoassist_manipulation) StdoutLine: {'line': b'5:  - /opt/ros/humble/bin/ament_uncrustify --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml\n'}
+[0.771491] (holoassist_manipulation) StdoutLine: {'line': b"5: Code style divergence in file 'src/clicked_point_to_moveit.cpp':\n"}
+[0.771674] (holoassist_manipulation) StdoutLine: {'line': b'5: \n'}
+[0.771741] (holoassist_manipulation) StdoutLine: {'line': b'5: --- src/clicked_point_to_moveit.cpp\n'}
+[0.771797] (holoassist_manipulation) StdoutLine: {'line': b'5: +++ src/clicked_point_to_moveit.cpp.uncrustify\n'}
+[0.771851] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -11 +11,2 @@\n'}
+[0.771904] (holoassist_manipulation) StdoutLine: {'line': b'5: -  ClickedPointToMoveIt() : Node("clicked_point_to_moveit")\n'}
+[0.771964] (holoassist_manipulation) StdoutLine: {'line': b'5: +  ClickedPointToMoveIt()\n'}
+[0.772017] (holoassist_manipulation) StdoutLine: {'line': b'5: +  : Node("clicked_point_to_moveit")\n'}
+[0.772067] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -27 +28,3 @@\n'}
+[0.772116] (holoassist_manipulation) StdoutLine: {'line': b'5: -    moveit_node_ = std::make_shared<rclcpp::Node>("clicked_point_to_moveit_moveit", moveit_node_options);\n'}
+[0.772170] (holoassist_manipulation) StdoutLine: {'line': b'5: +    moveit_node_ = std::make_shared<rclcpp::Node>(\n'}
+[0.772253] (holoassist_manipulation) StdoutLine: {'line': b'5: +      "clicked_point_to_moveit_moveit",\n'}
+[0.772317] (holoassist_manipulation) StdoutLine: {'line': b'5: +      moveit_node_options);\n'}
+[0.772385] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -29 +32,3 @@\n'}
+[0.772463] (holoassist_manipulation) StdoutLine: {'line': b'5: -    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(moveit_node_, move_group_name_);\n'}
+[0.772533] (holoassist_manipulation) StdoutLine: {'line': b'5: +    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(\n'}
+[0.772603] (holoassist_manipulation) StdoutLine: {'line': b'5: +      moveit_node_,\n'}
+[0.772678] (holoassist_manipulation) StdoutLine: {'line': b'5: +      move_group_name_);\n'}
+[0.772772] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -66,2 +71 @@\n'}
+[0.772845] (holoassist_manipulation) StdoutLine: {'line': b'5: -    if (!ok)\n'}
+[0.772926] (holoassist_manipulation) StdoutLine: {'line': b'5: -    {\n'}
+[0.773012] (holoassist_manipulation) StdoutLine: {'line': b'5: +    if (!ok) {\n'}
+[0.773089] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -76 +80 @@\n'}
+[0.773170] (holoassist_manipulation) StdoutLine: {'line': b'5: -  void publishMarker(const geometry_msgs::msg::PoseStamped& pose)\n'}
+[0.773254] (holoassist_manipulation) StdoutLine: {'line': b'5: +  void publishMarker(const geometry_msgs::msg::PoseStamped & pose)\n'}
+[0.773312] (holoassist_manipulation) StdoutLine: {'line': b'5: @@ -98 +102 @@\n'}
+[0.773420] (holoassist_manipulation) StdoutLine: {'line': b'5: -int main(int argc, char** argv)\n'}
+[0.773508] (holoassist_manipulation) StdoutLine: {'line': b'5: +int main(int argc, char ** argv)\n'}
+[0.773561] (holoassist_manipulation) StdoutLine: {'line': b'5: \n'}
+[0.773598] (holoassist_manipulation) StdoutLine: {'line': b'5: 1 files with code style divergence\n'}
+[0.778831] (holoassist_manipulation) StdoutLine: {'line': b'5: -- run_test.py: return code 1\n'}
+[0.778982] (holoassist_manipulation) StdoutLine: {'line': b"5: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/uncrustify.xunit.xml'\n"}
+[0.784961] (holoassist_manipulation) StdoutLine: {'line': b'5/6 Test #5: uncrustify .......................***Failed    0.12 sec\n'}
+[0.785151] (holoassist_manipulation) StdoutLine: {'line': b'test 6\n'}
+[0.785189] (holoassist_manipulation) StdoutLine: {'line': b'    Start 6: xmllint\n'}
+[0.785232] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[0.785262] (holoassist_manipulation) StdoutLine: {'line': b'6: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml" "--package-name" "holoassist_manipulation" "--output-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/ament_xmllint/xmllint.txt" "--command" "/opt/ros/humble/bin/ament_xmllint" "--xunit-file" "/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml"\n'}
+[0.785300] (holoassist_manipulation) StdoutLine: {'line': b'6: Test timeout computed to be: 60\n'}
+[0.800532] (-) TimerEvent: {}
+[0.823679] (holoassist_manipulation) StdoutLine: {'line': b"6: -- run_test.py: invoking following command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation':\n"}
+[0.823859] (holoassist_manipulation) StdoutLine: {'line': b'6:  - /opt/ros/humble/bin/ament_xmllint --xunit-file /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml\n'}
+[0.900646] (-) TimerEvent: {}
+[1.000844] (-) TimerEvent: {}
+[1.101086] (-) TimerEvent: {}
+[1.201380] (-) TimerEvent: {}
+[1.301645] (-) TimerEvent: {}
+[1.401868] (-) TimerEvent: {}
+[1.502177] (-) TimerEvent: {}
+[1.602411] (-) TimerEvent: {}
+[1.702607] (-) TimerEvent: {}
+[1.803044] (-) TimerEvent: {}
+[1.892521] (holoassist_manipulation) StdoutLine: {'line': b"6: File 'package.xml' is valid\n"}
+[1.892727] (holoassist_manipulation) StdoutLine: {'line': b'6: \n'}
+[1.892797] (holoassist_manipulation) StdoutLine: {'line': b'6: No problems found\n'}
+[1.899733] (holoassist_manipulation) StdoutLine: {'line': b'6: -- run_test.py: return code 0\n'}
+[1.899951] (holoassist_manipulation) StdoutLine: {'line': b"6: -- run_test.py: verify result file '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/test_results/holoassist_manipulation/xmllint.xunit.xml'\n"}
+[1.903186] (-) TimerEvent: {}
+[1.906182] (holoassist_manipulation) StdoutLine: {'line': b'6/6 Test #6: xmllint ..........................   Passed    1.12 sec\n'}
+[1.906548] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[1.906602] (holoassist_manipulation) StdoutLine: {'line': b'83% tests passed, 1 tests failed out of 6\n'}
+[1.906638] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[1.906672] (holoassist_manipulation) StdoutLine: {'line': b'Label Time Summary:\n'}
+[1.906705] (holoassist_manipulation) StdoutLine: {'line': b'cppcheck      =   0.11 sec*proc (1 test)\n'}
+[1.906739] (holoassist_manipulation) StdoutLine: {'line': b'flake8        =   0.16 sec*proc (1 test)\n'}
+[1.906771] (holoassist_manipulation) StdoutLine: {'line': b'lint_cmake    =   0.09 sec*proc (1 test)\n'}
+[1.906808] (holoassist_manipulation) StdoutLine: {'line': b'linter        =   1.74 sec*proc (6 tests)\n'}
+[1.906840] (holoassist_manipulation) StdoutLine: {'line': b'pep257        =   0.13 sec*proc (1 test)\n'}
+[1.906871] (holoassist_manipulation) StdoutLine: {'line': b'uncrustify    =   0.12 sec*proc (1 test)\n'}
+[1.906900] (holoassist_manipulation) StdoutLine: {'line': b'xmllint       =   1.12 sec*proc (1 test)\n'}
+[1.906930] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[1.906966] (holoassist_manipulation) StdoutLine: {'line': b'Total Test time (real) =   1.74 sec\n'}
+[1.907001] (holoassist_manipulation) StdoutLine: {'line': b'\n'}
+[1.907041] (holoassist_manipulation) StdoutLine: {'line': b'The following tests FAILED:\n'}
+[1.907077] (holoassist_manipulation) StdoutLine: {'line': b'\t  5 - uncrustify (Failed)\n'}
+[1.909770] (holoassist_manipulation) StderrLine: {'line': b'Errors while running CTest\n'}
+[1.909990] (holoassist_manipulation) StderrLine: {'line': b'Output from these tests are in: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation/Testing/Temporary/LastTest.log\n'}
+[1.910042] (holoassist_manipulation) StderrLine: {'line': b'Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.\n'}
+[1.910945] (holoassist_manipulation) CommandEnded: {'returncode': 8}
+[1.911594] (holoassist_manipulation) TestFailure: {'identifier': 'holoassist_manipulation'}
+[1.911694] (holoassist_manipulation) JobEnded: {'identifier': 'holoassist_manipulation', 'rc': 0}
+[1.911972] (holoassist_unity_bridge) JobStarted: {'identifier': 'holoassist_unity_bridge'}
+[2.003255] (-) TimerEvent: {}
+[2.086861] (holoassist_unity_bridge) Command: {'cmd': ['/usr/bin/python3', '-m', 'pytest'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/ollie/git/1HoloAssist/ollie', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'CODEX_CI': '1', 'LANGUAGE': 'en_AU:en', 'USER': 'ollie', 'SNAP_COMMON': '/var/snap/code/common', 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE': 'codex_vscode', 'VSCODE_NLS_CONFIG': '{"userLocale":"en-gb","osLocale":"en-au","resolvedLanguage":"en","defaultMessagesFile":"/snap/code/230/usr/share/code/resources/app/out/nls.messages.json","locale":"en-gb","availableLanguages":{}}', 'FONTCONFIG_PATH': '/etc/fonts', 'GIO_MODULE_DIR': '/home/ollie/snap/code/common/.cache/gio-modules', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'wayland', 'DEBUG': 'release', 'SNAP_UID': '1000', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib', 'HOME': '/home/ollie', 'CHROME_DESKTOP': 'code.desktop', 'SNAP_LIBRARY_PATH': '/var/lib/snapd/lib/gl:/var/lib/snapd/lib/gl32', 'OLDPWD': '/home/ollie/git/1HoloAssist/ollie', 'DESKTOP_SESSION': 'ubuntu', 'SNAP_USER_DATA': '/home/ollie/snap/code/230', 'GTK_PATH': '/snap/code/230/usr/lib/x86_64-linux-gnu/gtk-3.0', 'VSCODE_IPC_HOOK': '/run/user/1000/vscode-1097eb75-1.11-main.sock', 'GTK_IM_MODULE_FILE': '/home/ollie/snap/code/common/.cache/immodules/immodules.cache', 'APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL': '1', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'PAGER': 'cat', 'LC_CTYPE': 'C.UTF-8', 'DBUS_STARTER_BUS_TYPE': 'session', 'SYSTEMD_EXEC_PID': '1319', 'IM_CONFIG_CHECK_ENV': '1', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300', 'SNAP_REVISION': '230', 'COLORTERM': 'truecolor', 'VSCODE_CRASH_REPORTER_PROCESS_TYPE': 'extensionHost', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'ollie', 'SNAP_CONTEXT': 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_CONFIG_DIRS_VSCODE_SNAP_ORIG': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_SESSION_CLASS': 'user', 'SNAP_VERSION': '07ff9d61', 'XDG_DATA_DIRS_VSCODE_SNAP_ORIG': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'RUST_LOG': 'warn', 'USERNAME': 'ollie', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'SNAP_INSTANCE_NAME': 'code', 'FC_FONTATIONS': '1', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/home/ollie/.codex/tmp/arg0/codex-arg0kfpw4d:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/ollie/.vscode/extensions/openai.chatgpt-26.318.11754-linux-x64/bin/linux-x86_64', 'SESSION_MANAGER': 'local/ubuntu-22:@/tmp/.ICE-unix/1319,unix/ubuntu-22:/tmp/.ICE-unix/1319', 'GTK_EXE_PREFIX': '/snap/code/230/usr', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_TERMINAL_SCREEN': '/org/gnome/Terminal/screen/86e1b8b2_97ae_42c0_b5c2_64251d42099e', 'GNOME_SETUP_DISPLAY': ':1', 'SNAP_DATA': '/var/snap/code/230', 'XDG_RUNTIME_DIR': '/run/user/1000', 'GDK_BACKEND': 'x11', 'DISPLAY': ':0', 'LOCPATH': '/snap/code/230/usr/lib/locale', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'XDG_DATA_HOME': '/home/ollie/snap/code/230/.local/share', 'XMODIFIERS': '@im=ibus', 'GH_PAGER': 'cat', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.8L1NM3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'GNOME_TERMINAL_SERVICE': ':1.157', 'SSH_AGENT_LAUNCHER': 'gnome-keyring', 'SNAP_USER_COMMON': '/home/ollie/snap/code/common', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'GSETTINGS_SCHEMA_DIR': '/home/ollie/snap/code/230/.local/share/glib-2.0/schemas', 'SNAP_ARCH': 'amd64', 'AMENT_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble', 'SNAP_COOKIE': 'W2IqVAHP2FuUuCvZehgkN4bh6hLdXm9aQa3gBCIXsZN7thjHHSJ3', 'SHELL': '/bin/bash', 'GDK_PIXBUF_MODULEDIR': '/snap/code/230/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders', 'QT_ACCESSIBILITY': '1', 'ELECTRON_RUN_AS_NODE': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'SNAP_NAME': 'code', 'FONTCONFIG_FILE': '/etc/fonts/fonts.conf', 'CODEX_THREAD_ID': '019d1e91-4e81-7893-b390-00c5289d1ffd', 'GDK_PIXBUF_MODULE_FILE': '/home/ollie/snap/code/common/.cache/gdk-pixbuf-loaders.cache', 'SNAP_LAUNCHER_ARCH_TRIPLET': 'x86_64-linux-gnu', 'GIT_PAGER': 'cat', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge', 'VSCODE_CLI': '1', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'SNAP_REAL_HOME': '/home/ollie', 'VSCODE_CODE_CACHE_PATH': '/home/ollie/.config/Code/CachedData/07ff9d6178ede9a1bd12ad3399074d726ebe6e43', 'DBUS_STARTER_ADDRESS': 'unix:path=/run/user/1000/bus,guid=5a063e8b4eceabf03b9782a869c2c300', 'XDG_DATA_DIRS': '/home/ollie/snap/code/230/.local/share:/home/ollie/snap/code/230:/snap/code/230/usr/share:/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'SNAP_EUID': '1000', 'PYTHONPATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'SNAP': '/snap/code/230', 'COLCON': '1', 'VTE_VERSION': '6800', 'ELECTRON_NO_ATTACH_CONSOLE': '1', 'CMAKE_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation', 'VSCODE_PID': '9192', 'PYTHONDONTWRITEBYTECODE': '1', 'PYTEST_ADDOPTS': '--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/pytest.xml --junit-prefix=holoassist_unity_bridge -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/.pytest_cache'}, 'shell': False}
+[2.103350] (-) TimerEvent: {}
+[2.203555] (-) TimerEvent: {}
+[2.303760] (-) TimerEvent: {}
+[2.323582] (holoassist_unity_bridge) StdoutLine: {'line': b'============================= test session starts ==============================\n'}
+[2.323803] (holoassist_unity_bridge) StdoutLine: {'line': b'platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0\n'}
+[2.323863] (holoassist_unity_bridge) StdoutLine: {'line': b'cachedir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/.pytest_cache\n'}
+[2.323916] (holoassist_unity_bridge) StdoutLine: {'line': b'rootdir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge\n'}
+[2.323968] (holoassist_unity_bridge) StdoutLine: {'line': b'plugins: ament-pep257-0.12.15, ament-xmllint-0.12.15, launch-testing-1.0.14, launch-testing-ros-0.19.13, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-lint-0.12.15, colcon-core-0.20.1, cov-3.0.0\n'}
+[2.324016] (holoassist_unity_bridge) StdoutLine: {'line': b'collected 3 items\n'}
+[2.324057] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.329608] (holoassist_unity_bridge) StdoutLine: {'line': b'test/test_copyright.py s                                                 [ 33%]\n'}
+[2.403871] (-) TimerEvent: {}
+[2.423213] (holoassist_unity_bridge) StdoutLine: {'line': b'test/test_flake8.py F                                                    [ 66%]\n'}
+[2.439160] (holoassist_unity_bridge) StderrLine: {'line': b'=============================== warnings summary ===============================\n'}
+[2.439351] (holoassist_unity_bridge) StderrLine: {'line': b'test/test_flake8.py::test_flake8\n'}
+[2.439395] (holoassist_unity_bridge) StderrLine: {'line': b'test/test_flake8.py::test_flake8\n'}
+[2.439432] (holoassist_unity_bridge) StderrLine: {'line': b'  Warning: SelectableGroups dict interface is deprecated. Use select.\n'}
+[2.439465] (holoassist_unity_bridge) StderrLine: {'line': b'\n'}
+[2.439500] (holoassist_unity_bridge) StderrLine: {'line': b'-- Docs: https://docs.pytest.org/en/stable/warnings.html\n'}
+[2.439662] (holoassist_unity_bridge) StdoutLine: {'line': b'test/test_pep257.py .                                                    [100%]\n'}
+[2.439703] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.439734] (holoassist_unity_bridge) StdoutLine: {'line': b'=================================== FAILURES ===================================\n'}
+[2.439763] (holoassist_unity_bridge) StdoutLine: {'line': b'_________________________________ test_flake8 __________________________________\n'}
+[2.439792] (holoassist_unity_bridge) StdoutLine: {'line': b'test/test_flake8.py:23: in test_flake8\n'}
+[2.439820] (holoassist_unity_bridge) StdoutLine: {'line': b'    assert rc == 0, \\\n'}
+[2.439848] (holoassist_unity_bridge) StdoutLine: {'line': b'E   AssertionError: Found 2 code style errors / warnings:\n'}
+[2.439875] (holoassist_unity_bridge) StdoutLine: {'line': b'E     ./holoassist_unity_bridge/tcp_endpoint.launch.py:4:1: E302 expected 2 blank lines, found 1\n'}
+[2.439904] (holoassist_unity_bridge) StdoutLine: {'line': b'E     ./holoassist_unity_bridge/tcp_endpoint.launch.py:16:7: W292 no newline at end of file\n'}
+[2.439932] (holoassist_unity_bridge) StdoutLine: {'line': b'E   assert 1 == 0\n'}
+[2.439959] (holoassist_unity_bridge) StdoutLine: {'line': b'----------------------------- Captured stdout call -----------------------------\n'}
+[2.439990] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440020] (holoassist_unity_bridge) StdoutLine: {'line': b'./holoassist_unity_bridge/tcp_endpoint.launch.py:4:1: E302 expected 2 blank lines, found 1\n'}
+[2.440050] (holoassist_unity_bridge) StdoutLine: {'line': b'def generate_launch_description():\n'}
+[2.440080] (holoassist_unity_bridge) StdoutLine: {'line': b'^\n'}
+[2.440109] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440139] (holoassist_unity_bridge) StdoutLine: {'line': b'./holoassist_unity_bridge/tcp_endpoint.launch.py:16:7: W292 no newline at end of file\n'}
+[2.440168] (holoassist_unity_bridge) StdoutLine: {'line': b'    ])      ^\n'}
+[2.440202] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440236] (holoassist_unity_bridge) StdoutLine: {'line': b'1     E302 expected 2 blank lines, found 1\n'}
+[2.440267] (holoassist_unity_bridge) StdoutLine: {'line': b'1     W292 no newline at end of file\n'}
+[2.440302] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440344] (holoassist_unity_bridge) StdoutLine: {'line': b'8 files checked\n'}
+[2.440382] (holoassist_unity_bridge) StdoutLine: {'line': b'2 errors\n'}
+[2.440417] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440451] (holoassist_unity_bridge) StdoutLine: {'line': b"'E'-type errors: 1\n"}
+[2.440486] (holoassist_unity_bridge) StdoutLine: {'line': b"'W'-type errors: 1\n"}
+[2.440525] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440565] (holoassist_unity_bridge) StdoutLine: {'line': b'Checked files:\n'}
+[2.440608] (holoassist_unity_bridge) StdoutLine: {'line': b'\n'}
+[2.440655] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./setup.py\n'}
+[2.440705] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./holoassist_unity_bridge/tcp_endpoint.launch.py\n'}
+[2.440759] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./holoassist_unity_bridge/__init__.py\n'}
+[2.440817] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./test/test_copyright.py\n'}
+[2.440879] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./test/test_pep257.py\n'}
+[2.440947] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./test/test_flake8.py\n'}
+[2.441009] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./launch/tcp_endpoint.launch.py\n'}
+[2.441080] (holoassist_unity_bridge) StdoutLine: {'line': b'* ./launch/unity_movement_bringup.launch.py\n'}
+[2.441148] (holoassist_unity_bridge) StdoutLine: {'line': b'----------------------------- Captured stderr call -----------------------------\n'}
+[2.441233] (holoassist_unity_bridge) StdoutLine: {'line': b'option --max-complexity: please update from optparse string `type=` to argparse callable `type=` -- this will be an error in the future\n'}
+[2.441307] (holoassist_unity_bridge) StdoutLine: {'line': b'- generated xml file: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/pytest.xml -\n'}
+[2.441362] (holoassist_unity_bridge) StdoutLine: {'line': b'=========================== short test summary info ============================\n'}
+[2.441416] (holoassist_unity_bridge) StdoutLine: {'line': b'FAILED test/test_flake8.py::test_flake8 - AssertionError: Found 2 code style ...\n'}
+[2.441465] (holoassist_unity_bridge) StdoutLine: {'line': b'============== 1 failed, 1 passed, 1 skipped, 2 warnings in 0.17s ==============\n'}
+[2.503984] (-) TimerEvent: {}
+[2.505067] (holoassist_unity_bridge) CommandEnded: {'returncode': 1}
+[2.505384] (holoassist_unity_bridge) TestFailure: {'identifier': 'holoassist_unity_bridge'}
+[2.505401] (holoassist_unity_bridge) JobEnded: {'identifier': 'holoassist_unity_bridge', 'rc': 0}
+[2.505920] (-) EventReactorShutdown: {}

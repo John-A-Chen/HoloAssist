@@ -1,0 +1,4 @@
+source;share/holoassist_manipulation/local_setup.bash
+source;share/holoassist_manipulation/local_setup.dsv
+source;share/holoassist_manipulation/local_setup.sh
+source;share/holoassist_manipulation/local_setup.zsh

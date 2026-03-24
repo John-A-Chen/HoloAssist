@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite
+  name="holoassist_manipulation.pep257"
+  tests="1"
+  errors="0"
+  failures="0"
+  time="0.007"
+>
+  <testcase
+    name="./launch/click_to_plan.launch.py"
+    classname="holoassist_manipulation.pep257"/>
+  <system-out>Checked files:
+* ./launch/click_to_plan.launch.py</system-out>
+</testsuite>

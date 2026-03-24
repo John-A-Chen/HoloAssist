@@ -1,0 +1,138 @@
+[0.100s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'test', '--packages-select', 'holoassist_manipulation', 'holoassist_servo_tools', 'holoassist_unity_bridge', '--event-handlers', 'console_direct+']
+[0.100s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='test', build_base='build', install_base='install', merge_install=False, test_result_base=None, retest_until_fail=0, retest_until_pass=0, abort_on_error=False, return_code_on_test_failure=False, executor='parallel', parallel_workers=22, event_handlers=['console_direct+'], ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['holoassist_manipulation', 'holoassist_servo_tools', 'holoassist_unity_bridge'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], ctest_args=None, python_testing=None, pytest_args=None, pytest_with_coverage=False, unittest_args=None, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7f56d1a63850>, verb_extension=<colcon_core.verb.test.TestVerb object at 0x7f56d1a62680>, main=<bound method TestVerb.main of <colcon_core.verb.test.TestVerb object at 0x7f56d1a62680>>, mixin_verb=('test',))
+[0.201s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.202s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.202s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.202s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.202s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.202s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.202s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/ollie/git/1HoloAssist/ollie/ros2_ws'
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.202s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['ignore', 'ignore_ament_install']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ignore'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ignore_ament_install'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['colcon_pkg']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'colcon_pkg'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['colcon_meta']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'colcon_meta'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['ros']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ros'
+[0.213s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_manipulation' with type 'ros.ament_cmake' and name 'holoassist_manipulation'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['ignore', 'ignore_ament_install']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ignore'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ignore_ament_install'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['colcon_pkg']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'colcon_pkg'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['colcon_meta']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'colcon_meta'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['ros']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ros'
+[0.214s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_servo_tools' with type 'ros.ament_python' and name 'holoassist_servo_tools'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['ignore', 'ignore_ament_install']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ignore'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ignore_ament_install'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['colcon_pkg']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'colcon_pkg'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['colcon_meta']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'colcon_meta'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['ros']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ros'
+[0.215s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_unity_bridge' with type 'ros.ament_python' and name 'holoassist_unity_bridge'
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'ctest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'python_testing' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'pytest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'pytest_with_coverage' from command line to 'False'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'unittest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'retest_until_pass' from command line to '0'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' test argument 'retest_until_fail' from command line to '0'
+[0.217s] DEBUG:colcon.colcon_core.verb.test:Testing package 'holoassist_manipulation' with the following arguments: {'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation', 'ctest_args': None, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation', 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation', 'pytest_args': None, 'pytest_with_coverage': False, 'python_testing': None, 'retest_until_fail': 0, 'retest_until_pass': 0, 'test_result_base': None, 'unittest_args': None}
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'ctest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'python_testing' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'pytest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'pytest_with_coverage' from command line to 'False'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'unittest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'retest_until_pass' from command line to '0'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' test argument 'retest_until_fail' from command line to '0'
+[0.217s] DEBUG:colcon.colcon_core.verb.test:Testing package 'holoassist_servo_tools' with the following arguments: {'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools', 'ctest_args': None, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools', 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools', 'pytest_args': None, 'pytest_with_coverage': False, 'python_testing': None, 'retest_until_fail': 0, 'retest_until_pass': 0, 'test_result_base': None, 'unittest_args': None}
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'ctest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'python_testing' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'pytest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'pytest_with_coverage' from command line to 'False'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'unittest_args' from command line to 'None'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'retest_until_pass' from command line to '0'
+[0.217s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' test argument 'retest_until_fail' from command line to '0'
+[0.218s] DEBUG:colcon.colcon_core.verb.test:Testing package 'holoassist_unity_bridge' with the following arguments: {'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge', 'ctest_args': None, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge', 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge', 'pytest_args': None, 'pytest_with_coverage': False, 'python_testing': None, 'retest_until_fail': 0, 'retest_until_pass': 0, 'test_result_base': None, 'unittest_args': None}
+[0.218s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.218s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.219s] INFO:colcon.colcon_ros.task.ament_cmake.test:Testing ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation' with build type 'ament_cmake'
+[0.219s] INFO:colcon.colcon_cmake.task.cmake.test:Testing CMake package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation'
+[0.220s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.220s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.220s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.223s] INFO:colcon.colcon_ros.task.ament_python.test:Testing ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' with build type'ament_python'
+[0.223s] INFO:colcon.colcon_core.task.python.test:Testing Python package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools'
+[0.223s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.223s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.380s] Level 1:colcon.colcon_core.task.python.test:test() by extension 'pytest'
+[0.380s] Level 1:colcon.colcon_core.task.python.test:test.step() by extension 'pytest'
+[0.383s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest
+[0.384s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+[0.742s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' returned '0': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest
+[1.575s] INFO:colcon.colcon_ros.task.ament_python.test:Testing ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge' with build type'ament_python'
+[1.575s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '0': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+[1.575s] INFO:colcon.colcon_core.task.python.test:Testing Python package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge'
+[1.576s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.576s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.730s] Level 1:colcon.colcon_core.task.python.test:test() by extension 'pytest'
+[1.730s] Level 1:colcon.colcon_core.task.python.test:test.step() by extension 'pytest'
+[1.734s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge': PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/pytest.xml --junit-prefix=holoassist_unity_bridge -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m pytest
+[2.080s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[2.081s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge' returned '0': PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/pytest.xml --junit-prefix=holoassist_unity_bridge -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m pytest
+[2.081s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[2.081s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[2.082s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[2.086s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[2.086s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[2.086s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[2.098s] DEBUG:colcon.colcon_core.event_reactor:joined thread

@@ -1,0 +1,242 @@
+[0.079s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--packages-select', 'holoassist_manipulation', 'holoassist_servo_tools', 'holoassist_unity_bridge']
+[0.079s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=22, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['holoassist_manipulation', 'holoassist_servo_tools', 'holoassist_unity_bridge'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7d86bd7d65f0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7d86bd7d6140>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7d86bd7d6140>>, mixin_verb=('build',))
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.203s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.203s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/ollie/git/1HoloAssist/ollie/ros2_ws'
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.203s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['ignore', 'ignore_ament_install']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ignore'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ignore_ament_install'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['colcon_pkg']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'colcon_pkg'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['colcon_meta']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'colcon_meta'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extensions ['ros']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_manipulation) by extension 'ros'
+[0.213s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_manipulation' with type 'ros.ament_cmake' and name 'holoassist_manipulation'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['ignore', 'ignore_ament_install']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ignore'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ignore_ament_install'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['colcon_pkg']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'colcon_pkg'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['colcon_meta']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'colcon_meta'
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extensions ['ros']
+[0.213s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_servo_tools) by extension 'ros'
+[0.214s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_servo_tools' with type 'ros.ament_python' and name 'holoassist_servo_tools'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['ignore', 'ignore_ament_install']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ignore'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ignore_ament_install'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['colcon_pkg']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'colcon_pkg'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['colcon_meta']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'colcon_meta'
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extensions ['ros']
+[0.214s] Level 1:colcon.colcon_core.package_identification:_identify(src/holoassist_unity_bridge) by extension 'ros'
+[0.215s] DEBUG:colcon.colcon_core.package_identification:Package 'src/holoassist_unity_bridge' with type 'ros.ament_python' and name 'holoassist_unity_bridge'
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.215s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.234s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.235s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.236s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 335 installed packages in /opt/ros/humble
+[0.237s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.262s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_target' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_clean_cache' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_clean_first' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'cmake_force_configure' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'ament_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'catkin_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_manipulation' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.263s] DEBUG:colcon.colcon_core.verb:Building package 'holoassist_manipulation' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation', 'merge_install': False, 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation', 'symlink_install': False, 'test_result_base': None}
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_target' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_clean_cache' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_clean_first' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'cmake_force_configure' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'ament_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'catkin_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_servo_tools' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.263s] DEBUG:colcon.colcon_core.verb:Building package 'holoassist_servo_tools' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools', 'merge_install': False, 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools', 'symlink_install': False, 'test_result_base': None}
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_target' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_clean_cache' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_clean_first' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'cmake_force_configure' from command line to 'False'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'ament_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'catkin_cmake_args' from command line to 'None'
+[0.263s] Level 5:colcon.colcon_core.verb:set package 'holoassist_unity_bridge' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.263s] DEBUG:colcon.colcon_core.verb:Building package 'holoassist_unity_bridge' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge', 'merge_install': False, 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge', 'symlink_install': False, 'test_result_base': None}
+[0.263s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.264s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.264s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation' with build type 'ament_cmake'
+[0.264s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation'
+[0.267s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.267s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.267s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.269s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' with build type 'ament_python'
+[0.269s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_servo_tools', 'ament_prefix_path')
+[0.269s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/ament_prefix_path.ps1'
+[0.270s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/ament_prefix_path.dsv'
+[0.270s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/ament_prefix_path.sh'
+[0.270s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.270s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.276s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation -DCMAKE_INSTALL_PREFIX=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation
+[0.425s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools'
+[0.425s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.425s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.677s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_servo_tools build --build-base /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build install --record /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/install.log --single-version-externally-managed install_data
+[0.846s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' returned '0': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_servo_tools build --build-base /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build install --record /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/install.log --single-version-externally-managed install_data
+[0.848s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools' for CMake module files
+[0.848s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools' for CMake config files
+[0.849s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib'
+[0.849s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/bin'
+[0.849s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/pkgconfig/holoassist_servo_tools.pc'
+[0.849s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages'
+[0.849s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_servo_tools', 'pythonpath')
+[0.849s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/pythonpath.ps1'
+[0.849s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/pythonpath.dsv'
+[0.850s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/hook/pythonpath.sh'
+[0.850s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/bin'
+[0.850s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(holoassist_servo_tools)
+[0.850s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/package.ps1'
+[0.851s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/package.dsv'
+[0.851s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/package.sh'
+[0.852s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/package.bash'
+[0.852s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/package.zsh'
+[0.853s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/colcon-core/packages/holoassist_servo_tools)
+[1.563s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation -DCMAKE_INSTALL_PREFIX=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation
+[1.565s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation -- -j22 -l22
+[10.280s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation -- -j22 -l22
+[10.286s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation
+[10.299s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(holoassist_manipulation)
+[10.299s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation
+[10.299s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation' for CMake module files
+[10.300s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation' for CMake config files
+[10.300s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_manipulation', 'cmake_prefix_path')
+[10.300s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.ps1'
+[10.301s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.dsv'
+[10.301s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.sh'
+[10.302s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib'
+[10.302s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/bin'
+[10.302s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib/pkgconfig/holoassist_manipulation.pc'
+[10.302s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib/python3.10/site-packages'
+[10.302s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/bin'
+[10.303s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.ps1'
+[10.303s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.dsv'
+[10.303s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.sh'
+[10.304s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.bash'
+[10.304s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.zsh'
+[10.304s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/colcon-core/packages/holoassist_manipulation)
+[10.305s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(holoassist_manipulation)
+[10.305s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation' for CMake module files
+[10.306s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation' for CMake config files
+[10.306s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_manipulation', 'cmake_prefix_path')
+[10.306s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.ps1'
+[10.307s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.dsv'
+[10.307s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/hook/cmake_prefix_path.sh'
+[10.307s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib'
+[10.307s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/bin'
+[10.308s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib/pkgconfig/holoassist_manipulation.pc'
+[10.308s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/lib/python3.10/site-packages'
+[10.308s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/bin'
+[10.308s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.ps1'
+[10.308s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.dsv'
+[10.309s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.sh'
+[10.309s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.bash'
+[10.309s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/holoassist_manipulation/package.zsh'
+[10.309s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation/share/colcon-core/packages/holoassist_manipulation)
+[10.310s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge' with build type 'ament_python'
+[10.310s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_unity_bridge', 'ament_prefix_path')
+[10.310s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/ament_prefix_path.ps1'
+[10.310s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/ament_prefix_path.dsv'
+[10.310s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/ament_prefix_path.sh'
+[10.311s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[10.311s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[10.470s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge'
+[10.470s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[10.470s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[10.718s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_unity_bridge build --build-base /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/build install --record /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/install.log --single-version-externally-managed install_data
+[10.917s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge' for CMake module files
+[10.918s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge' returned '0': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_unity_bridge build --build-base /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/build install --record /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_unity_bridge/install.log --single-version-externally-managed install_data
+[10.919s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge' for CMake config files
+[10.919s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib'
+[10.919s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/bin'
+[10.919s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/pkgconfig/holoassist_unity_bridge.pc'
+[10.920s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages'
+[10.920s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_unity_bridge', 'pythonpath')
+[10.920s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/pythonpath.ps1'
+[10.920s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/pythonpath.dsv'
+[10.920s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/hook/pythonpath.sh'
+[10.921s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/bin'
+[10.921s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(holoassist_unity_bridge)
+[10.921s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/package.ps1'
+[10.921s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/package.dsv'
+[10.922s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/package.sh'
+[10.922s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/package.bash'
+[10.922s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/holoassist_unity_bridge/package.zsh'
+[10.922s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/share/colcon-core/packages/holoassist_unity_bridge)
+[10.922s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[10.922s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[10.922s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[10.922s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[10.928s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[10.928s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[10.928s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[10.940s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[10.940s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/local_setup.ps1'
+[10.941s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/_local_setup_util_ps1.py'
+[10.942s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/setup.ps1'
+[10.942s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/local_setup.sh'
+[10.943s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/_local_setup_util_sh.py'
+[10.943s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/setup.sh'
+[10.944s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/local_setup.bash'
+[10.945s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/setup.bash'
+[10.945s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/local_setup.zsh'
+[10.946s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/setup.zsh'

@@ -1,0 +1,78 @@
+[0.156s] Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest
+[0.387s] ============================= test session starts ==============================
+[0.388s] platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+[0.388s] cachedir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache
+[0.388s] rootdir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools
+[0.388s] plugins: ament-pep257-0.12.15, ament-xmllint-0.12.15, launch-testing-1.0.14, launch-testing-ros-0.19.13, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-lint-0.12.15, colcon-core-0.20.1, cov-3.0.0
+[0.388s] collected 3 items
+[0.388s] 
+[0.391s] test/test_copyright.py s                                                 [ 33%]
+[0.474s] test/test_flake8.py F                                                    [ 66%]
+[0.490s] =============================== warnings summary ===============================
+[0.490s] test/test_flake8.py::test_flake8
+[0.490s] test/test_flake8.py::test_flake8
+[0.490s]   Warning: SelectableGroups dict interface is deprecated. Use select.
+[0.490s] 
+[0.490s] -- Docs: https://docs.pytest.org/en/stable/warnings.html
+[0.490s] test/test_pep257.py .                                                    [100%]
+[0.490s] 
+[0.490s] =================================== FAILURES ===================================
+[0.491s] _________________________________ test_flake8 __________________________________
+[0.491s] test/test_flake8.py:23: in test_flake8
+[0.491s]     assert rc == 0, \
+[0.491s] E   AssertionError: Found 5 code style errors / warnings:
+[0.491s] E     ./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused
+[0.491s] E     ./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1
+[0.491s] E     ./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1
+[0.491s] E     ./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1
+[0.491s] E     ./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file
+[0.491s] E   assert 1 == 0
+[0.491s] ----------------------------- Captured stdout call -----------------------------
+[0.491s] 
+[0.491s] ./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused
+[0.491s] import math
+[0.491s] ^
+[0.491s] 
+[0.491s] ./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1
+[0.491s] class PoseToTwistServo(Node):
+[0.492s] ^
+[0.492s] 
+[0.492s] ./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1
+[0.492s] def main():
+[0.492s] ^
+[0.492s] 
+[0.492s] ./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1
+[0.492s] if __name__ == "__main__":
+[0.492s] ^
+[0.492s] 
+[0.492s] ./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file
+[0.492s]     main()          ^
+[0.492s] 
+[0.492s] 2     E302 expected 2 blank lines, found 1
+[0.492s] 1     E305 expected 2 blank lines after class or function definition, found 1
+[0.492s] 1     F401 'math' imported but unused
+[0.492s] 1     W292 no newline at end of file
+[0.492s] 
+[0.493s] 7 files checked
+[0.493s] 5 errors
+[0.493s] 
+[0.493s] 'E'-type errors: 3
+[0.493s] 'F'-type errors: 1
+[0.493s] 'W'-type errors: 1
+[0.493s] 
+[0.493s] Checked files:
+[0.493s] 
+[0.493s] * ./setup.py
+[0.493s] * ./test/test_copyright.py
+[0.493s] * ./test/test_pep257.py
+[0.493s] * ./test/test_flake8.py
+[0.493s] * ./launch/pose_to_twist_servo.launch.py
+[0.493s] * ./holoassist_servo_tools/pose_to_twist_servo.py
+[0.493s] * ./holoassist_servo_tools/__init__.py
+[0.493s] ----------------------------- Captured stderr call -----------------------------
+[0.493s] option --max-complexity: please update from optparse string `type=` to argparse callable `type=` -- this will be an error in the future
+[0.494s] - generated xml file: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml -
+[0.494s] =========================== short test summary info ============================
+[0.494s] FAILED test/test_flake8.py::test_flake8 - AssertionError: Found 5 code style ...
+[0.494s] ============== 1 failed, 1 passed, 1 skipped, 2 warnings in 0.16s ==============
+[0.538s] Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' returned '1': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest

@@ -8,7 +8,8 @@
 class ClickedPointToMoveIt : public rclcpp::Node
 {
 public:
-  ClickedPointToMoveIt() : Node("clicked_point_to_moveit")
+  ClickedPointToMoveIt()
+  : Node("clicked_point_to_moveit")
   {
     declare_parameter<std::string>("move_group_name", "ur_manipulator");
     declare_parameter<std::string>("planning_frame", "base_link");
@@ -24,11 +25,20 @@ public:
     // Ignore global launch remaps for the helper node so it keeps a unique name.
     // Otherwise launch's `name:=...` remap can rename both nodes in this process.
     auto moveit_node_options = rclcpp::NodeOptions().use_global_arguments(false);
-    moveit_node_ = std::make_shared<rclcpp::Node>("clicked_point_to_moveit_moveit", moveit_node_options);
+    moveit_node_ = std::make_shared<rclcpp::Node>(
+      "clicked_point_to_moveit_moveit",
+      moveit_node_options);
     move_group_name_ = get_parameter("move_group_name").as_string();
-    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(moveit_node_, move_group_name_);
+    move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
+      moveit_node_,
+      move_group_name_);
 
     RCLCPP_INFO(get_logger(), "Ready. Click points in RViz (Publish Point tool) on /clicked_point");
+  }
+
+  rclcpp::Node::SharedPtr getMoveItHelperNode() const
+  {
+    return moveit_node_;
   }
 
 private:
@@ -49,6 +59,7 @@ private:
     // Simple fixed orientation: yaw about Z, flat tool
     // Quaternion from roll=pi, pitch=0, yaw=yaw is often needed depending on UR tool definition
     // Keep it simple here: identity (you will tune later)
+    (void)yaw;
     target.pose.orientation.w = 1.0;
 
     publishMarker(target);
@@ -57,8 +68,7 @@ private:
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
     auto ok = (move_group_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-    if (!ok)
-    {
+    if (!ok) {
       RCLCPP_WARN(get_logger(), "Planning failed");
       return;
     }
@@ -67,7 +77,7 @@ private:
     move_group_->execute(plan);
   }
 
-  void publishMarker(const geometry_msgs::msg::PoseStamped& pose)
+  void publishMarker(const geometry_msgs::msg::PoseStamped & pose)
   {
     visualization_msgs::msg::Marker m;
     m.header = pose.header;
@@ -76,8 +86,13 @@ private:
     m.type = visualization_msgs::msg::Marker::SPHERE;
     m.action = visualization_msgs::msg::Marker::ADD;
     m.pose = pose.pose;
-    m.scale.x = 0.03; m.scale.y = 0.03; m.scale.z = 0.03;
-    m.color.a = 1.0; m.color.r = 0.1; m.color.g = 0.9; m.color.b = 0.1;
+    m.scale.x = 0.03;
+    m.scale.y = 0.03;
+    m.scale.z = 0.03;
+    m.color.a = 1.0;
+    m.color.r = 0.1;
+    m.color.g = 0.9;
+    m.color.b = 0.1;
     marker_pub_->publish(m);
   }
 
@@ -89,7 +104,7 @@ private:
   std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
 };
 
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<ClickedPointToMoveIt>();
@@ -97,7 +112,7 @@ int main(int argc, char** argv)
   // Need executor that spins both nodes (main node + moveit helper node)
   rclcpp::executors::MultiThreadedExecutor exec;
   exec.add_node(node);
-  exec.add_node(node->get_node_base_interface()); // harmless; keeps node alive
+  exec.add_node(node->getMoveItHelperNode());
   exec.spin();
 
   rclcpp::shutdown();

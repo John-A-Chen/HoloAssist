@@ -1,0 +1,2 @@
+Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_manipulation' returned '0': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process

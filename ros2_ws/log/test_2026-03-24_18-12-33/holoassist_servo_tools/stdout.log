@@ -1,0 +1,70 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache
+rootdir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools
+plugins: ament-pep257-0.12.15, ament-xmllint-0.12.15, launch-testing-1.0.14, launch-testing-ros-0.19.13, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-lint-0.12.15, colcon-core-0.20.1, cov-3.0.0
+collected 3 items
+
+test/test_copyright.py s                                                 [ 33%]
+test/test_flake8.py F                                                    [ 66%]
+test/test_pep257.py .                                                    [100%]
+
+=================================== FAILURES ===================================
+_________________________________ test_flake8 __________________________________
+test/test_flake8.py:23: in test_flake8
+    assert rc == 0, \
+E   AssertionError: Found 5 code style errors / warnings:
+E     ./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused
+E     ./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1
+E     ./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1
+E     ./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1
+E     ./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file
+E   assert 1 == 0
+----------------------------- Captured stdout call -----------------------------
+
+./holoassist_servo_tools/pose_to_twist_servo.py:1:1: F401 'math' imported but unused
+import math
+^
+
+./holoassist_servo_tools/pose_to_twist_servo.py:7:1: E302 expected 2 blank lines, found 1
+class PoseToTwistServo(Node):
+^
+
+./holoassist_servo_tools/pose_to_twist_servo.py:84:1: E302 expected 2 blank lines, found 1
+def main():
+^
+
+./holoassist_servo_tools/pose_to_twist_servo.py:91:1: E305 expected 2 blank lines after class or function definition, found 1
+if __name__ == "__main__":
+^
+
+./holoassist_servo_tools/pose_to_twist_servo.py:92:11: W292 no newline at end of file
+    main()          ^
+
+2     E302 expected 2 blank lines, found 1
+1     E305 expected 2 blank lines after class or function definition, found 1
+1     F401 'math' imported but unused
+1     W292 no newline at end of file
+
+7 files checked
+5 errors
+
+'E'-type errors: 3
+'F'-type errors: 1
+'W'-type errors: 1
+
+Checked files:
+
+* ./setup.py
+* ./test/test_copyright.py
+* ./test/test_pep257.py
+* ./test/test_flake8.py
+* ./launch/pose_to_twist_servo.launch.py
+* ./holoassist_servo_tools/pose_to_twist_servo.py
+* ./holoassist_servo_tools/__init__.py
+----------------------------- Captured stderr call -----------------------------
+option --max-complexity: please update from optparse string `type=` to argparse callable `type=` -- this will be an error in the future
+- generated xml file: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml -
+=========================== short test summary info ============================
+FAILED test/test_flake8.py::test_flake8 - AssertionError: Found 5 code style ...
+============== 1 failed, 1 passed, 1 skipped, 2 warnings in 0.16s ==============

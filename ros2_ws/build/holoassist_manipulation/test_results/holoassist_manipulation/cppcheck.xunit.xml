@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite
+  name="holoassist_manipulation.cppcheck"
+  tests="1"
+  errors="0"
+  failures="0"
+  time="0.000"
+  skipped="1"
+>
+  <testcase
+    name="src/clicked_point_to_moveit.cpp"
+    classname="holoassist_manipulation.cppcheck"
+  >
+    <skipped type="skip" message="">
+      ![CDATA[Test Skipped due to cppcheck 2.7 performance issues]]
+    </skipped>
+  </testcase>
+  <system-err>Tests Skipped due to cppcheck 2.7 performance issues</system-err>
+</testsuite>

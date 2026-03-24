@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite
+  name="holoassist_manipulation.uncrustify"
+  tests="1"
+  failures="0"
+  errors="0"
+  time="0.005"
+>
+  <testcase
+    name="src/clicked_point_to_moveit.cpp"
+    classname="holoassist_manipulation.uncrustify"/>
+  <system-out>Checked files:
+* src/clicked_point_to_moveit.cpp</system-out>
+</testsuite>

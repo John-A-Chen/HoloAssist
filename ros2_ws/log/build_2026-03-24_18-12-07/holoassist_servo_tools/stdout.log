@@ -1,0 +1,37 @@
+running egg_info
+creating ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info
+writing ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/PKG-INFO
+writing dependency_links to ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/dependency_links.txt
+writing entry points to ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/entry_points.txt
+writing requirements to ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/requires.txt
+writing top-level names to ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/top_level.txt
+writing manifest file '../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'
+reading manifest file '../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'
+writing manifest file '../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib/holoassist_servo_tools
+copying holoassist_servo_tools/pose_to_twist_servo.py -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib/holoassist_servo_tools
+copying holoassist_servo_tools/__init__.py -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib/holoassist_servo_tools
+running install
+running install_lib
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools
+copying /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib/holoassist_servo_tools/pose_to_twist_servo.py -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools
+copying /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/build/lib/holoassist_servo_tools/__init__.py -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools
+byte-compiling /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools/pose_to_twist_servo.py to pose_to_twist_servo.cpython-310.pyc
+byte-compiling /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/ament_index
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/ament_index/resource_index
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/ament_index/resource_index/packages
+copying resource/holoassist_servo_tools -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/ament_index/resource_index/packages
+copying package.xml -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools
+creating /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/launch
+copying launch/pose_to_twist_servo.launch.py -> /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/share/holoassist_servo_tools/launch
+running install_egg_info
+Copying ../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info to /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools-0.0.0-py3.10.egg-info
+running install_scripts
+Installing pose_to_twist_servo script to /home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/holoassist_servo_tools
+writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/install.log'

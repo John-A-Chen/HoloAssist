@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite
+  name="holoassist_manipulation.flake8"
+  tests="1"
+  errors="0"
+  failures="0"
+  time="0.038"
+>
+  <testcase
+    name="flake8"
+    classname="holoassist_manipulation.flake8"/>
+  <system-out>Checked files:
+* ./launch/click_to_plan.launch.py</system-out>
+</testsuite>

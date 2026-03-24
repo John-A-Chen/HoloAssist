@@ -1,0 +1,21 @@
+[0.159s] Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest
+[0.371s] ============================= test session starts ==============================
+[0.371s] platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+[0.372s] cachedir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache
+[0.372s] rootdir: /home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools
+[0.372s] plugins: ament-pep257-0.12.15, ament-xmllint-0.12.15, launch-testing-1.0.14, launch-testing-ros-0.19.13, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-lint-0.12.15, colcon-core-0.20.1, cov-3.0.0
+[0.372s] collected 3 items
+[0.372s] 
+[0.377s] test/test_copyright.py s                                                 [ 33%]
+[0.445s] test/test_flake8.py .                                                    [ 66%]
+[0.472s] 
+[0.472s] =============================== warnings summary ===============================
+[0.472s] test/test_flake8.py::test_flake8
+[0.472s] test/test_flake8.py::test_flake8
+[0.473s]   Warning: SelectableGroups dict interface is deprecated. Use select.
+[0.473s] 
+[0.473s] -- Docs: https://docs.pytest.org/en/stable/warnings.html
+[0.473s] test/test_pep257.py .                                                    [100%]
+[0.473s] - generated xml file: /home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml -
+[0.473s] =================== 2 passed, 1 skipped, 2 warnings in 0.14s ===================
+[0.518s] Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools' returned '0': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_manipulation:/opt/ros/humble PYTEST_ADDOPTS=--tb=short --junit-xml=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/pytest.xml --junit-prefix=holoassist_servo_tools -o cache_dir=/home/ollie/git/1HoloAssist/ollie/ros2_ws/build/holoassist_servo_tools/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_servo_tools/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/ros2_ws/install/holoassist_unity_bridge/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages /usr/bin/python3 -m pytest
