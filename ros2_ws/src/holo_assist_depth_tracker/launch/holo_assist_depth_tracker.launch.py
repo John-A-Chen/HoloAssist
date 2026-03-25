@@ -8,7 +8,7 @@ import os
 
 def generate_launch_description() -> LaunchDescription:
     default_params = os.path.join(
-        get_package_share_directory("depth_tracker"),
+        get_package_share_directory("holo_assist_depth_tracker"),
         "config",
         "tracker_params.yaml",
     )
@@ -20,9 +20,9 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     tracker_node = Node(
-        package="depth_tracker",
-        executable="depth_tracker_node",
-        name="depth_tracker",
+        package="holo_assist_depth_tracker",
+        executable="holo_assist_depth_tracker_node",
+        name="holo_assist_depth_tracker",
         output="screen",
         parameters=[LaunchConfiguration("params_file")],
     )

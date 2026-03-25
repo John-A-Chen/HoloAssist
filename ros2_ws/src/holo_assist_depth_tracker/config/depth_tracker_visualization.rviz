@@ -1,0 +1,86 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 30; 30; 30
+    Fixed Frame: camera_depth_optical_frame
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Plane: XY
+      Plane Cell Count: 20
+      Cell Size: 0.1
+      Color: 120; 120; 120
+      Alpha: 0.4
+      Line Style:
+        Value: Lines
+        Line Width: 0.03
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Depth PointCloud
+      Enabled: true
+      Topic:
+        Value: /holo_assist_depth_tracker/pointcloud
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.01
+      Alpha: 1
+      Decay Time: 0
+      Queue Size: 10
+      Color Transformer: AxisColor
+      Axis: Z
+      Position Transformer: XYZ
+      Selectable: true
+      Use Fixed Frame: true
+      Use rainbow: true
+    - Class: rviz_default_plugins/Marker
+      Name: Obstacle Marker
+      Enabled: true
+      Marker Topic:
+        Value: /holo_assist_depth_tracker/obstacle_marker
+      Queue Size: 100
+      Namespaces:
+        holo_assist_depth_tracker_obstacle: true
+    - Class: rviz_default_plugins/Image
+      Name: Tracker Debug Image
+      Enabled: true
+      Topic:
+        Value: /holo_assist_depth_tracker/debug_image
+      Queue Size: 2
+      Max Value: 1
+      Min Value: 0
+      Normalize Range: true
+      Median window: 5
+      Transport Hint: raw
+  Enabled: true
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.4
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 1.0
+      Pitch: 0.65
+      Yaw: 0.75
+Window Geometry:
+  Width: 1500
+  Height: 900
+  X: 100
+  Y: 80

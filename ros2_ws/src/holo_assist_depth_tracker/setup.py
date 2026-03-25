@@ -3,7 +3,7 @@ from glob import glob
 import os
 
 
-package_name = "depth_tracker"
+package_name = "holo_assist_depth_tracker"
 
 
 setup(
@@ -15,6 +15,7 @@ setup(
         (f"share/{package_name}", ["package.xml"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
+        (os.path.join("share", package_name, "config"), glob("config/*.rviz")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -25,7 +26,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "depth_tracker_node = depth_tracker.depth_tracker_node:main",
+            "holo_assist_depth_tracker_node = holo_assist_depth_tracker.depth_tracker_node:main",
+            "depth_tracker_node = holo_assist_depth_tracker.depth_tracker_node:main",
         ],
     },
 )

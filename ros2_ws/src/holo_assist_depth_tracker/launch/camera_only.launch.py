@@ -21,8 +21,8 @@ def generate_launch_description() -> LaunchDescription:
 
     depth_profile_arg = DeclareLaunchArgument(
         "depth_profile",
-        default_value="424,240,15",
-        description="Depth stream profile W,H,FPS (low bandwidth default)",
+        default_value="848,480,15",
+        description="Depth stream profile W,H,FPS (higher resolution default)",
     )
 
     rs_launch = IncludeLaunchDescription(

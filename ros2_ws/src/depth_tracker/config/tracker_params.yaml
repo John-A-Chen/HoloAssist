@@ -1,8 +1,0 @@
-depth_tracker:
-  ros__parameters:
-    depth_topic: "/camera/camera/depth/image_rect_raw"
-    camera_info_topic: "/camera/camera/depth/camera_info"
-    min_depth_m: 2.0
-    max_depth_m: 5.0
-    min_area_px: 400
-    morph_kernel: 5

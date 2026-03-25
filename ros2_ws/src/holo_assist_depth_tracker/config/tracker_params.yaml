@@ -1,0 +1,20 @@
+holo_assist_depth_tracker:
+  ros__parameters:
+    depth_topic: /camera/camera/depth/image_rect_raw
+    camera_info_topic: /camera/camera/depth/camera_info
+
+    min_depth_m: 0.3
+    max_depth_m: 10.0
+    min_area_px: 100
+    morph_kernel: 3
+
+    publish_pointcloud: true
+    pointcloud_topic: /holo_assist_depth_tracker/pointcloud
+    point_stride_px: 2
+    temporal_alpha: 0.35
+    max_points: 120000
+
+    publish_obstacle_marker: true
+    obstacle_topic: /holo_assist_depth_tracker/obstacle_marker
+    obstacle_padding_m: 0.05
+    obstacle_min_size_m: 0.08
