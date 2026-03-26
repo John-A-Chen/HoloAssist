@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
+find_package(moveit_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -21,7 +23,22 @@ ament_target_dependencies(clicked_point_to_moveit
   moveit_ros_planning_interface
 )
 
-install(TARGETS clicked_point_to_moveit
+add_executable(pointcloud_to_moveit_obstacle src/pointcloud_to_moveit_obstacle.cpp)
+ament_target_dependencies(pointcloud_to_moveit_obstacle
+  rclcpp
+  geometry_msgs
+  sensor_msgs
+  shape_msgs
+  moveit_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  moveit_ros_planning_interface
+)
+
+install(TARGETS
+  clicked_point_to_moveit
+  pointcloud_to_moveit_obstacle
   DESTINATION lib/${PROJECT_NAME}
 )
 
