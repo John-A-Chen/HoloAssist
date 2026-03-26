@@ -1,0 +1,3 @@
+[console_scripts]
+manager_node = holoassist_manager.manager_node:main
+

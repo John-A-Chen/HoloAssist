@@ -1,0 +1,39 @@
+running egg_info
+creating ../../build/holoassist_manager/holoassist_manager.egg-info
+writing ../../build/holoassist_manager/holoassist_manager.egg-info/PKG-INFO
+writing dependency_links to ../../build/holoassist_manager/holoassist_manager.egg-info/dependency_links.txt
+writing entry points to ../../build/holoassist_manager/holoassist_manager.egg-info/entry_points.txt
+writing requirements to ../../build/holoassist_manager/holoassist_manager.egg-info/requires.txt
+writing top-level names to ../../build/holoassist_manager/holoassist_manager.egg-info/top_level.txt
+writing manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+reading manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+writing manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+copying holoassist_manager/__init__.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+copying holoassist_manager/manager_node.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+running install
+running install_lib
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+copying /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager/__init__.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+copying /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager/manager_node.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+byte-compiling /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager/manager_node.py to manager_node.cpython-310.pyc
+running install_data
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index/packages
+copying resource/holoassist_manager -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index/packages
+copying package.xml -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/launch
+copying launch/manager.launch.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/launch
+creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/config
+copying config/manager_params.yaml -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/config
+running install_egg_info
+Copying ../../build/holoassist_manager/holoassist_manager.egg-info to /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager-0.1.0-py3.10.egg-info
+running install_scripts
+Installing manager_node script to /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/holoassist_manager
+writing list of installed files to '/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/install.log'

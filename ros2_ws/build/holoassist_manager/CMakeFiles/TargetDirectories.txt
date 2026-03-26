@@ -1,0 +1,10 @@
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/uninstall.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/holoassist_manager_uninstall.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/manager_node.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/test.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/edit_cache.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/rebuild_cache.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/list_install_components.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/install.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/install/local.dir
+/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/CMakeFiles/install/strip.dir

@@ -1,0 +1,41 @@
+[0.442s] Invoking command in '/home/sebastian/git/rs2/HoloAssist/ros2_ws/src/holoassist_manager': PYTHONPATH=/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_manager build --build-base /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build install --record /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/install.log --single-version-externally-managed install_data
+[0.588s] running egg_info
+[0.588s] creating ../../build/holoassist_manager/holoassist_manager.egg-info
+[0.589s] writing ../../build/holoassist_manager/holoassist_manager.egg-info/PKG-INFO
+[0.589s] writing dependency_links to ../../build/holoassist_manager/holoassist_manager.egg-info/dependency_links.txt
+[0.589s] writing entry points to ../../build/holoassist_manager/holoassist_manager.egg-info/entry_points.txt
+[0.589s] writing requirements to ../../build/holoassist_manager/holoassist_manager.egg-info/requires.txt
+[0.589s] writing top-level names to ../../build/holoassist_manager/holoassist_manager.egg-info/top_level.txt
+[0.589s] writing manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+[0.590s] reading manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+[0.590s] writing manifest file '../../build/holoassist_manager/holoassist_manager.egg-info/SOURCES.txt'
+[0.590s] running build
+[0.590s] running build_py
+[0.590s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build
+[0.590s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib
+[0.590s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+[0.590s] copying holoassist_manager/__init__.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+[0.591s] copying holoassist_manager/manager_node.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager
+[0.591s] running install
+[0.591s] running install_lib
+[0.592s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+[0.592s] copying /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager/__init__.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+[0.592s] copying /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build/lib/holoassist_manager/manager_node.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager
+[0.592s] byte-compiling /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager/__init__.py to __init__.cpython-310.pyc
+[0.592s] byte-compiling /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager/manager_node.py to manager_node.cpython-310.pyc
+[0.593s] running install_data
+[0.593s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index
+[0.594s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index
+[0.594s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index/packages
+[0.594s] copying resource/holoassist_manager -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/ament_index/resource_index/packages
+[0.594s] copying package.xml -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager
+[0.594s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/launch
+[0.594s] copying launch/manager.launch.py -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/launch
+[0.594s] creating /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/config
+[0.594s] copying config/manager_params.yaml -> /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/share/holoassist_manager/config
+[0.594s] running install_egg_info
+[0.595s] Copying ../../build/holoassist_manager/holoassist_manager.egg-info to /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages/holoassist_manager-0.1.0-py3.10.egg-info
+[0.595s] running install_scripts
+[0.608s] Installing manager_node script to /home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/holoassist_manager
+[0.608s] writing list of installed files to '/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/install.log'
+[0.623s] Invoked command in '/home/sebastian/git/rs2/HoloAssist/ros2_ws/src/holoassist_manager' returned '0': PYTHONPATH=/home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sebastian/git/rs2/HoloAssist/ros2_ws/install/holoassist_manager/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/holoassist_manager build --build-base /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/build install --record /home/sebastian/git/rs2/HoloAssist/ros2_ws/build/holoassist_manager/install.log --single-version-externally-managed install_data
