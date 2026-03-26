@@ -1,0 +1,2 @@
+/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp/CMakeLists.txt
+/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp/GameActivity/CMakeLists.txt

@@ -1,0 +1,10 @@
+# ninja log v5
+1	528	1771938206096385981	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ebef68288285ffb
+1	541	1771938206109385767	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	840c6b33492d2c38
+2	557	1771938206125385503	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	779635973368633b
+1	591	1771938206159384942	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	365a4adeb4c0add8
+2	666	1771938206235383689	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3dcbd91b2f01288b
+1	745	1771938206313382403	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	740e937b56dcbe6c
+1	750	1771938206318382321	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	feb4b5d5b5e83df4
+0	798	1771938206365381546	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	b0de57bc1ed302e5
+798	820	1771938206390381134	/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5h46372q/obj/arm64-v8a/libgame.so	8ce7fbd86da665cb
