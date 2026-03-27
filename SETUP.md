@@ -1,12 +1,16 @@
 # HoloAssist — Setup Guide
 
-This guide gets you up to speed with the current state of the `nic` branch. The goal right now is a **digital twin**: the UR3e robot in Unity mirrors the real robot's joint positions in real time via ROS 2.
+This guide gets you up to speed with the current state of the `nic` branch. The system provides a **digital twin** (UR3e mirrored in Unity via ROS 2) and **XR teleoperation** (Quest 3 controllers drive the real robot).
 
 ## Current State
 
 - Unity project set up with Meta XR SDK, ROS-TCP-Connector, and URDF-Importer
 - UR3e URDF imported into Unity with visual meshes
-- `JointStateSubscriber.cs` script written — subscribes to `/joint_states` and drives robot joints
+- **Digital twin**: `JointStateSubscriber.cs` subscribes to `/joint_states` and drives robot joints (purely kinematic, no physics)
+- **Robot control**: `RobotController.cs` with two modes — Direct Joint (jog individual joints) and MoveIt Servo (Cartesian end-effector velocity)
+- **Robot placement**: `RobotBasePlacer.cs` lets you pinch-to-grab and reposition the robot in mixed reality
+- **HUD**: `RobotHUD.cs` shows current control mode and selected joint in a floating panel
+- Input via Unity Input System (`RobotControlActions.inputactions`) — no OVRInput dependency
 - `ros_tcp_endpoint` built in the ROS workspace
 - UR ROS2 driver cloned from source (fixes segfault in apt version)
 
@@ -88,11 +92,18 @@ cp /opt/ros/humble/share/ur_description/meshes/ur3e/collision/*.stl "Unity/My pr
 - ROS IP Address: `127.0.0.1` (same machine) or your Linux machine's IP
 - ROS Port: `10000`
 
-### JointStateSubscriber script
+### Scripts
 
-`Assets/Scripts/JointStateSubscriber.cs` is already written. Attach it to the root `ur` GameObject in the scene. On Play it will find all joints automatically and subscribe to `/joint_states`.
+All scripts are in `Assets/Scripts/`. Attach them as follows:
 
-**Note:** Disable gravity on the root `ur` ArticulationBody (uncheck Use Gravity) so the robot doesn't fall when Play is pressed.
+| Script | Attach to | Inspector setup |
+|---|---|---|
+| `JointStateSubscriber.cs` | Root `ur` GameObject | None — auto-discovers joints |
+| `RobotController.cs` | Any GameObject | Drag `RobotControlActions.inputactions` into **Input Actions** field |
+| `RobotBasePlacer.cs` | Empty parent wrapper (e.g. `RobotRig`) containing `ur` as child | None |
+| `RobotHUD.cs` | Empty GameObject | Drag the RobotController GameObject into **Controller** field |
+
+**Note:** JointStateSubscriber disables all ArticulationBody components on Start (purely kinematic). No need to manually disable gravity.
 
 ## Launch Sequence (real robot, IP: 192.168.0.194)
 
@@ -106,15 +117,37 @@ ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=192.168
 source /opt/ros/humble/setup.bash
 source ros2_ws/install/setup.bash
 ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
+
+# Terminal 3 — MoveIt Servo (only needed for Servo mode, not Direct Joint)
+source /opt/ros/humble/setup.bash
+source ros2_ws/install/setup.bash
+ros2 launch ur_moveit_config ur_moveit.launch.py ur_type:=ur3e launch_rviz:=false launch_servo:=true
 ```
 
-Then on the **teach pendant**: load and run the External Control program.
+Then on the **teach pendant**: load and run the External Control program (Host IP: `192.168.0.100`).
 
 Then hit **Play** in Unity.
+
+## Controller Mapping (Quest 3)
+
+| Input | Direct Joint Mode | MoveIt Servo Mode |
+|---|---|---|
+| **Menu button** (left) | Toggle to Servo | Toggle to Direct Joint |
+| **A button** (right) | Next joint | — |
+| **B button** (right) | Previous joint | — |
+| **Right stick Y** | Jog selected joint (proportional velocity) | End-effector up/down |
+| **Right stick X** | — | End-effector yaw |
+| **Left stick Y** | — | End-effector forward/back |
+| **Left stick X** | — | End-effector left/right |
+
+- **Direct Joint mode** works with Terminals 1+2 only
+- **Servo mode** requires all 3 terminals (MoveIt Servo must be running)
 
 ## Known Issues
 
 - **UR driver segfault (exit code -11)** — affects apt-installed `ros-humble-ur-robot-driver` on Ubuntu 22.04. Fix: build from source (see above).
-- **Robot falls in Unity** — disable gravity on the root `ur` ArticulationBody.
 - **Git HTTPS clone fails** — use SSH (`git@github.com:...`) for all cloning.
 - **Unity Package Manager can't find robotics packages** — clone locally and reference via `file://` in manifest.json.
+- **ros_tcp_endpoint crashes on Unity disconnect/reconnect** — restart the endpoint after every Unity Play/Stop cycle.
+- **Do NOT use OVRInput** — the MR template uses Unity Input System, not OVR. `OVRInput.Get()` returns zero without `OVRManager`. All controller input goes through `RobotControlActions.inputactions`.
+- **XRI input conflicts** — XRI Default Input Actions bind thumbsticks to teleport/turn/move. `RobotController.cs` disables these automatically at runtime. If you add new XRI features, check for binding conflicts.

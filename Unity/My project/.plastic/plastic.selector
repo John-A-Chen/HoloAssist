@@ -1,0 +1,4 @@
+repository "41069 Robotics Studio 2/My project@16768330389180@cloud"
+  path "/"
+    br "/main"
+    co "/main"

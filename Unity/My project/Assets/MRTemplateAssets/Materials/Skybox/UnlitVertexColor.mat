@@ -194,6 +194,7 @@ Material:
     - _VertexOffsetY: 0
     - _WeightBold: 0.5
     - _WeightNormal: 0
+    - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
