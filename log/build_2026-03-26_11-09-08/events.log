@@ -1,0 +1,355 @@
+[0.000000] (-) TimerEvent: {}
+[0.000409] (holoassist_manipulation) JobQueued: {'identifier': 'holoassist_manipulation', 'dependencies': OrderedDict()}
+[0.000510] (holoassist_movement) JobQueued: {'identifier': 'holoassist_movement', 'dependencies': OrderedDict()}
+[0.000606] (holoassist_servo_tools) JobQueued: {'identifier': 'holoassist_servo_tools', 'dependencies': OrderedDict()}
+[0.000664] (holoassist_unity_bridge) JobQueued: {'identifier': 'holoassist_unity_bridge', 'dependencies': OrderedDict([('holoassist_manipulation', '/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation'), ('holoassist_servo_tools', '/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools')])}
+[0.000743] (holoassist_manipulation) JobStarted: {'identifier': 'holoassist_manipulation'}
+[0.004264] (holoassist_servo_tools) JobStarted: {'identifier': 'holoassist_servo_tools'}
+[0.007678] (holoassist_movement) JobStarted: {'identifier': 'holoassist_movement'}
+[0.011364] (holoassist_manipulation) JobProgress: {'identifier': 'holoassist_manipulation', 'progress': 'cmake'}
+[0.011794] (holoassist_manipulation) Command: {'cmd': ['/usr/bin/cmake', '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation', '-DCMAKE_INSTALL_PREFIX=/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'ollie'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/ollie'), ('OLDPWD', '/home/ollie/git/1HoloAssist/ollie'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '1130'), ('SYSTEMD_EXEC_PID', '1289'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8188'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'ollie'), ('JOURNAL_STREAM', '8:4368'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'ollie'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265'), ('INVOCATION_ID', '3b4e249087b74bf09b2ef0313136ee33'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.DM7LM3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement')]), 'shell': False}
+[0.099788] (-) TimerEvent: {}
+[0.200146] (-) TimerEvent: {}
+[0.263376] (holoassist_manipulation) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.263984] (holoassist_manipulation) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.264313] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.264386] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.264524] (holoassist_manipulation) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.264587] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.264649] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.264708] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.300257] (-) TimerEvent: {}
+[0.313075] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.320914] (holoassist_manipulation) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.321194] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.321714] (holoassist_manipulation) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.328494] (holoassist_manipulation) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.400392] (-) TimerEvent: {}
+[0.464718] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.500473] (-) TimerEvent: {}
+[0.575953] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rclcpp: 16.0.18 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[0.600585] (-) TimerEvent: {}
+[0.634774] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.639535] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.649591] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.665746] (holoassist_manipulation) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.682045] (holoassist_manipulation) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.700684] (-) TimerEvent: {}
+[0.723049] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.725463] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[0.781779] (holoassist_movement) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../../build/holoassist_movement', 'build', '--build-base', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build', 'install', '--record', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement', 'env': {'GJS_DEBUG_TOPICS': 'JS ERROR;JS LOG', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_AU:en', 'USER': 'ollie', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib', 'HOME': '/home/ollie', 'OLDPWD': '/home/ollie/git/1HoloAssist/ollie', 'DESKTOP_SESSION': 'ubuntu', 'GIO_LAUNCHED_DESKTOP_FILE': '/usr/share/applications/terminator.desktop', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'MANAGERPID': '1130', 'SYSTEMD_EXEC_PID': '1289', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '8188', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'ollie', 'JOURNAL_STREAM': '8:4368', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'ollie', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265', 'INVOCATION_ID': '3b4e249087b74bf09b2ef0313136ee33', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'IBUS_DISABLE_SNOOPER': '1', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.DM7LM3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'SSH_AGENT_LAUNCHER': 'gnome-keyring', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'AMENT_PREFIX_PATH': '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement', 'SHELL': '/bin/bash', 'TERMINATOR_UUID': 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'GJS_DEBUG_OUTPUT': 'stderr', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages', 'COLCON': '1', 'VTE_VERSION': '6800'}, 'shell': False}
+[0.787528] (holoassist_servo_tools) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../../build/holoassist_servo_tools', 'build', '--build-base', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build', 'install', '--record', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_servo_tools', 'env': {'GJS_DEBUG_TOPICS': 'JS ERROR;JS LOG', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_AU:en', 'USER': 'ollie', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib', 'HOME': '/home/ollie', 'OLDPWD': '/home/ollie/git/1HoloAssist/ollie', 'DESKTOP_SESSION': 'ubuntu', 'GIO_LAUNCHED_DESKTOP_FILE': '/usr/share/applications/terminator.desktop', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'MANAGERPID': '1130', 'SYSTEMD_EXEC_PID': '1289', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '8188', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'ollie', 'JOURNAL_STREAM': '8:4368', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'ollie', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265', 'INVOCATION_ID': '3b4e249087b74bf09b2ef0313136ee33', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'IBUS_DISABLE_SNOOPER': '1', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.DM7LM3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'SSH_AGENT_LAUNCHER': 'gnome-keyring', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'AMENT_PREFIX_PATH': '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement', 'SHELL': '/bin/bash', 'TERMINATOR_UUID': 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'GJS_DEBUG_OUTPUT': 'stderr', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages', 'COLCON': '1', 'VTE_VERSION': '6800'}, 'shell': False}
+[0.800798] (-) TimerEvent: {}
+[0.815917] (holoassist_manipulation) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[0.846387] (holoassist_manipulation) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[0.893626] (holoassist_manipulation) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[0.900881] (-) TimerEvent: {}
+[0.904633] (holoassist_manipulation) StdoutLine: {'line': b'-- Looking for pthread.h\n'}
+[0.985223] (holoassist_manipulation) StdoutLine: {'line': b'-- Looking for pthread.h - found\n'}
+[0.985484] (holoassist_manipulation) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[1.000979] (-) TimerEvent: {}
+[1.026592] (holoassist_movement) StdoutLine: {'line': b'running egg_info\n'}
+[1.027249] (holoassist_movement) StdoutLine: {'line': b'writing ../../../build/holoassist_movement/holoassist_movement.egg-info/PKG-INFO\n'}
+[1.027441] (holoassist_movement) StdoutLine: {'line': b'writing dependency_links to ../../../build/holoassist_movement/holoassist_movement.egg-info/dependency_links.txt\n'}
+[1.027602] (holoassist_movement) StdoutLine: {'line': b'writing entry points to ../../../build/holoassist_movement/holoassist_movement.egg-info/entry_points.txt\n'}
+[1.028609] (holoassist_movement) StdoutLine: {'line': b'writing requirements to ../../../build/holoassist_movement/holoassist_movement.egg-info/requires.txt\n'}
+[1.028794] (holoassist_movement) StdoutLine: {'line': b'writing top-level names to ../../../build/holoassist_movement/holoassist_movement.egg-info/top_level.txt\n'}
+[1.030796] (holoassist_movement) StdoutLine: {'line': b"reading manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'\n"}
+[1.031577] (holoassist_movement) StdoutLine: {'line': b"writing manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'\n"}
+[1.031756] (holoassist_movement) StdoutLine: {'line': b'running build\n'}
+[1.031829] (holoassist_movement) StdoutLine: {'line': b'running build_py\n'}
+[1.031925] (holoassist_movement) StdoutLine: {'line': b'copying holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement\n'}
+[1.032153] (holoassist_movement) StdoutLine: {'line': b'copying holoassist_movement/robot_demo_control.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement\n'}
+[1.032544] (holoassist_movement) StdoutLine: {'line': b'running install\n'}
+[1.032845] (holoassist_movement) StdoutLine: {'line': b'running install_lib\n'}
+[1.033618] (holoassist_movement) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement\n'}
+[1.033799] (holoassist_movement) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/robot_demo_control.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement\n'}
+[1.034306] (holoassist_movement) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/robot_state.py to robot_state.cpython-310.pyc\n'}
+[1.035109] (holoassist_movement) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/robot_demo_control.py to robot_demo_control.cpython-310.pyc\n'}
+[1.035988] (holoassist_movement) StdoutLine: {'line': b'running install_data\n'}
+[1.036131] (holoassist_movement) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.037942] (holoassist_movement) StdoutLine: {'line': b"removing '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info' (and everything under it)\n"}
+[1.038176] (holoassist_movement) StdoutLine: {'line': b'Copying ../../../build/holoassist_movement/holoassist_movement.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info\n'}
+[1.038796] (holoassist_movement) StdoutLine: {'line': b'running install_scripts\n'}
+[1.043439] (holoassist_servo_tools) StdoutLine: {'line': b'running egg_info\n'}
+[1.043970] (holoassist_servo_tools) StdoutLine: {'line': b'creating ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info\n'}
+[1.044124] (holoassist_servo_tools) StdoutLine: {'line': b'writing ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/PKG-INFO\n'}
+[1.044285] (holoassist_servo_tools) StdoutLine: {'line': b'writing dependency_links to ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/dependency_links.txt\n'}
+[1.044394] (holoassist_servo_tools) StdoutLine: {'line': b'writing entry points to ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/entry_points.txt\n'}
+[1.044547] (holoassist_servo_tools) StdoutLine: {'line': b'writing requirements to ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/requires.txt\n'}
+[1.044715] (holoassist_servo_tools) StdoutLine: {'line': b'writing top-level names to ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/top_level.txt\n'}
+[1.044789] (holoassist_servo_tools) StdoutLine: {'line': b"writing manifest file '../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'\n"}
+[1.047040] (holoassist_servo_tools) StdoutLine: {'line': b"reading manifest file '../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'\n"}
+[1.047581] (holoassist_servo_tools) StdoutLine: {'line': b"writing manifest file '../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info/SOURCES.txt'\n"}
+[1.047702] (holoassist_servo_tools) StdoutLine: {'line': b'running build\n'}
+[1.047780] (holoassist_servo_tools) StdoutLine: {'line': b'running build_py\n'}
+[1.047884] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build\n'}
+[1.047978] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib\n'}
+[1.048055] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib/holoassist_servo_tools\n'}
+[1.048128] (holoassist_servo_tools) StdoutLine: {'line': b'copying holoassist_servo_tools/pose_to_twist_servo.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib/holoassist_servo_tools\n'}
+[1.048269] (holoassist_servo_tools) StdoutLine: {'line': b'copying holoassist_servo_tools/__init__.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib/holoassist_servo_tools\n'}
+[1.048368] (holoassist_servo_tools) StdoutLine: {'line': b'running install\n'}
+[1.048468] (holoassist_servo_tools) StdoutLine: {'line': b'running install_lib\n'}
+[1.048958] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools\n'}
+[1.049053] (holoassist_servo_tools) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib/holoassist_servo_tools/pose_to_twist_servo.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools\n'}
+[1.049149] (holoassist_servo_tools) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/build/lib/holoassist_servo_tools/__init__.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools\n'}
+[1.049465] (holoassist_servo_tools) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools/pose_to_twist_servo.py to pose_to_twist_servo.cpython-310.pyc\n'}
+[1.050181] (holoassist_servo_tools) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools/__init__.py to __init__.cpython-310.pyc\n'}
+[1.050274] (holoassist_servo_tools) StdoutLine: {'line': b'running install_data\n'}
+[1.050375] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/ament_index\n'}
+[1.050485] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/ament_index/resource_index\n'}
+[1.050558] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/ament_index/resource_index/packages\n'}
+[1.050630] (holoassist_servo_tools) StdoutLine: {'line': b'copying resource/holoassist_servo_tools -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/ament_index/resource_index/packages\n'}
+[1.050721] (holoassist_servo_tools) StdoutLine: {'line': b'copying package.xml -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/holoassist_servo_tools\n'}
+[1.050823] (holoassist_servo_tools) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/holoassist_servo_tools/launch\n'}
+[1.050892] (holoassist_servo_tools) StdoutLine: {'line': b'copying launch/pose_to_twist_servo.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/share/holoassist_servo_tools/launch\n'}
+[1.050965] (holoassist_servo_tools) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.052318] (holoassist_servo_tools) StdoutLine: {'line': b'Copying ../../../build/holoassist_servo_tools/holoassist_servo_tools.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages/holoassist_servo_tools-0.0.0-py3.10.egg-info\n'}
+[1.052864] (holoassist_servo_tools) StdoutLine: {'line': b'running install_scripts\n'}
+[1.059594] (holoassist_movement) StdoutLine: {'line': b'Installing move_to_joints script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement\n'}
+[1.059790] (holoassist_movement) StdoutLine: {'line': b'Installing robot_demo_control script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement\n'}
+[1.059923] (holoassist_movement) StdoutLine: {'line': b'Installing robot_state script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement\n'}
+[1.060204] (holoassist_movement) StdoutLine: {'line': b"writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log'\n"}
+[1.062319] (holoassist_manipulation) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[1.063459] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[1.071205] (holoassist_servo_tools) StdoutLine: {'line': b'Installing pose_to_twist_servo script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/holoassist_servo_tools\n'}
+[1.071489] (holoassist_servo_tools) StdoutLine: {'line': b"writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_servo_tools/install.log'\n"}
+[1.084954] (holoassist_movement) CommandEnded: {'returncode': 0}
+[1.097726] (holoassist_movement) JobEnded: {'identifier': 'holoassist_movement', 'rc': 0}
+[1.099105] (holoassist_servo_tools) CommandEnded: {'returncode': 0}
+[1.101067] (-) TimerEvent: {}
+[1.104470] (holoassist_servo_tools) JobEnded: {'identifier': 'holoassist_servo_tools', 'rc': 0}
+[1.117473] (holoassist_manipulation) StdoutLine: {'line': b'-- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)\n'}
+[1.132065] (holoassist_manipulation) StdoutLine: {'line': b'-- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[1.151915] (holoassist_manipulation) StdoutLine: {'line': b'-- Found tf2: 0.25.19 (/opt/ros/humble/share/tf2/cmake)\n'}
+[1.161213] (holoassist_manipulation) StdoutLine: {'line': b'-- Found tf2_ros: 0.25.19 (/opt/ros/humble/share/tf2_ros/cmake)\n'}
+[1.201253] (-) TimerEvent: {}
+[1.248864] (holoassist_manipulation) StdoutLine: {'line': b'-- Found tf2_geometry_msgs: 0.25.19 (/opt/ros/humble/share/tf2_geometry_msgs/cmake)\n'}
+[1.260095] (holoassist_manipulation) StdoutLine: {'line': b'-- Found eigen3_cmake_module: 0.1.1 (/opt/ros/humble/share/eigen3_cmake_module/cmake)\n'}
+[1.261362] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Eigen3: TRUE (found version "3.4.0") \n'}
+[1.261536] (holoassist_manipulation) StdoutLine: {'line': b'-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target\n'}
+[1.263842] (holoassist_manipulation) StdoutLine: {'line': b'-- Found visualization_msgs: 4.9.1 (/opt/ros/humble/share/visualization_msgs/cmake)\n'}
+[1.282883] (holoassist_manipulation) StdoutLine: {'line': b'-- Found moveit_ros_planning_interface: 2.5.9 (/opt/ros/humble/share/moveit_ros_planning_interface/cmake)\n'}
+[1.301345] (-) TimerEvent: {}
+[1.305716] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: date_time filesystem program_options system thread \n'}
+[1.401485] (-) TimerEvent: {}
+[1.419932] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: chrono date_time filesystem iostreams program_options regex serialization system thread \n'}
+[1.454167] (holoassist_manipulation) StdoutLine: {'line': b'-- Found parameter_traits: 0.7.0 (/opt/ros/humble/share/parameter_traits/cmake)\n'}
+[1.472685] (holoassist_manipulation) StdoutLine: {'line': b'-- Found rclcpp_lifecycle: 16.0.18 (/opt/ros/humble/share/rclcpp_lifecycle/cmake)\n'}
+[1.495663] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: filesystem \n'}
+[1.501611] (-) TimerEvent: {}
+[1.579575] (holoassist_manipulation) StdoutLine: {'line': b'-- library: /usr/lib/x86_64-linux-gnu/libcurl.so\n'}
+[1.601725] (-) TimerEvent: {}
+[1.637893] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: system filesystem date_time program_options thread chrono \n'}
+[1.666593] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: thread system filesystem regex date_time program_options \n'}
+[1.685866] (holoassist_manipulation) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found version "1.74.0") found components: system filesystem date_time program_options thread \n'}
+[1.701939] (-) TimerEvent: {}
+[1.713028] (holoassist_manipulation) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.15 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[1.777252] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'cppcheck' to perform static code analysis on C / C++ code\n"}
+[1.777480] (holoassist_manipulation) StdoutLine: {'line': b'-- Configured cppcheck include dirs: \n'}
+[1.777552] (holoassist_manipulation) StdoutLine: {'line': b'-- Configured cppcheck exclude dirs and/or files: \n'}
+[1.777825] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'flake8' to check Python code syntax and style conventions\n"}
+[1.778162] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[1.778569] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257\n"}
+[1.779108] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'uncrustify' to check C / C++ code style\n"}
+[1.779223] (holoassist_manipulation) StdoutLine: {'line': b'-- Configured uncrustify additional arguments: \n'}
+[1.779511] (holoassist_manipulation) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[1.780624] (holoassist_manipulation) StdoutLine: {'line': b'-- Configuring done\n'}
+[1.802066] (-) TimerEvent: {}
+[1.804804] (holoassist_manipulation) StdoutLine: {'line': b'-- Generating done\n'}
+[1.810273] (holoassist_manipulation) StdoutLine: {'line': b'-- Build files have been written to: /home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation\n'}
+[1.821318] (holoassist_manipulation) CommandEnded: {'returncode': 0}
+[1.822068] (holoassist_manipulation) JobProgress: {'identifier': 'holoassist_manipulation', 'progress': 'build'}
+[1.823025] (holoassist_manipulation) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation', '--', '-j22', '-l22'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'ollie'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/ollie'), ('OLDPWD', '/home/ollie/git/1HoloAssist/ollie'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '1130'), ('SYSTEMD_EXEC_PID', '1289'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8188'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'ollie'), ('JOURNAL_STREAM', '8:4368'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'ollie'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265'), ('INVOCATION_ID', '3b4e249087b74bf09b2ef0313136ee33'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.DM7LM3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement')]), 'shell': False}
+[1.876104] (holoassist_manipulation) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/clicked_point_to_moveit.dir/src/clicked_point_to_moveit.cpp.o\x1b[0m\n'}
+[1.902198] (-) TimerEvent: {}
+[2.002453] (-) TimerEvent: {}
+[2.102831] (-) TimerEvent: {}
+[2.203306] (-) TimerEvent: {}
+[2.303606] (-) TimerEvent: {}
+[2.403897] (-) TimerEvent: {}
+[2.504189] (-) TimerEvent: {}
+[2.604512] (-) TimerEvent: {}
+[2.704797] (-) TimerEvent: {}
+[2.805108] (-) TimerEvent: {}
+[2.905450] (-) TimerEvent: {}
+[3.005799] (-) TimerEvent: {}
+[3.106095] (-) TimerEvent: {}
+[3.206403] (-) TimerEvent: {}
+[3.306734] (-) TimerEvent: {}
+[3.407080] (-) TimerEvent: {}
+[3.507429] (-) TimerEvent: {}
+[3.607724] (-) TimerEvent: {}
+[3.708019] (-) TimerEvent: {}
+[3.808307] (-) TimerEvent: {}
+[3.908612] (-) TimerEvent: {}
+[4.008920] (-) TimerEvent: {}
+[4.109222] (-) TimerEvent: {}
+[4.209556] (-) TimerEvent: {}
+[4.309908] (-) TimerEvent: {}
+[4.410275] (-) TimerEvent: {}
+[4.510604] (-) TimerEvent: {}
+[4.610905] (-) TimerEvent: {}
+[4.711220] (-) TimerEvent: {}
+[4.811552] (-) TimerEvent: {}
+[4.911881] (-) TimerEvent: {}
+[5.012243] (-) TimerEvent: {}
+[5.112575] (-) TimerEvent: {}
+[5.212893] (-) TimerEvent: {}
+[5.313237] (-) TimerEvent: {}
+[5.413628] (-) TimerEvent: {}
+[5.513991] (-) TimerEvent: {}
+[5.614395] (-) TimerEvent: {}
+[5.714753] (-) TimerEvent: {}
+[5.815222] (-) TimerEvent: {}
+[5.915779] (-) TimerEvent: {}
+[6.016171] (-) TimerEvent: {}
+[6.116476] (-) TimerEvent: {}
+[6.216910] (-) TimerEvent: {}
+[6.317302] (-) TimerEvent: {}
+[6.417684] (-) TimerEvent: {}
+[6.518091] (-) TimerEvent: {}
+[6.618483] (-) TimerEvent: {}
+[6.718882] (-) TimerEvent: {}
+[6.819283] (-) TimerEvent: {}
+[6.919660] (-) TimerEvent: {}
+[7.020056] (-) TimerEvent: {}
+[7.120431] (-) TimerEvent: {}
+[7.220829] (-) TimerEvent: {}
+[7.321239] (-) TimerEvent: {}
+[7.421682] (-) TimerEvent: {}
+[7.522111] (-) TimerEvent: {}
+[7.622491] (-) TimerEvent: {}
+[7.722853] (-) TimerEvent: {}
+[7.823240] (-) TimerEvent: {}
+[7.923628] (-) TimerEvent: {}
+[8.024033] (-) TimerEvent: {}
+[8.124413] (-) TimerEvent: {}
+[8.224778] (-) TimerEvent: {}
+[8.325119] (-) TimerEvent: {}
+[8.425461] (-) TimerEvent: {}
+[8.525814] (-) TimerEvent: {}
+[8.626187] (-) TimerEvent: {}
+[8.726553] (-) TimerEvent: {}
+[8.826974] (-) TimerEvent: {}
+[8.927342] (-) TimerEvent: {}
+[9.027720] (-) TimerEvent: {}
+[9.128080] (-) TimerEvent: {}
+[9.228455] (-) TimerEvent: {}
+[9.328808] (-) TimerEvent: {}
+[9.429174] (-) TimerEvent: {}
+[9.529610] (-) TimerEvent: {}
+[9.629966] (-) TimerEvent: {}
+[9.730327] (-) TimerEvent: {}
+[9.830683] (-) TimerEvent: {}
+[9.931044] (-) TimerEvent: {}
+[10.031420] (-) TimerEvent: {}
+[10.131781] (-) TimerEvent: {}
+[10.232164] (-) TimerEvent: {}
+[10.332526] (-) TimerEvent: {}
+[10.432850] (-) TimerEvent: {}
+[10.533162] (-) TimerEvent: {}
+[10.633458] (-) TimerEvent: {}
+[10.733772] (-) TimerEvent: {}
+[10.834105] (-) TimerEvent: {}
+[10.934499] (-) TimerEvent: {}
+[11.034916] (-) TimerEvent: {}
+[11.135231] (-) TimerEvent: {}
+[11.235551] (-) TimerEvent: {}
+[11.335866] (-) TimerEvent: {}
+[11.436189] (-) TimerEvent: {}
+[11.536516] (-) TimerEvent: {}
+[11.636849] (-) TimerEvent: {}
+[11.737254] (-) TimerEvent: {}
+[11.837755] (-) TimerEvent: {}
+[11.938127] (-) TimerEvent: {}
+[12.038551] (-) TimerEvent: {}
+[12.138918] (-) TimerEvent: {}
+[12.239284] (-) TimerEvent: {}
+[12.339698] (-) TimerEvent: {}
+[12.440098] (-) TimerEvent: {}
+[12.516869] (holoassist_manipulation) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable clicked_point_to_moveit\x1b[0m\n'}
+[12.540208] (-) TimerEvent: {}
+[12.640534] (-) TimerEvent: {}
+[12.740859] (-) TimerEvent: {}
+[12.841270] (-) TimerEvent: {}
+[12.941647] (-) TimerEvent: {}
+[13.042064] (-) TimerEvent: {}
+[13.142548] (-) TimerEvent: {}
+[13.153146] (holoassist_manipulation) StdoutLine: {'line': b'[100%] Built target clicked_point_to_moveit\n'}
+[13.163763] (holoassist_manipulation) CommandEnded: {'returncode': 0}
+[13.164466] (holoassist_manipulation) JobProgress: {'identifier': 'holoassist_manipulation', 'progress': 'install'}
+[13.174073] (holoassist_manipulation) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'ollie'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/ollie'), ('OLDPWD', '/home/ollie/git/1HoloAssist/ollie'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '1130'), ('SYSTEMD_EXEC_PID', '1289'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8188'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/ollie/git/1HoloAssist/ollie/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'ollie'), ('JOURNAL_STREAM', '8:4368'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'ollie'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265'), ('INVOCATION_ID', '3b4e249087b74bf09b2ef0313136ee33'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.DM7LM3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement')]), 'shell': False}
+[13.180921] (holoassist_manipulation) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[13.181116] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/lib/holoassist_manipulation/clicked_point_to_moveit\n'}
+[13.183485] (holoassist_manipulation) StdoutLine: {'line': b'-- Set runtime path of "/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/lib/holoassist_manipulation/clicked_point_to_moveit" to ""\n'}
+[13.183638] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/launch\n'}
+[13.183686] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/launch/__pycache__\n'}
+[13.183728] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/launch/__pycache__/click_to_plan.launch.cpython-310.pyc\n'}
+[13.184438] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/launch/click_to_plan.launch.py\n'}
+[13.184581] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/ament_index/resource_index/package_run_dependencies/holoassist_manipulation\n'}
+[13.184678] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/ament_index/resource_index/parent_prefix_path/holoassist_manipulation\n'}
+[13.184806] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/environment/ament_prefix_path.sh\n'}
+[13.184890] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/environment/ament_prefix_path.dsv\n'}
+[13.184972] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/environment/path.sh\n'}
+[13.185029] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/environment/path.dsv\n'}
+[13.185097] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/local_setup.bash\n'}
+[13.185189] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/local_setup.sh\n'}
+[13.185238] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/local_setup.zsh\n'}
+[13.185283] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/local_setup.dsv\n'}
+[13.185332] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/package.dsv\n'}
+[13.185405] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/ament_index/resource_index/packages/holoassist_manipulation\n'}
+[13.185485] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/cmake/holoassist_manipulationConfig.cmake\n'}
+[13.185548] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/cmake/holoassist_manipulationConfig-version.cmake\n'}
+[13.185623] (holoassist_manipulation) StdoutLine: {'line': b'-- Installing: /home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation/share/holoassist_manipulation/package.xml\n'}
+[13.187149] (holoassist_manipulation) CommandEnded: {'returncode': 0}
+[13.197944] (holoassist_manipulation) JobEnded: {'identifier': 'holoassist_manipulation', 'rc': 0}
+[13.198923] (holoassist_unity_bridge) JobStarted: {'identifier': 'holoassist_unity_bridge'}
+[13.242625] (-) TimerEvent: {}
+[13.342915] (-) TimerEvent: {}
+[13.443195] (-) TimerEvent: {}
+[13.543491] (-) TimerEvent: {}
+[13.643815] (-) TimerEvent: {}
+[13.685986] (holoassist_unity_bridge) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../../build/holoassist_unity_bridge', 'build', '--build-base', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build', 'install', '--record', '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge', 'env': {'GJS_DEBUG_TOPICS': 'JS ERROR;JS LOG', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_AU:en', 'USER': 'ollie', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib', 'HOME': '/home/ollie', 'OLDPWD': '/home/ollie/git/1HoloAssist/ollie', 'DESKTOP_SESSION': 'ubuntu', 'GIO_LAUNCHED_DESKTOP_FILE': '/usr/share/applications/terminator.desktop', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'MANAGERPID': '1130', 'SYSTEMD_EXEC_PID': '1289', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '8188', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'ollie', 'JOURNAL_STREAM': '8:4368', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'ollie', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/ubuntu-22:@/tmp/.ICE-unix/1265,unix/ubuntu-22:/tmp/.ICE-unix/1265', 'INVOCATION_ID': '3b4e249087b74bf09b2ef0313136ee33', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'IBUS_DISABLE_SNOOPER': '1', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.DM7LM3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'SSH_AGENT_LAUNCHER': 'gnome-keyring', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'AMENT_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation:/opt/ros/humble:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement', 'SHELL': '/bin/bash', 'TERMINATOR_UUID': 'urn:uuid:5192131a-5a82-4c36-9ce7-fe3f543f64dd', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'GJS_DEBUG_OUTPUT': 'stderr', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages', 'COLCON': '1', 'VTE_VERSION': '6800', 'CMAKE_PREFIX_PATH': '/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation'}, 'shell': False}
+[13.743975] (-) TimerEvent: {}
+[13.844356] (-) TimerEvent: {}
+[13.867753] (holoassist_unity_bridge) StdoutLine: {'line': b'running egg_info\n'}
+[13.868090] (holoassist_unity_bridge) StdoutLine: {'line': b'creating ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info\n'}
+[13.868214] (holoassist_unity_bridge) StdoutLine: {'line': b'writing ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/PKG-INFO\n'}
+[13.868350] (holoassist_unity_bridge) StdoutLine: {'line': b'writing dependency_links to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/dependency_links.txt\n'}
+[13.868448] (holoassist_unity_bridge) StdoutLine: {'line': b'writing entry points to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/entry_points.txt\n'}
+[13.868532] (holoassist_unity_bridge) StdoutLine: {'line': b'writing requirements to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/requires.txt\n'}
+[13.868640] (holoassist_unity_bridge) StdoutLine: {'line': b'writing top-level names to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/top_level.txt\n'}
+[13.868718] (holoassist_unity_bridge) StdoutLine: {'line': b"writing manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'\n"}
+[13.870423] (holoassist_unity_bridge) StdoutLine: {'line': b"reading manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'\n"}
+[13.870934] (holoassist_unity_bridge) StdoutLine: {'line': b"writing manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'\n"}
+[13.871063] (holoassist_unity_bridge) StdoutLine: {'line': b'running build\n'}
+[13.871124] (holoassist_unity_bridge) StdoutLine: {'line': b'running build_py\n'}
+[13.871351] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build\n'}
+[13.871577] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib\n'}
+[13.871644] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge\n'}
+[13.871700] (holoassist_unity_bridge) StdoutLine: {'line': b'copying holoassist_unity_bridge/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge\n'}
+[13.871801] (holoassist_unity_bridge) StdoutLine: {'line': b'copying holoassist_unity_bridge/__init__.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge\n'}
+[13.871862] (holoassist_unity_bridge) StdoutLine: {'line': b'running install\n'}
+[13.871917] (holoassist_unity_bridge) StdoutLine: {'line': b'running install_lib\n'}
+[13.872187] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge\n'}
+[13.872276] (holoassist_unity_bridge) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge\n'}
+[13.872365] (holoassist_unity_bridge) StdoutLine: {'line': b'copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge/__init__.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge\n'}
+[13.872620] (holoassist_unity_bridge) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge/tcp_endpoint.launch.py to tcp_endpoint.launch.cpython-310.pyc\n'}
+[13.872865] (holoassist_unity_bridge) StdoutLine: {'line': b'byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge/__init__.py to __init__.cpython-310.pyc\n'}
+[13.872964] (holoassist_unity_bridge) StdoutLine: {'line': b'running install_data\n'}
+[13.873056] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index\n'}
+[13.873162] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index\n'}
+[13.873239] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index/packages\n'}
+[13.873306] (holoassist_unity_bridge) StdoutLine: {'line': b'copying resource/holoassist_unity_bridge -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index/packages\n'}
+[13.873427] (holoassist_unity_bridge) StdoutLine: {'line': b'copying package.xml -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge\n'}
+[13.873528] (holoassist_unity_bridge) StdoutLine: {'line': b'creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch\n'}
+[13.873590] (holoassist_unity_bridge) StdoutLine: {'line': b'copying launch/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch\n'}
+[13.873652] (holoassist_unity_bridge) StdoutLine: {'line': b'copying launch/unity_movement_bringup.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch\n'}
+[13.873716] (holoassist_unity_bridge) StdoutLine: {'line': b'running install_egg_info\n'}
+[13.875007] (holoassist_unity_bridge) StdoutLine: {'line': b'Copying ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge-0.0.0-py3.10.egg-info\n'}
+[13.875375] (holoassist_unity_bridge) StdoutLine: {'line': b'running install_scripts\n'}
+[13.890917] (holoassist_unity_bridge) StdoutLine: {'line': b"writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/install.log'\n"}
+[13.908972] (holoassist_unity_bridge) CommandEnded: {'returncode': 0}
+[13.916914] (holoassist_unity_bridge) JobEnded: {'identifier': 'holoassist_unity_bridge', 'rc': 0}
+[13.917667] (-) EventReactorShutdown: {}

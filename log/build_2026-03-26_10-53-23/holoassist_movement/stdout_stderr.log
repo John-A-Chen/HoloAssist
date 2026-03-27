@@ -1,0 +1,27 @@
+running egg_info
+writing ../../../build/holoassist_movement/holoassist_movement.egg-info/PKG-INFO
+writing dependency_links to ../../../build/holoassist_movement/holoassist_movement.egg-info/dependency_links.txt
+writing entry points to ../../../build/holoassist_movement/holoassist_movement.egg-info/entry_points.txt
+writing requirements to ../../../build/holoassist_movement/holoassist_movement.egg-info/requires.txt
+writing top-level names to ../../../build/holoassist_movement/holoassist_movement.egg-info/top_level.txt
+reading manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'
+writing manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'
+running build
+running build_py
+copying holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+copying holoassist_movement/move_to_joints.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+running install
+running install_lib
+copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/move_to_joints.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/robot_state.py to robot_state.cpython-310.pyc
+byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/move_to_joints.py to move_to_joints.cpython-310.pyc
+running install_data
+running install_egg_info
+removing '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../../../build/holoassist_movement/holoassist_movement.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info
+running install_scripts
+Installing move_to_joints script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+Installing robot_demo_control script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+Installing robot_state script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log'

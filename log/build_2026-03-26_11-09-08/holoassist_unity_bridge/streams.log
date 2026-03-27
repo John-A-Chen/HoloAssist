@@ -1,0 +1,39 @@
+[0.489s] Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_unity_bridge build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/install.log --single-version-externally-managed install_data
+[0.669s] running egg_info
+[0.669s] creating ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info
+[0.669s] writing ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/PKG-INFO
+[0.669s] writing dependency_links to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/dependency_links.txt
+[0.670s] writing entry points to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/entry_points.txt
+[0.670s] writing requirements to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/requires.txt
+[0.670s] writing top-level names to ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/top_level.txt
+[0.670s] writing manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'
+[0.672s] reading manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'
+[0.672s] writing manifest file '../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info/SOURCES.txt'
+[0.672s] running build
+[0.672s] running build_py
+[0.672s] creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build
+[0.673s] creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib
+[0.673s] creating /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge
+[0.673s] copying holoassist_unity_bridge/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge
+[0.673s] copying holoassist_unity_bridge/__init__.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge
+[0.673s] running install
+[0.673s] running install_lib
+[0.673s] creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge
+[0.673s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge
+[0.673s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build/lib/holoassist_unity_bridge/__init__.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge
+[0.674s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge/tcp_endpoint.launch.py to tcp_endpoint.launch.cpython-310.pyc
+[0.674s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge/__init__.py to __init__.cpython-310.pyc
+[0.674s] running install_data
+[0.674s] creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index
+[0.674s] creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index
+[0.674s] creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index/packages
+[0.674s] copying resource/holoassist_unity_bridge -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/ament_index/resource_index/packages
+[0.675s] copying package.xml -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge
+[0.675s] creating /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch
+[0.675s] copying launch/tcp_endpoint.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch
+[0.675s] copying launch/unity_movement_bringup.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/share/holoassist_unity_bridge/launch
+[0.675s] running install_egg_info
+[0.676s] Copying ../../../build/holoassist_unity_bridge/holoassist_unity_bridge.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages/holoassist_unity_bridge-0.0.0-py3.10.egg-info
+[0.676s] running install_scripts
+[0.692s] writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/install.log'
+[0.710s] Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_unity_bridge' returned '0': AMENT_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools:/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ollie/git/1HoloAssist/ollie/install/holoassist_manipulation PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages:/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_unity_bridge build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_unity_bridge/install.log --single-version-externally-managed install_data

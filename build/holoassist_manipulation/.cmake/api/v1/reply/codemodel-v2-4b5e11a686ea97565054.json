@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-f8f27b9554892a4e8789.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "holoassist_manipulation",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "clicked_point_to_moveit::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-clicked_point_to_moveit-c3542c4c3ed2aecc6b54.json",
+					"name" : "clicked_point_to_moveit",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "holoassist_manipulation_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-holoassist_manipulation_uninstall-2bb2e6eac9fc4ac57c38.json",
+					"name" : "holoassist_manipulation_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-932ebb3146b39083ad22.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/ollie/git/1HoloAssist/ollie/build/holoassist_manipulation",
+		"source" : "/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_manipulation"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

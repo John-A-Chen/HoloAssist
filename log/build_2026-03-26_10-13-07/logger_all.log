@@ -1,0 +1,144 @@
+[0.110s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--packages-select', 'holoassist_movement', '--base-paths', 'ros2_ws/src']
+[0.110s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=22, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['ros2_ws/src'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['holoassist_movement'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7fdb4a2a1780>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7fdb4a2a12d0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7fdb4a2a12d0>>, mixin_verb=('build',))
+[0.197s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.197s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.197s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.197s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.197s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.197s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src'
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['ignore', 'ignore_ament_install']
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ignore'
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ignore_ament_install'
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['colcon_pkg']
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'colcon_pkg'
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['colcon_meta']
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'colcon_meta'
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['ros']
+[0.198s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ros'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['cmake', 'python']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'cmake'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'python'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['python_setup_py']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'python_setup_py'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'ignore'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'ignore_ament_install'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['colcon_pkg']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'colcon_pkg'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['colcon_meta']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'colcon_meta'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['ros']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'ros'
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['cmake', 'python']
+[0.205s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'cmake'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'python'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extensions ['python_setup_py']
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/__pycache__) by extension 'python_setup_py'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extensions ['ignore', 'ignore_ament_install']
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extension 'ignore'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extension 'ignore_ament_install'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extensions ['colcon_pkg']
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extension 'colcon_pkg'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extensions ['colcon_meta']
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extension 'colcon_meta'
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extensions ['ros']
+[0.206s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_manipulation) by extension 'ros'
+[0.209s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/holoassist_manipulation' with type 'ros.ament_cmake' and name 'holoassist_manipulation'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extensions ['ignore', 'ignore_ament_install']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extension 'ignore'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extension 'ignore_ament_install'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extensions ['colcon_pkg']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extension 'colcon_pkg'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extensions ['colcon_meta']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extension 'colcon_meta'
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extensions ['ros']
+[0.209s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_movement) by extension 'ros'
+[0.210s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/holoassist_movement' with type 'ros.ament_python' and name 'holoassist_movement'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extensions ['ignore', 'ignore_ament_install']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extension 'ignore'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extension 'ignore_ament_install'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extensions ['colcon_pkg']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extension 'colcon_pkg'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extensions ['colcon_meta']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extension 'colcon_meta'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extensions ['ros']
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_servo_tools) by extension 'ros'
+[0.210s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/holoassist_servo_tools' with type 'ros.ament_python' and name 'holoassist_servo_tools'
+[0.210s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extensions ['ignore', 'ignore_ament_install']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extension 'ignore'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extension 'ignore_ament_install'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extensions ['colcon_pkg']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extension 'colcon_pkg'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extensions ['colcon_meta']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extension 'colcon_meta'
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extensions ['ros']
+[0.211s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/holoassist_unity_bridge) by extension 'ros'
+[0.211s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/holoassist_unity_bridge' with type 'ros.ament_python' and name 'holoassist_unity_bridge'
+[0.211s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.224s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'holoassist_manipulation' in 'ros2_ws/src/holoassist_manipulation'
+[0.224s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'holoassist_servo_tools' in 'ros2_ws/src/holoassist_servo_tools'
+[0.224s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'holoassist_unity_bridge' in 'ros2_ws/src/holoassist_unity_bridge'
+[0.224s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.225s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.225s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_args' from command line to 'None'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_target' from command line to 'None'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_clean_cache' from command line to 'False'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_clean_first' from command line to 'False'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'cmake_force_configure' from command line to 'False'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'ament_cmake_args' from command line to 'None'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'catkin_cmake_args' from command line to 'None'
+[0.226s] Level 5:colcon.colcon_core.verb:set package 'holoassist_movement' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.226s] DEBUG:colcon.colcon_core.verb:Building package 'holoassist_movement' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement', 'merge_install': False, 'path': '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement', 'symlink_install': False, 'test_result_base': None}
+[0.226s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.227s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.227s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement' with build type 'ament_python'
+[0.227s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_movement', 'ament_prefix_path')
+[0.229s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.229s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/ament_prefix_path.ps1'
+[0.229s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/ament_prefix_path.dsv'
+[0.229s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/ament_prefix_path.sh'
+[0.230s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.230s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.375s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement'
+[0.375s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.375s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.601s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages: /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_movement build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log --single-version-externally-managed install_data
+[0.763s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement' returned '0': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages: /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_movement build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log --single-version-externally-managed install_data
+[0.766s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement' for CMake module files
+[0.766s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement' for CMake config files
+[0.767s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib'
+[0.767s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/bin'
+[0.767s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/pkgconfig/holoassist_movement.pc'
+[0.767s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages'
+[0.768s] Level 1:colcon.colcon_core.shell:create_environment_hook('holoassist_movement', 'pythonpath')
+[0.768s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/pythonpath.ps1'
+[0.768s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/pythonpath.dsv'
+[0.768s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/hook/pythonpath.sh'
+[0.769s] Level 1:colcon.colcon_core.environment:checking '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/bin'
+[0.769s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(holoassist_movement)
+[0.769s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/package.ps1'
+[0.770s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/package.dsv'
+[0.770s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/package.sh'
+[0.770s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/package.bash'
+[0.771s] INFO:colcon.colcon_core.shell:Creating package script '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/package.zsh'
+[0.771s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/colcon-core/packages/holoassist_movement)
+[0.771s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[0.771s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[0.771s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[0.772s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[0.775s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[0.775s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[0.775s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[0.785s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[0.785s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/install/local_setup.ps1'
+[0.786s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ollie/git/1HoloAssist/ollie/install/_local_setup_util_ps1.py'
+[0.786s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/install/setup.ps1'
+[0.787s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/install/local_setup.sh'
+[0.787s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ollie/git/1HoloAssist/ollie/install/_local_setup_util_sh.py'
+[0.787s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/install/setup.sh'
+[0.788s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/install/local_setup.bash'
+[0.788s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/install/setup.bash'
+[0.789s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ollie/git/1HoloAssist/ollie/install/local_setup.zsh'
+[0.797s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ollie/git/1HoloAssist/ollie/install/setup.zsh'

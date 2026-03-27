@@ -1,0 +1,37 @@
+[0.346s] Invoking command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages: /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_movement build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log --single-version-externally-managed install_data
+[0.472s] running egg_info
+[0.472s] writing ../../../build/holoassist_movement/holoassist_movement.egg-info/PKG-INFO
+[0.472s] writing dependency_links to ../../../build/holoassist_movement/holoassist_movement.egg-info/dependency_links.txt
+[0.472s] writing entry points to ../../../build/holoassist_movement/holoassist_movement.egg-info/entry_points.txt
+[0.472s] writing requirements to ../../../build/holoassist_movement/holoassist_movement.egg-info/requires.txt
+[0.472s] writing top-level names to ../../../build/holoassist_movement/holoassist_movement.egg-info/top_level.txt
+[0.473s] reading manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'
+[0.474s] writing manifest file '../../../build/holoassist_movement/holoassist_movement.egg-info/SOURCES.txt'
+[0.474s] running build
+[0.474s] running build_py
+[0.474s] copying holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+[0.474s] copying holoassist_movement/robot_demo_control.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+[0.474s] copying holoassist_movement/move_to_joints.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+[0.474s] copying holoassist_movement/demo_runner.py -> /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement
+[0.474s] running install
+[0.475s] running install_lib
+[0.475s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/robot_state.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+[0.475s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/robot_demo_control.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+[0.476s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/move_to_joints.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+[0.476s] copying /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build/lib/holoassist_movement/demo_runner.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement
+[0.476s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/robot_state.py to robot_state.cpython-310.pyc
+[0.476s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/robot_demo_control.py to robot_demo_control.cpython-310.pyc
+[0.477s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/move_to_joints.py to move_to_joints.cpython-310.pyc
+[0.477s] byte-compiling /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement/demo_runner.py to demo_runner.cpython-310.pyc
+[0.478s] running install_data
+[0.478s] copying package.xml -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement
+[0.478s] copying launch/robot_demo_control.launch.py -> /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/share/holoassist_movement/launch
+[0.478s] running install_egg_info
+[0.479s] removing '/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info' (and everything under it)
+[0.479s] Copying ../../../build/holoassist_movement/holoassist_movement.egg-info to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages/holoassist_movement-0.0.0-py3.10.egg-info
+[0.480s] running install_scripts
+[0.494s] Installing move_to_joints script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+[0.494s] Installing robot_demo_control script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+[0.494s] Installing robot_state script to /home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/holoassist_movement
+[0.494s] writing list of installed files to '/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log'
+[0.512s] Invoked command in '/home/ollie/git/1HoloAssist/ollie/ros2_ws/src/holoassist_movement' returned '0': PYTHONPATH=/home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages: /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/holoassist_movement build --build-base /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/build install --record /home/ollie/git/1HoloAssist/ollie/build/holoassist_movement/install.log --single-version-externally-managed install_data

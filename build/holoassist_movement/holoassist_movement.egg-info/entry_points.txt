@@ -1,0 +1,5 @@
+[console_scripts]
+move_to_joints = holoassist_movement.move_to_joints:main
+robot_demo_control = holoassist_movement.robot_demo_control:main
+robot_state = holoassist_movement.robot_state:main
+
