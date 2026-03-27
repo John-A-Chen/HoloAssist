@@ -1,0 +1,87 @@
+# External packages — clone manually per SETUP.md
+ROS-TCP-Connector/
+URDF-Importer/
+ros2_ws/src/ROS-TCP-Endpoint/
+ros2_ws/src/Universal_Robots_ROS2_Driver/
+
+# Unity generated files
+Unity/My project/Library/
+Unity/My project/Temp/
+Unity/My project/Logs/
+Unity/My project/obj/
+Unity/My project/Builds/
+Unity/My project/UserSettings/
+Unity/My project/.utmp/
+Unity/My project/*.sln
+Unity/My project/*.csproj
+
+# colcon / ROS
+build/
+install/
+log/
+
+#anywhere else
+**/build/
+**/install/
+**/log/
+
+# docker workspaces / bind mounts
+docker/**/ws/
+docker/**/build/
+docker/**/install/
+docker/**/log/
+
+# ROS tooling caches
+.ros/
+.rosinstall
+.rosinstall.bak
+.rosinstall.catkin
+*.repos.bak
+
+# VS Code (keep settings, ignore caches)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/c_cpp_properties.json
+.vscode/*.db
+.vscode/*.db-shm
+.vscode/*.db-wal
+
+# JetBrains
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Bags
+*.db3
+*.mcap
+bags/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Large sim artefacts (optional, if they appear)
+.gazebo/
+.ignition/
+
+# VSCode C/C++ IntelliSense DB (bloat)
+.vscode/*.db
+.vscode/*.db-*
+.vscode/ipch/
+
+# VSCode bloat
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
