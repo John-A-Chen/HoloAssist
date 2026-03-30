@@ -66,6 +66,9 @@ bags/
 # Claude Code memory (per-user, not shared)
 memory/
 
+# Personal change logs (per-branch, not shared)
+SEB_CHANGES.md
+
 # OS / editor junk
 .DS_Store
 Thumbs.db

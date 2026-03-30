@@ -10,8 +10,8 @@ public class RobotHUD : MonoBehaviour
     public float distanceFromCamera = 1.5f;
     public Vector3 offset = new Vector3(0.3f, -0.2f, 0f); // bottom-right of view
     public float followSpeed = 3f;
-    public float panelWidth = 0.25f;
-    public float panelHeight = 0.1f;
+    public float panelWidth = 2.5f;
+    public float panelHeight = 0.08f;
 
     private TextMeshPro label;
     private Transform cam;
@@ -23,17 +23,16 @@ public class RobotHUD : MonoBehaviour
         // Background quad
         var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
         bg.transform.SetParent(transform, false);
-        bg.transform.localScale = new Vector3(panelWidth, panelHeight, 1f);
-        var bgMat = bg.GetComponent<Renderer>().material;
-        bgMat.color = new Color(0f, 0f, 0f, 0.6f);
-        bgMat.SetFloat("_Mode", 3); // transparent
-        bgMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        bgMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        bgMat.SetInt("_ZWrite", 0);
-        bgMat.DisableKeyword("_ALPHATEST_ON");
-        bgMat.EnableKeyword("_ALPHABLEND_ON");
-        bgMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        bg.transform.localScale = new Vector3(panelWidth + 0.04f, panelHeight + 0.02f, 1f);
+        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        bgMat.SetFloat("_Surface", 1); // transparent
+        bgMat.SetFloat("_Blend", 0);   // alpha blend
+        bgMat.SetColor("_BaseColor", new Color(0.05f, 0.05f, 0.1f, 0.85f));
+        bgMat.SetFloat("_ZWrite", 0);
+        bgMat.SetOverrideTag("RenderType", "Transparent");
         bgMat.renderQueue = 3000;
+        bgMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        bg.GetComponent<Renderer>().material = bgMat;
         Destroy(bg.GetComponent<Collider>());
 
         // Text
@@ -41,8 +40,10 @@ public class RobotHUD : MonoBehaviour
         textObj.transform.SetParent(transform, false);
         textObj.transform.localPosition = new Vector3(0f, 0f, -0.001f);
         label = textObj.AddComponent<TextMeshPro>();
-        label.fontSize = 1.5f;
+        label.fontSize = 0.3f;
         label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Overflow;
         label.color = Color.white;
         label.rectTransform.sizeDelta = new Vector2(panelWidth, panelHeight);
 
