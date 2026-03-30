@@ -5432,9 +5432,9 @@ MonoBehaviour:
   selectedJoint: 
   selectedIndex: 0
   control: 0
-  stiffness: 0
-  damping: 0
-  forceLimit: 0
+  stiffness: 1000
+  damping: 100
+  forceLimit: 10
   speed: 5
   torque: 100
   acceleration: 5
@@ -5698,6 +5698,10 @@ PrefabInstance:
     - target: {fileID: 6391579207171690961, guid: 86a5bf68cb51f4e44bd3893bd22a2ba7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6484816944661230505, guid: 86a5bf68cb51f4e44bd3893bd22a2ba7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 7460734852215867547, guid: 86a5bf68cb51f4e44bd3893bd22a2ba7, type: 3}
       propertyPath: m_QuestSettings

@@ -63,6 +63,9 @@ venv/
 *.mcap
 bags/
 
+# Claude Code memory (per-user, not shared)
+memory/
+
 # OS / editor junk
 .DS_Store
 Thumbs.db

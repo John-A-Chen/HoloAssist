@@ -118,3 +118,4 @@ Then hit **Play** in Unity.
 - **Robot falls in Unity** — disable gravity on the root `ur` ArticulationBody.
 - **Git HTTPS clone fails** — use SSH (`git@github.com:...`) for all cloning.
 - **Unity Package Manager can't find robotics packages** — clone locally and reference via `file://` in manifest.json.
+- **Meta XR SDK cached packages cause issues** — if you hit errors related to Meta XR packages, clear the cached copies: `rm -rf "Unity/My project/Library/PackageCache/com.meta.xr.*"`
