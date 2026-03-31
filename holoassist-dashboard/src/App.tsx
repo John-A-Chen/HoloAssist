@@ -1,5 +1,5 @@
-import { DashboardPage } from './pages/DashboardPage';
+import { PerceptionMonitorPage } from './pages/PerceptionMonitorPage';
 
 export default function App() {
-  return <DashboardPage />;
+  return <PerceptionMonitorPage />;
 }

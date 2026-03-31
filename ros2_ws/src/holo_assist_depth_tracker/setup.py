@@ -28,6 +28,10 @@ setup(
         "console_scripts": [
             "holo_assist_depth_tracker_node = holo_assist_depth_tracker.depth_tracker_node:main",
             "depth_tracker_node = holo_assist_depth_tracker.depth_tracker_node:main",
+            "holo_assist_depth_tracker_dashboard_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
+            "depth_tracker_dashboard_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
+            "holo_assist_webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
+            "webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
         ],
     },
 )

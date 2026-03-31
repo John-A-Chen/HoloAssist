@@ -1,8 +1,22 @@
-# RS2 HoloAssist Dashboard (Mock UI)
+# RS2 HoloAssist Dashboard
 
-Local web dashboard scaffold for RS2 HoloAssist robot operations.
+Local web dashboard for RS2 HoloAssist.
 
-This build is UI-only and uses a mock API/state layer. No ROS pub/sub, websocket, or DDS integration is implemented yet.
+Current default page is a tabbed System Dashboard that reads from the depth tracker dashboard relay:
+- `GET /api/perception/status`
+- `GET /api/perception/debug.jpg`
+
+Tabs:
+- Overview
+- Perception
+- Robot State
+- Unity Bridge
+
+Relay modes:
+- Depth tracker mode (RealSense depth pipeline active)
+- RGB fallback mode (raw webcam image only, pointcloud/obstacle marked unsupported)
+
+The old mock robot-operation panels are still present in `src/pages/DashboardPage.tsx` and related components for later reintegration.
 
 ## Stack
 
@@ -12,7 +26,7 @@ This build is UI-only and uses a mock API/state layer. No ROS pub/sub, websocket
 - Recharts (latency sparkline)
 - Lightweight local UI primitives (shadcn-style patterns)
 
-## Run
+## Run (Perception Monitor)
 
 Requires Node.js `18+` (Vite 5).
 
@@ -23,6 +37,14 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+If the relay runs on the same machine, Vite proxies `/api/*` to `http://127.0.0.1:8765`.
+
+Optional override:
+
+```bash
+VITE_PERCEPTION_API_BASE=http://<relay-host>:8765 npm run dev
+```
 
 Production build:
 
