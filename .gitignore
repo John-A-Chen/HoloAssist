@@ -1,18 +1,21 @@
-# colcon / ROS
-build/
-install/
-log/
+# ROS workspace build artifacts
+/ros2_ws/build/
+/ros2_ws/install/
+/ros2_ws/log/
 
-#anywhere else
-**/build/
-**/install/
-**/log/
+# Keep ROS source tree tracked
+!/ros2_ws/
+!/ros2_ws/src/
+!/ros2_ws/src/**
 
 # docker workspaces / bind mounts
-docker/**/ws/
-docker/**/build/
-docker/**/install/
-docker/**/log/
+# Ignore built workspace artifacts, but keep source folders visible
+/docker/**/build/
+/docker/**/install/
+/docker/**/log/
+/docker/**/ws/build/
+/docker/**/ws/install/
+/docker/**/ws/log/
 
 # ROS tooling caches
 .ros/
@@ -31,6 +34,7 @@ docker/**/log/
 .vscode/*.db
 .vscode/*.db-shm
 .vscode/*.db-wal
+.vscode/ipch/
 
 # JetBrains
 .idea/
@@ -57,12 +61,7 @@ Thumbs.db
 .gazebo/
 .ignition/
 
-# VS Code (keep team config, ignore everything else)
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/tasks.json
-!.vscode/c_cpp_properties.json
-.vscode/*.db*
-.vscode/ipch/
+# Frontend
+holoassist-dashboard/node_modules/
+holoassist-dashboard/dist/
+holoassist-dashboard/.vite/
