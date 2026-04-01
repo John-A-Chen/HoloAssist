@@ -1,4 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
 
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -129,11 +141,21 @@ interface RelayStatus {
   };
 }
 
+interface RateHistorySample {
+  ts_unix_ms: number;
+  bbox_hz: number;
+  obstacle_hz: number;
+  debug_age_s: number;
+  point_count: number;
+}
+
+type BadgeTone = 'neutral' | 'success' | 'warn' | 'error' | 'info';
+type TabId = 'overview' | 'perception' | 'robot' | 'unity';
+
 const API_BASE = import.meta.env.VITE_PERCEPTION_API_BASE ?? '';
 const STATUS_POLL_MS = 300;
 const IMAGE_REFRESH_MS = 250;
-
-type TabId = 'overview' | 'perception' | 'robot' | 'unity';
+const RATE_HISTORY_WINDOW_MS = 60_000;
 
 function apiPath(path: string): string {
   return `${API_BASE}${path}`;
@@ -153,12 +175,36 @@ function formatMaybe(value: number | null | undefined, digits = 3): string {
   return value.toFixed(digits);
 }
 
+function formatClockLabel(unixMs: number): string {
+  if (!Number.isFinite(unixMs) || unixMs <= 0) {
+    return 'n/a';
+  }
+  const date = new Date(unixMs);
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+function trimRateHistory(samples: RateHistorySample[], nowMs: number): RateHistorySample[] {
+  const cutoff = nowMs - RATE_HISTORY_WINDOW_MS;
+  return samples.filter((sample) => sample.ts_unix_ms >= cutoff);
+}
+
+function formatPoints(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  return Math.round(value).toLocaleString();
+}
+
 export function PerceptionMonitorPage() {
   const [status, setStatus] = useState<RelayStatus | null>(null);
   const [bridgeOnline, setBridgeOnline] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [imageTick, setImageTick] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [rateHistory, setRateHistory] = useState<RateHistorySample[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,26 +215,44 @@ export function PerceptionMonitorPage() {
         return;
       }
       polling = true;
+
       try {
-        const response = await fetch(apiPath('/api/perception/status'), {
-          cache: 'no-store'
-        });
+        const response = await fetch(apiPath('/api/perception/status'), { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
+
         const payload = (await response.json()) as RelayStatus;
         if (cancelled) {
           return;
         }
+
         setStatus(payload);
         setBridgeOnline(true);
         setErrorText(null);
+        setRateHistory((previous) => {
+          const nowMs = Number.isFinite(payload.server_time_unix_ms) ? payload.server_time_unix_ms : Date.now();
+          const sample: RateHistorySample = {
+            ts_unix_ms: nowMs,
+            bbox_hz: Number(payload.rates_hz.bbox ?? 0),
+            obstacle_hz: Number(payload.rates_hz.obstacle ?? 0),
+            debug_age_s: Number(payload.tracker_connection.last_debug_age_s ?? -1),
+            point_count: Number(payload.counters.last_point_count ?? 0)
+          };
+
+          const deduped =
+            previous.length > 0 && previous[previous.length - 1].ts_unix_ms === sample.ts_unix_ms
+              ? [...previous.slice(0, -1), sample]
+              : [...previous, sample];
+          return trimRateHistory(deduped, nowMs);
+        });
       } catch (error) {
         if (cancelled) {
           return;
         }
         setBridgeOnline(false);
         setErrorText(error instanceof Error ? error.message : String(error));
+        setRateHistory((previous) => trimRateHistory(previous, Date.now()));
       } finally {
         polling = false;
       }
@@ -219,40 +283,83 @@ export function PerceptionMonitorPage() {
     };
   }, [bridgeOnline, status?.latest.jpeg_available]);
 
-  const imageUrl = useMemo(
-    () => `${apiPath('/api/perception/debug.jpg')}?tick=${imageTick}`,
-    [imageTick]
-  );
+  const imageUrl = useMemo(() => `${apiPath('/api/perception/debug.jpg')}?tick=${imageTick}`, [imageTick]);
 
   const sourceMode = status?.source.mode ?? 'no_data';
   const pipelineConnected = status?.tracker_connection.pipeline_connected ?? false;
   const robotConnected = status?.robot_state.joint_state_available ?? false;
   const unityReachable = status?.unity_integration.tcp_endpoint_reachable ?? false;
+  const staleTimeout = status?.bridge.stale_timeout_s ?? 1.5;
+  const historyWindowSeconds = Math.round(RATE_HISTORY_WINDOW_MS / 1000);
+  const sourceLabel =
+    sourceMode === 'depth_tracker' ? 'RealSense depth mode' : sourceMode === 'rgb_fallback' ? 'RGB fallback mode' : 'No stream';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <main className="mx-auto max-w-[1700px] px-4 py-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-wide">HoloAssist System Dashboard</h1>
-            <p className="text-sm text-slate-400">Perception + Robot State + Unity Integration</p>
+      <main className="mx-auto max-w-[1800px] px-5 py-6">
+        <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-panel backdrop-blur-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-100">HoloAssist Evidence Dashboard</h1>
+              <p className="mt-1 text-base text-slate-300">Perception, robot telemetry, and bridge health for presentation capture</p>
+            </div>
+            <div className="rounded-xl border border-slate-700/80 bg-slate-950/70 px-4 py-3 text-right">
+              <div className="text-xs uppercase tracking-wide text-slate-400">Logging window</div>
+              <div className="text-lg font-semibold text-slate-100">{historyWindowSeconds}s rolling</div>
+              <div className="mt-1 text-xs text-slate-400">Last update: {status ? formatClockLabel(status.server_time_unix_ms) : 'n/a'}</div>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={bridgeOnline ? 'success' : 'error'}>
-              {bridgeOnline ? 'Relay reachable' : 'Relay unreachable'}
-            </Badge>
-            <Badge tone={pipelineConnected ? 'success' : 'warn'}>
-              {pipelineConnected ? 'Perception live' : 'Perception stale'}
-            </Badge>
-            <Badge tone={robotConnected ? 'success' : 'warn'}>
-              {robotConnected ? 'Robot state live' : 'Robot state stale'}
-            </Badge>
-            <Badge tone={unityReachable ? 'success' : 'warn'}>
-              {unityReachable ? 'Unity bridge reachable' : 'Unity bridge unreachable'}
-            </Badge>
-            <Badge tone={sourceMode === 'depth_tracker' ? 'info' : sourceMode === 'rgb_fallback' ? 'warn' : 'neutral'}>
-              {sourceMode === 'depth_tracker' ? 'Depth mode' : sourceMode === 'rgb_fallback' ? 'RGB fallback mode' : 'No stream'}
-            </Badge>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <StatusBadge label="Relay" value={bridgeOnline ? 'Reachable' : 'Unreachable'} tone={bridgeOnline ? 'success' : 'error'} />
+            <StatusBadge
+              label="Tracker"
+              value={pipelineConnected ? 'Live' : 'Stale'}
+              tone={pipelineConnected ? 'success' : 'warn'}
+            />
+            <StatusBadge
+              label="Robot State"
+              value={robotConnected ? 'Live' : 'Stale'}
+              tone={robotConnected ? 'success' : 'warn'}
+            />
+            <StatusBadge
+              label="Unity Bridge"
+              value={unityReachable ? 'Reachable' : 'Unreachable'}
+              tone={unityReachable ? 'success' : 'warn'}
+            />
+            <StatusBadge
+              label="Camera Source"
+              value={sourceLabel}
+              tone={sourceMode === 'depth_tracker' ? 'info' : sourceMode === 'rgb_fallback' ? 'warn' : 'neutral'}
+            />
+            <StatusBadge
+              label="Obstacle"
+              value={status?.latest.obstacle_active ? 'Active' : 'Inactive'}
+              tone={status?.latest.obstacle_active ? 'success' : 'neutral'}
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <EvidenceStat
+              label="BBox Publish Rate"
+              value={`${formatMaybe(status?.rates_hz.bbox, 2)} Hz`}
+              note="Primary evidence metric"
+            />
+            <EvidenceStat
+              label="Obstacle Marker Rate"
+              value={`${formatMaybe(status?.rates_hz.obstacle, 2)} Hz`}
+              note="Target observed around 4.0-4.5 Hz"
+            />
+            <EvidenceStat
+              label="Debug Frame Age"
+              value={formatAge(status?.tracker_connection.last_debug_age_s ?? -1)}
+              note={`Stale threshold ${staleTimeout.toFixed(2)} s`}
+            />
+            <EvidenceStat
+              label="Last Point Count"
+              value={formatPoints(status?.counters.last_point_count ?? 0)}
+              note="Context only; not primary rate evidence"
+            />
           </div>
         </div>
 
@@ -261,6 +368,14 @@ export function PerceptionMonitorPage() {
             <CardContent className="p-4 text-sm text-red-200">
               Dashboard relay request failed.
               <span className="ml-2 font-mono text-xs text-red-300">{errorText ?? 'Unknown error'}</span>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {bridgeOnline && sourceMode !== 'depth_tracker' ? (
+          <Card className="mb-4 border-amber-900/70 bg-amber-950/20">
+            <CardContent className="p-4 text-sm text-amber-200">
+              {status?.capabilities.message || 'Depth source unavailable, pointcloud and boundary features are disabled.'}
             </CardContent>
           </Card>
         ) : null}
@@ -274,11 +389,9 @@ export function PerceptionMonitorPage() {
           </CardContent>
         </Card>
 
-        {activeTab === 'overview' ? (
-          <OverviewTab status={status} imageUrl={imageUrl} />
-        ) : null}
+        {activeTab === 'overview' ? <OverviewTab status={status} imageUrl={imageUrl} /> : null}
         {activeTab === 'perception' ? (
-          <PerceptionTab status={status} imageUrl={imageUrl} />
+          <PerceptionTab status={status} imageUrl={imageUrl} rateHistory={rateHistory} staleTimeout={staleTimeout} />
         ) : null}
         {activeTab === 'robot' ? <RobotTab status={status} /> : null}
         {activeTab === 'unity' ? <UnityTab status={status} /> : null}
@@ -289,20 +402,18 @@ export function PerceptionMonitorPage() {
 
 function OverviewTab({ status, imageUrl }: { status: RelayStatus | null; imageUrl: string }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.3fr_1fr]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Live Camera Feed</CardTitle>
-          <CardDescription>Active topic: {status?.source.active_image_topic || 'n/a'}</CardDescription>
+          <CardTitle className="text-lg">Live Camera Feed</CardTitle>
+          <CardDescription className="text-sm">Active topic: {status?.source.active_image_topic || 'n/a'}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950/80">
             {status?.latest.jpeg_available ? (
-              <img src={imageUrl} alt="HoloAssist camera stream" className="h-auto min-h-[24rem] w-full object-contain" />
+              <img src={imageUrl} alt="HoloAssist camera stream" className="h-auto min-h-[26rem] w-full object-contain" />
             ) : (
-              <div className="flex min-h-[24rem] items-center justify-center text-sm text-slate-400">
-                Waiting for image stream...
-              </div>
+              <div className="flex min-h-[24rem] items-center justify-center text-sm text-slate-400">Waiting for image stream...</div>
             )}
           </div>
         </CardContent>
@@ -311,8 +422,8 @@ function OverviewTab({ status, imageUrl }: { status: RelayStatus | null; imageUr
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Subsystem Summary</CardTitle>
-            <CardDescription>Current operating mode</CardDescription>
+            <CardTitle className="text-lg">Subsystem Summary</CardTitle>
+            <CardDescription className="text-sm">Current operating mode and evidence snapshot</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Metric label="Source mode" value={status?.source.mode || 'n/a'} />
@@ -326,10 +437,12 @@ function OverviewTab({ status, imageUrl }: { status: RelayStatus | null; imageUr
 
         <Card>
           <CardHeader>
-            <CardTitle>Live Rates (Hz)</CardTitle>
-            <CardDescription>Measured over relay rolling window</CardDescription>
+            <CardTitle className="text-lg">Presentation Rates (Hz)</CardTitle>
+            <CardDescription className="text-sm">Measured over relay rolling window</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <Metric label="bbox (primary)" value={formatMaybe(status?.rates_hz.bbox, 2)} />
+            <Metric label="obstacle (primary)" value={formatMaybe(status?.rates_hz.obstacle, 2)} />
             <Metric label="debug_image" value={formatMaybe(status?.rates_hz.debug_image, 2)} />
             <Metric label="pointcloud" value={formatMaybe(status?.rates_hz.pointcloud, 2)} />
             <Metric label="joint_states" value={formatMaybe(status?.rates_hz.joint_states, 2)} />
@@ -343,85 +456,299 @@ function OverviewTab({ status, imageUrl }: { status: RelayStatus | null; imageUr
   );
 }
 
-function PerceptionTab({ status, imageUrl }: { status: RelayStatus | null; imageUrl: string }) {
+function PerceptionTab({
+  status,
+  imageUrl,
+  rateHistory,
+  staleTimeout
+}: {
+  status: RelayStatus | null;
+  imageUrl: string;
+  rateHistory: RateHistorySample[];
+  staleTimeout: number;
+}) {
   const pointcloudSupported = status?.capabilities.pointcloud_supported ?? false;
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_1fr]">
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Perception Stream</CardTitle>
-            <CardDescription>Image source: {status?.source.active_image_topic || 'n/a'}</CardDescription>
-          </div>
-          <Badge tone={status?.latest.jpeg_available ? 'success' : 'warn'}>
-            {status?.latest.jpeg_available ? 'Streaming' : 'Waiting'}
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950/80">
-            {status?.latest.jpeg_available ? (
-              <img src={imageUrl} alt="Perception stream" className="h-auto min-h-[24rem] w-full object-contain" />
-            ) : (
-              <div className="flex min-h-[24rem] items-center justify-center text-sm text-slate-400">
-                Waiting for image stream...
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Perception Health</CardTitle>
-            <CardDescription>Freshness and counters</CardDescription>
+            <div>
+              <CardTitle className="text-lg">Perception Stream</CardTitle>
+              <CardDescription className="text-sm">Image source: {status?.source.active_image_topic || 'n/a'}</CardDescription>
+            </div>
+            <Badge tone={status?.latest.jpeg_available ? 'success' : 'warn'} className="px-3 py-1 text-sm">
+              {status?.latest.jpeg_available ? 'Streaming' : 'Waiting'}
+            </Badge>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Metric label="Debug frame age" value={formatAge(status?.tracker_connection.last_debug_age_s ?? -1)} />
-            <Metric label="RGB frame age" value={formatAge(status?.tracker_connection.last_rgb_age_s ?? -1)} />
-            <Metric label="BBox age" value={formatAge(status?.tracker_connection.last_bbox_age_s ?? -1)} />
-            <Metric label="Pointcloud age" value={formatAge(status?.tracker_connection.last_pointcloud_age_s ?? -1)} />
-            <Metric label="Obstacle age" value={formatAge(status?.tracker_connection.last_obstacle_age_s ?? -1)} />
-            <Metric label="debug_image rate" value={formatMaybe(status?.rates_hz.debug_image, 2)} />
-            <Metric label="pointcloud rate" value={formatMaybe(status?.rates_hz.pointcloud, 2)} />
-            <Metric label="bbox count" value={String(status?.counters.bbox_rx_count ?? 0)} />
-            <Metric label="pointcloud count" value={String(status?.counters.pointcloud_rx_count ?? 0)} />
-            <Metric label="last point count" value={pointcloudSupported ? String(status?.counters.last_point_count ?? 0) : 'Unsupported'} />
-            {!pointcloudSupported ? (
-              <div className="rounded-md border border-amber-900/70 bg-amber-950/20 p-3 text-amber-200">
-                {status?.capabilities.message || 'Depth unavailable; pointcloud and obstacle outputs are unsupported.'}
-              </div>
-            ) : null}
+          <CardContent>
+            <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950/80">
+              {status?.latest.jpeg_available ? (
+                <img src={imageUrl} alt="Perception stream" className="h-auto min-h-[26rem] w-full object-contain" />
+              ) : (
+                <div className="flex min-h-[24rem] items-center justify-center text-sm text-slate-400">Waiting for image stream...</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Current BBox</CardTitle>
-            <CardDescription>Topic: {status?.topics.bbox_topic ?? 'n/a'}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {!pointcloudSupported ? (
-              <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-slate-400">
-                RGB fallback mode active. No depth-derived bbox.
-              </div>
-            ) : status?.latest.bbox ? (
-              <>
-                <Metric label="x_min / y_min" value={`${status.latest.bbox.x_min_px.toFixed(1)} / ${status.latest.bbox.y_min_px.toFixed(1)} px`} />
-                <Metric label="x_max / y_max" value={`${status.latest.bbox.x_max_px.toFixed(1)} / ${status.latest.bbox.y_max_px.toFixed(1)} px`} />
-                <Metric label="cx / cy" value={`${status.latest.bbox.cx_px.toFixed(1)} / ${status.latest.bbox.cy_px.toFixed(1)} px`} />
-                <Metric label="Median depth" value={`${status.latest.bbox.median_depth_m.toFixed(3)} m`} />
-                <Metric label="Blob area" value={`${status.latest.bbox.area_px.toFixed(0)} px`} />
-              </>
-            ) : (
-              <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-slate-400">
-                No valid obstacle blob in configured depth band.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Perception Health</CardTitle>
+              <CardDescription className="text-sm">Freshness and counters</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <Metric label="Debug frame age" value={formatAge(status?.tracker_connection.last_debug_age_s ?? -1)} />
+              <Metric label="RGB frame age" value={formatAge(status?.tracker_connection.last_rgb_age_s ?? -1)} />
+              <Metric label="BBox age" value={formatAge(status?.tracker_connection.last_bbox_age_s ?? -1)} />
+              <Metric label="Pointcloud age" value={formatAge(status?.tracker_connection.last_pointcloud_age_s ?? -1)} />
+              <Metric label="Obstacle age" value={formatAge(status?.tracker_connection.last_obstacle_age_s ?? -1)} />
+              <Metric label="bbox rate (primary)" value={formatMaybe(status?.rates_hz.bbox, 2)} />
+              <Metric label="obstacle rate (primary)" value={formatMaybe(status?.rates_hz.obstacle, 2)} />
+              <Metric label="bbox count" value={String(status?.counters.bbox_rx_count ?? 0)} />
+              <Metric label="obstacle count" value={String(status?.counters.obstacle_rx_count ?? 0)} />
+              <Metric label="pointcloud count" value={String(status?.counters.pointcloud_rx_count ?? 0)} />
+              <Metric label="last point count" value={pointcloudSupported ? String(status?.counters.last_point_count ?? 0) : 'Unsupported'} />
+              {!pointcloudSupported ? (
+                <div className="rounded-md border border-amber-900/70 bg-amber-950/20 p-3 text-amber-200">
+                  {status?.capabilities.message || 'Depth unavailable; pointcloud and obstacle outputs are unsupported.'}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Current BBox</CardTitle>
+              <CardDescription className="text-sm">Topic: {status?.topics.bbox_topic ?? 'n/a'}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {!pointcloudSupported ? (
+                <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-slate-400">
+                  RGB fallback mode active. No depth-derived bbox.
+                </div>
+              ) : status?.latest.bbox ? (
+                <>
+                  <Metric label="x_min / y_min" value={`${status.latest.bbox.x_min_px.toFixed(1)} / ${status.latest.bbox.y_min_px.toFixed(1)} px`} />
+                  <Metric label="x_max / y_max" value={`${status.latest.bbox.x_max_px.toFixed(1)} / ${status.latest.bbox.y_max_px.toFixed(1)} px`} />
+                  <Metric label="cx / cy" value={`${status.latest.bbox.cx_px.toFixed(1)} / ${status.latest.bbox.cy_px.toFixed(1)} px`} />
+                  <Metric label="Median depth" value={`${status.latest.bbox.median_depth_m.toFixed(3)} m`} />
+                  <Metric label="Blob area" value={`${status.latest.bbox.area_px.toFixed(0)} px`} />
+                </>
+              ) : (
+                <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-slate-400">
+                  No valid obstacle blob in configured depth band.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      <PerceptionRateTrendCard samples={rateHistory} />
+      <PerceptionFreshnessCard samples={rateHistory} staleTimeout={staleTimeout} />
+    </div>
+  );
+}
+
+function PerceptionRateTrendCard({ samples }: { samples: RateHistorySample[] }) {
+  const enoughData = samples.length >= 2;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle className="text-lg">Perception Output Rates - Rolling 60s</CardTitle>
+          <CardDescription className="text-sm">
+            Time-series log of bbox and obstacle marker publish rates for presentation evidence
+          </CardDescription>
+        </div>
+        <Badge tone="info" className="px-3 py-1 text-sm">
+          BBox and obstacle rates
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        {!enoughData ? (
+          <EmptyChartState text="Collecting rate history. Wait a few seconds for the graph to populate." />
+        ) : (
+          <div className="h-[22rem] w-full rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={samples} margin={{ top: 18, right: 28, bottom: 22, left: 16 }}>
+                <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="4 4" />
+                <XAxis
+                  dataKey="ts_unix_ms"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(value: number) => formatClockLabel(value)}
+                  tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                  stroke="#94a3b8"
+                  label={{ value: 'Time (hh:mm:ss)', position: 'insideBottom', offset: -12, fill: '#94a3b8' }}
+                />
+                <YAxis
+                  yAxisId="rate"
+                  tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                  stroke="#94a3b8"
+                  width={52}
+                  label={{ value: 'Rate (Hz)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15,23,42,0.95)',
+                    border: '1px solid rgba(71,85,105,0.8)',
+                    borderRadius: '0.75rem',
+                    color: '#e2e8f0'
+                  }}
+                  labelFormatter={(value: number | string) => `Time ${formatClockLabel(Number(value))}`}
+                  formatter={(value: number | string, name: string) => [`${Number(value).toFixed(2)} Hz`, name]}
+                />
+                <Legend
+                  verticalAlign="top"
+                  wrapperStyle={{
+                    color: '#cbd5e1',
+                    fontSize: '12px',
+                    paddingBottom: '8px'
+                  }}
+                />
+                <ReferenceArea yAxisId="rate" y1={4.0} y2={4.6} fill="rgba(34,197,94,0.13)" />
+                <ReferenceLine yAxisId="rate" y={4.0} stroke="#22c55e" strokeDasharray="6 6" />
+                <ReferenceLine yAxisId="rate" y={4.6} stroke="#22c55e" strokeDasharray="6 6" />
+                <Line
+                  yAxisId="rate"
+                  type="monotone"
+                  dataKey="bbox_hz"
+                  name="BBox publish rate"
+                  stroke="#38bdf8"
+                  strokeWidth={3}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  yAxisId="rate"
+                  type="monotone"
+                  dataKey="obstacle_hz"
+                  name="Obstacle marker rate"
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PerceptionFreshnessCard({ samples, staleTimeout }: { samples: RateHistorySample[]; staleTimeout: number }) {
+  const enoughData = samples.length >= 2;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle className="text-lg">Freshness and Point Count - Rolling 60s</CardTitle>
+          <CardDescription className="text-sm">Debug frame freshness and point density context</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!enoughData ? (
+          <EmptyChartState text="Collecting freshness history. Keep the tracker running to build the timeline." />
+        ) : (
+          <div className="h-[20rem] w-full rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={samples} margin={{ top: 18, right: 28, bottom: 22, left: 16 }}>
+                <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="4 4" />
+                <XAxis
+                  dataKey="ts_unix_ms"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(value: number) => formatClockLabel(value)}
+                  tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                  stroke="#94a3b8"
+                  label={{ value: 'Time (hh:mm:ss)', position: 'insideBottom', offset: -12, fill: '#94a3b8' }}
+                />
+                <YAxis
+                  yAxisId="age"
+                  tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                  stroke="#94a3b8"
+                  width={56}
+                  label={{ value: 'Age (s)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                />
+                <YAxis
+                  yAxisId="points"
+                  orientation="right"
+                  tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                  stroke="#94a3b8"
+                  width={70}
+                  label={{ value: 'Points', angle: 90, position: 'insideRight', fill: '#94a3b8' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15,23,42,0.95)',
+                    border: '1px solid rgba(71,85,105,0.8)',
+                    borderRadius: '0.75rem',
+                    color: '#e2e8f0'
+                  }}
+                  labelFormatter={(value: number | string) => `Time ${formatClockLabel(Number(value))}`}
+                  formatter={(value: number | string, name: string) => {
+                    if (name === 'Last point count') {
+                      return [formatPoints(Number(value)), name];
+                    }
+                    return [`${Number(value).toFixed(2)} s`, name];
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  wrapperStyle={{
+                    color: '#cbd5e1',
+                    fontSize: '12px',
+                    paddingBottom: '8px'
+                  }}
+                />
+                <ReferenceLine
+                  yAxisId="age"
+                  y={staleTimeout}
+                  stroke="#f59e0b"
+                  strokeDasharray="6 6"
+                  label={{ value: 'Stale threshold', fill: '#fbbf24', fontSize: 11 }}
+                />
+                <Line
+                  yAxisId="age"
+                  type="monotone"
+                  dataKey="debug_age_s"
+                  name="Debug frame age"
+                  stroke="#f59e0b"
+                  strokeWidth={2.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  yAxisId="points"
+                  type="monotone"
+                  dataKey="point_count"
+                  name="Last point count"
+                  stroke="#a78bfa"
+                  strokeWidth={2.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyChartState({ text }: { text: string }) {
+  return (
+    <div className="flex h-[16rem] items-center justify-center rounded-lg border border-slate-800 bg-slate-950/60 text-sm text-slate-400">
+      {text}
     </div>
   );
 }
@@ -433,8 +760,8 @@ function RobotTab({ status }: { status: RelayStatus | null }) {
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Robot State</CardTitle>
-          <CardDescription>Joint telemetry and end-effector pose</CardDescription>
+          <CardTitle className="text-lg">Robot State</CardTitle>
+          <CardDescription className="text-sm">Joint telemetry and end-effector pose</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Metric label="Joint state age" value={formatAge(status?.robot_state.joint_state_age_s ?? -1)} />
@@ -458,8 +785,8 @@ function RobotTab({ status }: { status: RelayStatus | null }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Command and Latency Metrics</CardTitle>
-          <CardDescription>Goal transport and response estimates</CardDescription>
+          <CardTitle className="text-lg">Command and Latency Metrics</CardTitle>
+          <CardDescription className="text-sm">Goal transport and response estimates</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Metric label="Target pose age" value={formatAge(status?.robot_state.command_metrics.last_target_age_s ?? -1)} />
@@ -478,8 +805,8 @@ function RobotTab({ status }: { status: RelayStatus | null }) {
 
       <Card className="xl:col-span-2">
         <CardHeader>
-          <CardTitle>Joint Table</CardTitle>
-          <CardDescription>Position / velocity / effort</CardDescription>
+          <CardTitle className="text-lg">Joint Table</CardTitle>
+          <CardDescription className="text-sm">Position / velocity / effort</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto rounded-lg border border-slate-800">
@@ -523,8 +850,8 @@ function UnityTab({ status }: { status: RelayStatus | null }) {
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Unity Bridge Health</CardTitle>
-          <CardDescription>ROS-TCP endpoint and map signal</CardDescription>
+          <CardTitle className="text-lg">Unity Bridge Health</CardTitle>
+          <CardDescription className="text-sm">ROS-TCP endpoint and map signal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Metric label="TCP host" value={status ? `${status.unity_integration.tcp_host}:${status.unity_integration.tcp_port}` : 'n/a'} />
@@ -543,8 +870,8 @@ function UnityTab({ status }: { status: RelayStatus | null }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Digital Twin Alignment Signals</CardTitle>
-          <CardDescription>Goal-to-motion timing indicators</CardDescription>
+          <CardTitle className="text-lg">Digital Twin Alignment Signals</CardTitle>
+          <CardDescription className="text-sm">Goal-to-motion timing indicators</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Metric label="Target topic" value={status?.topics.target_pose_topic ?? 'n/a'} mono />
@@ -573,7 +900,7 @@ function TabButton({
   onClick: () => void;
 }) {
   return (
-    <Button variant={active ? 'default' : 'outline'} size="sm" onClick={onClick}>
+    <Button variant={active ? 'default' : 'outline'} size="sm" onClick={onClick} className="min-w-[8.5rem]">
       {label}
     </Button>
   );
@@ -589,9 +916,37 @@ function Metric({
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-2">
-      <span className="text-slate-400">{label}</span>
-      <span className={mono ? 'font-mono text-xs text-slate-200' : 'font-medium text-slate-200'}>{value}</span>
+    <div className="flex items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-2.5">
+      <span className="text-sm text-slate-300">{label}</span>
+      <span className={mono ? 'font-mono text-sm text-slate-100' : 'text-sm font-semibold text-slate-100'}>{value}</span>
+    </div>
+  );
+}
+
+function StatusBadge({ label, value, tone }: { label: string; value: string; tone: BadgeTone }) {
+  const dotColorByTone: Record<BadgeTone, string> = {
+    neutral: 'bg-slate-400',
+    success: 'bg-emerald-400',
+    warn: 'bg-amber-400',
+    error: 'bg-red-400',
+    info: 'bg-sky-400'
+  };
+
+  return (
+    <Badge tone={tone} className="px-3 py-1 text-sm">
+      <span className={`mr-2 inline-block h-2 w-2 rounded-full ${dotColorByTone[tone]}`} />
+      <span className="font-semibold">{label}:</span>
+      <span className="ml-1">{value}</span>
+    </Badge>
+  );
+}
+
+function EvidenceStat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="rounded-xl border border-slate-700/80 bg-slate-950/75 p-3">
+      <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-slate-100">{value}</div>
+      <div className="mt-1 text-xs text-slate-400">{note}</div>
     </div>
   );
 }
