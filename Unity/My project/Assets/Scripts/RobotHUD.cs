@@ -80,7 +80,7 @@ public class RobotHUD : MonoBehaviour
     void UpdateText()
     {
         string modeStr = controller.CurrentMode == RobotController.ControlMode.DirectJoint
-            ? "JOINT" : "SERVO";
+            ? "JOINT" : "RMRC";
 
         if (controller.CurrentMode == RobotController.ControlMode.DirectJoint)
         {

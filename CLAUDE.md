@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 HoloAssist is a ROS 2-based XR teleoperation framework integrating a Meta Quest 3 headset with a Universal Robots UR3e collaborative arm. This branch (`nic`) is one of several personal branches in a shared research team repository (other branches: `john`, `ollie`, `seb`).
 
-The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e end-effector via Cartesian velocity commands through MoveIt 2 Servo.
+The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e end-effector via Cartesian velocity commands using RMRC (Resolved Motion Rate Control) — Jacobian-based velocity resolution computed locally in Unity, no MoveIt needed.
 
 ### Progress Status
 - ✅ Unity XR template (Mixed Reality / passthrough) working on Quest 3
@@ -19,7 +19,7 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ JointStateSubscriber.cs in place; joints register correctly in Unity Console
 - ✅ Digital twin working (Unity mirrors real UR3e joints) — fixed joint name mismatch between ROS and Unity
 - ✅ Quest 3 build connects to ROS over WiFi (ROS IP set to laptop's WiFi IP, ros_tcp_endpoint on 0.0.0.0)
-- ✅ RobotController.cs created with two control modes (Direct Joint + MoveIt Servo) — rewritten to use Unity Input System (was OVRInput, which didn't work without OVRManager)
+- ✅ RobotController.cs created with two control modes (Direct Joint + RMRC) — rewritten to use Unity Input System (was OVRInput, which didn't work without OVRManager)
 - ✅ MoveIt 2 + Servo config already present in `ur_moveit_config` package (launch with `launch_servo:=true`)
 - ✅ RobotBasePlacer.cs working — hand-tracking pinch-to-grab and drag robot in MR (on parent wrapper GameObject)
 - ✅ JointStateSubscriber.cs rewritten to be purely kinematic (no ArticulationBody physics, direct Transform rotations)
@@ -29,10 +29,11 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ RobotControlActions.inputactions created — dedicated Input System actions for robot control
 - ✅ RobotController.cs disables conflicting XRI locomotion action maps at runtime (teleport, turn, snap turn, move, jump, rotate manipulation)
 - ✅ RobotHUD.cs created — floating TextMeshPro panel follows camera, shows mode + selected joint
-- ⬜ Test RobotController.cs on Quest 3 (not yet tested — script compiles but needs real hardware test)
-- ⬜ Wire up RobotControlActions asset in Inspector (drag into RobotController's Input Actions field)
-- ⬜ Test MoveIt Servo mode end-to-end (requires Terminal 3: `ros2 launch ur_moveit_config ur_moveit.launch.py ur_type:=ur3e launch_rviz:=false launch_servo:=true`)
-- ⬜ Test full teleoperation loop with real robot
+- ✅ RobotController.cs tested on Quest 3 — teleoperation works but was jerky in Direct Joint mode
+- ✅ UR3eKinematics.cs created — forward kinematics + geometric Jacobian + DLS inverse for RMRC
+- ✅ RobotController.cs rewritten: Servo mode replaced with RMRC mode (Jacobian-based Cartesian velocity control, no MoveIt needed)
+- ⬜ Test RMRC mode on Quest 3 with real robot
+- ⬜ Test full teleoperation loop with RMRC
 
 ## Repository Layout
 
@@ -45,7 +46,8 @@ nic/
   Unity/My project/ — Unity 6.3 project
     Assets/
       Scripts/JointStateSubscriber.cs  — subscribes to /joint_states, drives robot joints
-      Scripts/RobotController.cs       — robot control (Direct Joint + MoveIt Servo modes)
+      Scripts/RobotController.cs       — robot control (RMRC + Direct Joint modes)
+      Scripts/UR3eKinematics.cs        — UR3e forward kinematics + Jacobian for RMRC
       Scripts/RobotBasePlacer.cs       — hand-tracking pinch-to-grab robot placement
       Scripts/RobotHUD.cs              — floating HUD showing mode + selected joint
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
@@ -85,15 +87,33 @@ ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=192.168
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 
-# Terminal 3 (only for MoveIt Servo mode)
+# Terminal 3 (activate forward_velocity_controller for RMRC / Direct Joint)
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 launch ur_moveit_config ur_moveit.launch.py ur_type:=ur3e launch_rviz:=false launch_servo:=true
+ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller
 ```
 
 Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.100`).
 Then hit Play in Unity.
 
-**Note:** Terminal 3 is required for Servo mode. Without it, `/servo_node/delta_twist_cmds` has no subscriber. Direct Joint mode works with just Terminals 1+2.
+**Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. The `forward_velocity_controller` must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation.
+
+### Simulated Hardware (no real robot)
+
+```bash
+# Terminal 1 — fake UR3e hardware
+source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
+ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=0.0.0.0 use_fake_hardware:=true fake_sensor_commands:=true launch_rviz:=true
+
+# Terminal 2 — switch to velocity controller (wait for Terminal 1 to finish loading)
+source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
+ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller
+
+# Terminal 3 — ROS-TCP bridge
+source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
+ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
+```
+
+No teach pendant needed. Ignore `urscript_interface` connection errors — that node doesn't check for fake hardware mode. Joint states and controllers work fine. Robot moves in RViz and Unity digital twin.
 
 ### Network Setup
 
@@ -152,24 +172,25 @@ Control Layer (ur_robot_driver / ros2_control)
 
 - `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary.
 - `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR hand tracking — pinch to grab, drag to move. Pure transform movement, no physics.
+- `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK). DLS pseudoinverse for velocity resolution (3-DOF linear, no orientation constraint). Manipulability measure for adaptive damping.
 - `Assets/Scripts/RobotController.cs` — attach to any GameObject; uses **Unity Input System** (not OVRInput). Requires `RobotControlActions.inputactions` dragged into the Inspector's **Input Actions** field. Two control modes switched via Menu button:
-  - **Direct Joint mode** (default): A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Sends trajectory points with both position AND velocity fields so the controller interpolates smoothly. Publishes continuously (even at zero input) so the robot holds position. Publishes `JointTrajectory` to `/scaled_joint_trajectory_controller/joint_trajectory` (no MoveIt needed).
-  - **MoveIt Servo mode**: left stick = XY translation, right stick = Z translation + yaw. Publishes `TwistStamped` to `/servo_node/delta_twist_cmds`. **Requires MoveIt Servo running** (Terminal 3). Sends commands continuously (including zeros) to prevent servo 100ms idle timeout. Messages are timestamped — servo rejects stale messages.
+  - **RMRC mode** (default): Resolved Motion Rate Control — right stick = XY translation (forward/back, left/right), left stick Y = Z translation (up/down), left stick X = yaw. Uses `UR3eKinematics` numerical Jacobian (3-DOF linear) to resolve Cartesian velocity into coordinated joint velocities. Does not constrain tool orientation. Adaptive damping increases near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
+  - **Direct Joint mode**: A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`.
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
-  - Publish rate: 30Hz (must be >10Hz to stay within servo's 100ms `incoming_command_timeout`).
+  - Publish rate: 50Hz.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
 
 ### Controller mapping (Quest 3)
 
-| Input | Direct Joint Mode | MoveIt Servo Mode |
+| Input | Direct Joint Mode | RMRC Mode |
 |---|---|---|
-| **Menu button** (left) | Toggle to Servo | Toggle to Direct Joint |
+| **Menu button** (left) | Toggle to RMRC | Toggle to Direct Joint |
 | **A button** (right) | Next joint | — |
 | **B button** (right) | Previous joint | — |
-| **Right stick Y** | Jog selected joint (proportional velocity) | End-effector up/down (Z) |
-| **Right stick X** | — | End-effector yaw |
-| **Left stick Y** | — | End-effector forward/back (X) |
-| **Left stick X** | — | End-effector left/right (Y) |
+| **Right stick Y** | Jog selected joint (proportional velocity) | End-effector forward/back (X) |
+| **Right stick X** | — | End-effector left/right (Y) |
+| **Left stick Y** | — | End-effector up/down (Z) |
+| **Left stick X** | — | End-effector yaw |
 - `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating TextMeshPro panel tracks the camera, shows current mode and selected joint.
 
 ## Known Issues
@@ -185,4 +206,5 @@ Control Layer (ur_robot_driver / ros2_control)
 - **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.100` ↔ `192.168.0.194`), Quest connects to laptop via WiFi. Both must be on the same WiFi network. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.100`.
 - **OVRInput does nothing on Quest 3 (MR template)** — the Mixed Reality template uses Unity Input System + XR Interaction Toolkit, not OVR. `OVRInput.Get()` silently returns zero without `OVRManager` in the scene. Fixed by rewriting RobotController.cs to use `InputAction` from Unity Input System with `<XRController>` bindings.
 - **XRI Default Input Actions consume thumbsticks/buttons** — the MR template's XRI actions bind both thumbsticks to teleport/turn/move and A button to Jump. RobotController.cs now disables these conflicting action maps at runtime (`XRI Left Locomotion`, `XRI Right Locomotion`, plus individual Rotate Manipulation and UI Scroll actions).
-- **MoveIt Servo config** — `ros2_ws/src/Universal_Robots_ROS2_Driver/ur_moveit_config/config/ur_servo.yaml`: `command_in_type: speed_units` (m/s, rad/s), `incoming_command_timeout: 0.1` (100ms), `robot_link_command_frame: tool0`, `publish_period: 0.004` (250Hz output), outputs to `forward_position_controller`. Servo switches the active ros2_control controller — do not expect `scaled_joint_trajectory_controller` to work while Servo is active.
+- **MoveIt Servo not currently used** — RMRC replaces MoveIt Servo for teleoperation. Servo config still exists in `ur_moveit_config/config/ur_servo.yaml` if needed later for collision-aware planning.
+- **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish `Float64MultiArray` to `/forward_velocity_controller/commands`. After launching the UR driver, switch controllers: `ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller`.

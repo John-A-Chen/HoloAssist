@@ -2,25 +2,32 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Unity.Robotics.ROSTCPConnector;
-using RosMessageTypes.Geometry;
 using RosMessageTypes.Sensor;
 using RosMessageTypes.Std;
-using RosMessageTypes.BuiltinInterfaces;
 
 public class RobotController : MonoBehaviour
 {
-    public enum ControlMode { Servo, DirectJoint }
+    public enum ControlMode { RMRC, DirectJoint }
 
     [Header("Control Settings")]
-    public ControlMode mode = ControlMode.DirectJoint;
-    public float linearSpeed = 0.3f;   // m/s for Servo mode
-    public float angularSpeed = 0.3f;  // rad/s for Servo mode
-    public float jointJogSpeed = 0.5f; // rad/s max for Direct Joint mode
-    public float publishRate = 50f;    // Hz
+    public ControlMode mode = ControlMode.RMRC;
+    public float linearSpeed = 0.25f;    // m/s max Cartesian speed for RMRC
+    public float angularSpeed = 0.3f;    // rad/s max Cartesian rotation for RMRC
+    public float jointJogSpeed = 0.5f;   // rad/s max for Direct Joint mode
+    public float publishRate = 50f;      // Hz
+    public float maxJointVelocity = 2.0f; // rad/s safety limit — all joints scaled proportionally
 
     [Header("Smoothing")]
     [Tooltip("Input smoothing time constant (seconds). Lower = more responsive, higher = smoother.")]
     public float inputSmoothTime = 0.12f;
+
+    [Header("RMRC")]
+    [Tooltip("Damping factor for singularity robustness. Higher = safer near singularities but less precise.")]
+    public float damping = 0.01f;
+    [Tooltip("Manipulability threshold — increases damping when near singularities.")]
+    public float singularityThreshold = 0.01f;
+    [Tooltip("Maximum damping applied near singularities.")]
+    public float maxDamping = 0.5f;
 
     [Header("Input")]
     public InputActionAsset inputActions;
@@ -37,8 +44,8 @@ public class RobotController : MonoBehaviour
     private float publishTimer = 0f;
     private bool hasReceivedJointState = false;
     private float smoothedJointInput = 0f;
-    private Vector2 smoothedServoLeft = Vector2.zero;
-    private Vector2 smoothedServoRight = Vector2.zero;
+    private Vector2 smoothedLeft = Vector2.zero;
+    private Vector2 smoothedRight = Vector2.zero;
 
     // Input actions
     private InputAction leftStickAction;
@@ -46,6 +53,10 @@ public class RobotController : MonoBehaviour
     private InputAction nextJointAction;
     private InputAction prevJointAction;
     private InputAction toggleModeAction;
+
+    // Reusable arrays to avoid GC
+    private double[] vDesired = new double[3];
+    private double[] qDot = new double[6];
 
     private static readonly string[] jointNames =
     {
@@ -57,13 +68,15 @@ public class RobotController : MonoBehaviour
         "wrist_3_joint"
     };
 
-    private const string SERVO_TOPIC = "/servo_node/delta_twist_cmds";
+    // Joint limits from URDF (radians)
+    private static readonly double[] jointLimitsLower = { -6.2832, -6.2832, -3.1416, -6.2832, -6.2832, -6.2832 };
+    private static readonly double[] jointLimitsUpper = {  6.2832,  6.2832,  3.1416,  6.2832,  6.2832,  6.2832 };
+
     private const string VELOCITY_TOPIC = "/forward_velocity_controller/commands";
 
     void Start()
     {
         ros = ROSConnection.GetOrCreateInstance();
-        ros.RegisterPublisher<TwistStampedMsg>(SERVO_TOPIC);
         ros.RegisterPublisher<Float64MultiArrayMsg>(VELOCITY_TOPIC);
         ros.Subscribe<JointStateMsg>("/joint_states", OnJointState);
 
@@ -159,8 +172,8 @@ public class RobotController : MonoBehaviour
         if (publishTimer < 1f / publishRate) return;
         publishTimer = 0f;
 
-        if (mode == ControlMode.Servo)
-            UpdateServo();
+        if (mode == ControlMode.RMRC)
+            UpdateRMRC();
         else
             UpdateDirectJoint();
     }
@@ -169,10 +182,10 @@ public class RobotController : MonoBehaviour
     {
         if (toggleModeAction != null && toggleModeAction.WasPressedThisFrame())
         {
-            mode = (mode == ControlMode.Servo) ? ControlMode.DirectJoint : ControlMode.Servo;
+            mode = (mode == ControlMode.RMRC) ? ControlMode.DirectJoint : ControlMode.RMRC;
             smoothedJointInput = 0f;
-            smoothedServoLeft = Vector2.zero;
-            smoothedServoRight = Vector2.zero;
+            smoothedLeft = Vector2.zero;
+            smoothedRight = Vector2.zero;
             Debug.Log($"[RobotController] Mode: {mode}");
         }
 
@@ -180,7 +193,7 @@ public class RobotController : MonoBehaviour
         {
             if (nextJointAction != null && nextJointAction.WasPressedThisFrame())
             {
-                smoothedJointInput = 0f; // reset when switching joints
+                smoothedJointInput = 0f;
                 selectedJoint = (selectedJoint + 1) % 6;
                 Debug.Log($"[RobotController] Selected: {jointNames[selectedJoint]}");
             }
@@ -199,31 +212,76 @@ public class RobotController : MonoBehaviour
         return Mathf.Lerp(current, target, 1f - Mathf.Exp(-dt / smoothTime));
     }
 
-    void UpdateServo()
+    void UpdateRMRC()
     {
+        if (!hasReceivedJointState) return;
+
         Vector2 leftStick = leftStickAction != null ? leftStickAction.ReadValue<Vector2>() : Vector2.zero;
         Vector2 rightStick = rightStickAction != null ? rightStickAction.ReadValue<Vector2>() : Vector2.zero;
 
         float dt = 1f / publishRate;
 
-        smoothedServoLeft.x = SmoothExp(smoothedServoLeft.x, leftStick.x, inputSmoothTime, dt);
-        smoothedServoLeft.y = SmoothExp(smoothedServoLeft.y, leftStick.y, inputSmoothTime, dt);
-        smoothedServoRight.x = SmoothExp(smoothedServoRight.x, rightStick.x, inputSmoothTime, dt);
-        smoothedServoRight.y = SmoothExp(smoothedServoRight.y, rightStick.y, inputSmoothTime, dt);
+        // Smooth stick inputs
+        smoothedLeft.x = SmoothExp(smoothedLeft.x, leftStick.x, inputSmoothTime, dt);
+        smoothedLeft.y = SmoothExp(smoothedLeft.y, leftStick.y, inputSmoothTime, dt);
+        smoothedRight.x = SmoothExp(smoothedRight.x, rightStick.x, inputSmoothTime, dt);
+        smoothedRight.y = SmoothExp(smoothedRight.y, rightStick.y, inputSmoothTime, dt);
 
-        var msg = new TwistStampedMsg();
-        msg.header.frame_id = "tool0";
+        // Kill small residuals when stick is released
+        if (Mathf.Abs(smoothedLeft.x) < 0.005f && Mathf.Abs(leftStick.x) < 0.01f) smoothedLeft.x = 0f;
+        if (Mathf.Abs(smoothedLeft.y) < 0.005f && Mathf.Abs(leftStick.y) < 0.01f) smoothedLeft.y = 0f;
+        if (Mathf.Abs(smoothedRight.x) < 0.005f && Mathf.Abs(rightStick.x) < 0.01f) smoothedRight.x = 0f;
+        if (Mathf.Abs(smoothedRight.y) < 0.005f && Mathf.Abs(rightStick.y) < 0.01f) smoothedRight.y = 0f;
 
-        double secs = Time.timeAsDouble;
-        msg.header.stamp.sec = (int)secs;
-        msg.header.stamp.nanosec = (uint)((secs - (int)secs) * 1e9);
+        // Build desired linear velocity in robot base frame
+        // Right stick: X (forward/back), Y (left/right)
+        // Left stick Y: Z (up/down)
+        vDesired[0] = smoothedRight.y * linearSpeed;   // vx - forward/back
+        vDesired[1] = smoothedRight.x * linearSpeed;   // vy - left/right
+        vDesired[2] = smoothedLeft.y * linearSpeed;    // vz - up/down
 
-        msg.twist.linear.x = smoothedServoLeft.y * linearSpeed;
-        msg.twist.linear.y = smoothedServoLeft.x * linearSpeed;
-        msg.twist.linear.z = smoothedServoRight.y * linearSpeed;
-        msg.twist.angular.z = smoothedServoRight.x * angularSpeed;
+        // Adaptive damping near singularities
+        double manip = UR3eKinematics.Manipulability(currentPositions);
+        float effectiveDamping = damping;
+        if (manip < singularityThreshold && singularityThreshold > 0)
+        {
+            float ratio = 1f - (float)(manip / singularityThreshold);
+            effectiveDamping = Mathf.Lerp(damping, maxDamping, ratio);
+        }
 
-        ros.Publish(SERVO_TOPIC, msg);
+        // Resolve linear velocity to joint velocities via 3x6 Jacobian pseudoinverse
+        UR3eKinematics.ResolveLinearVelocity(currentPositions, vDesired, qDot, effectiveDamping);
+
+        // Add yaw (rotation about base Z) directly to joint 0 (shoulder_pan)
+        qDot[0] += smoothedLeft.x * angularSpeed;
+
+        // Joint limit protection — zero out velocity pushing past limits
+        for (int i = 0; i < 6; i++)
+        {
+            double pos = currentPositions[i];
+            double lo = jointLimitsLower[i];
+            double hi = jointLimitsUpper[i];
+            double margin = 0.05; // ~3 degrees buffer
+            if (pos <= lo + margin && qDot[i] < 0) qDot[i] = 0;
+            if (pos >= hi - margin && qDot[i] > 0) qDot[i] = 0;
+        }
+
+        // Proportional velocity scaling — preserves Cartesian direction
+        double maxAbs = 0;
+        for (int i = 0; i < 6; i++)
+            maxAbs = Math.Max(maxAbs, Math.Abs(qDot[i]));
+        if (maxAbs > maxJointVelocity)
+        {
+            double scale = maxJointVelocity / maxAbs;
+            for (int i = 0; i < 6; i++)
+                qDot[i] *= scale;
+        }
+
+        // Publish
+        var msg = new Float64MultiArrayMsg();
+        msg.data = new double[6];
+        Array.Copy(qDot, msg.data, 6);
+        ros.Publish(VELOCITY_TOPIC, msg);
     }
 
     void UpdateDirectJoint()
@@ -234,12 +292,10 @@ public class RobotController : MonoBehaviour
 
         float dt = 1f / publishRate;
 
-        // Smooth stick input for gentle ramp-up/down
         smoothedJointInput = SmoothExp(smoothedJointInput, rightStick.y, inputSmoothTime, dt);
         if (Mathf.Abs(smoothedJointInput) < 0.01f && Mathf.Abs(rightStick.y) < 0.01f)
             smoothedJointInput = 0f;
 
-        // Build velocity command — 6 joints, only the selected one moves
         var msg = new Float64MultiArrayMsg();
         msg.data = new double[6];
         msg.data[selectedJoint] = smoothedJointInput * jointJogSpeed;
@@ -249,7 +305,6 @@ public class RobotController : MonoBehaviour
 
     void OnDestroy()
     {
-        // Send zero velocities on shutdown
         if (ros != null)
         {
             var stop = new Float64MultiArrayMsg();
