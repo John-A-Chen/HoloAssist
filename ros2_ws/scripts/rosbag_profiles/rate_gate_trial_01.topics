@@ -1,0 +1,11 @@
+# Test C - Rate and gating instrumentation evidence.
+# Main evidence topics are bbox + obstacle marker rates.
+
+/camera/camera/depth/image_rect_raw
+/camera/camera/depth/camera_info
+/holo_assist_depth_tracker/debug_image
+/holo_assist_depth_tracker/bbox
+/holo_assist_depth_tracker/obstacle_marker
+/holo_assist_depth_tracker/pointcloud
+/tf
+/tf_static

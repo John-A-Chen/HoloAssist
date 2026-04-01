@@ -1,0 +1,10 @@
+# Test A - Pass evidence:
+# Independent workspace monitoring on desktop UI (remote device).
+
+/camera/camera/depth/image_rect_raw
+/camera/camera/depth/camera_info
+/holo_assist_depth_tracker/debug_image
+/holo_assist_depth_tracker/bbox
+/holo_assist_depth_tracker/obstacle_marker
+/tf
+/tf_static
