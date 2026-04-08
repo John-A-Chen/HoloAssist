@@ -2745,6 +2745,11 @@ MonoBehaviour:
   angularSpeed: 0.3
   jointJogSpeed: 0.5
   publishRate: 20
+  maxJointVelocity: 2
+  inputSmoothTime: 0.12
+  damping: 0.01
+  singularityThreshold: 0.01
+  maxDamping: 0.5
   inputActions: {fileID: -944628639613478452, guid: de9ac261292ca53058128db2005f4914, type: 3}
 --- !u!4 &705389822
 Transform:
@@ -7586,6 +7591,56 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.Robotics.UrdfImporter::Unity.Robotics.UrdfImporter.UrdfVisual
   geometryType: 3
+--- !u!1 &1995104100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1995104102}
+  - component: {fileID: 1995104101}
+  m_Layer: 0
+  m_Name: HeadsetStream
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1995104101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1995104100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 813f6582b2ed47b908d0802c0ec96ca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadsetStreamPublisher
+  topic: /headset/image_compressed
+  captureWidth: 640
+  captureHeight: 480
+  targetFPS: 30
+  jpegQuality: 60
+  sourceCamera: {fileID: 0}
+--- !u!4 &1995104102
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1995104100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.1288, y: 0, z: -1.61623}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!224 &2001866392 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4941219564456579801, guid: dc067c577ec1b854684d789b6e727cc0, type: 3}
@@ -8813,3 +8868,4 @@ SceneRoots:
   - {fileID: 1230243598}
   - {fileID: 705389822}
   - {fileID: 538940411}
+  - {fileID: 1995104102}

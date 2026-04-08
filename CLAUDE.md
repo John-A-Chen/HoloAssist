@@ -32,6 +32,11 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ RobotController.cs tested on Quest 3 — teleoperation works but was jerky in Direct Joint mode
 - ✅ UR3eKinematics.cs created — forward kinematics + geometric Jacobian + DLS inverse for RMRC
 - ✅ RobotController.cs rewritten: Servo mode replaced with RMRC mode (Jacobian-based Cartesian velocity control, no MoveIt needed)
+- ✅ Dashboard app created — Python/PyQt5 e-stop + debug console, streams to Steam Deck OLED
+- ✅ HeadsetStreamPublisher.cs created — renders Unity scene view to dashboard via `/headset/image_compressed` (render capture, no passthrough)
+- ✅ Dashboard HEADSET tab verified working — shows Unity scene from operator's XR viewpoint
+- ✅ launch.sh / launch.py created — one-command launcher for UR driver + controller switch + TCP endpoint (fake hardware default, --robot-ip for real)
+- ✅ dashboard.sh created — sources ROS automatically before launching dashboard
 - ⬜ Test RMRC mode on Quest 3 with real robot
 - ⬜ Test full teleoperation loop with RMRC
 
@@ -50,9 +55,16 @@ nic/
       Scripts/UR3eKinematics.cs        — UR3e forward kinematics + Jacobian for RMRC
       Scripts/RobotBasePlacer.cs       — hand-tracking pinch-to-grab robot placement
       Scripts/RobotHUD.cs              — floating HUD showing mode + selected joint
+      Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
       URDF/                            — ur3e.urdf + meshes
       (RosMessages/ deleted — types built into ROS-TCP-Connector)
+  dashboard/           — Python/PyQt5 e-stop & debug dashboard (streamed to Steam Deck)
+    main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
+    ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
+  launch.py            — Python launcher: starts UR driver, controller switch, TCP endpoint
+  launch.sh            — Shell wrapper for launch.py (sources ROS automatically)
+  dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
   ROS-TCP-Connector/  — Unity package (local, referenced via file:// in manifest.json)
   URDF-Importer/      — Unity package (local, referenced via file:// in manifest.json)
   SETUP.md            — full onboarding guide for new contributors
@@ -63,6 +75,27 @@ nic/
 **Prerequisites:** ROS 2 Humble on Ubuntu 22.04, Unity 6.3 LTS.
 
 **Do not use Docker** — the apt-installed UR driver has a segfault bug on Ubuntu 22.04; build from source instead (already done in this workspace).
+
+### Quick Start (launcher scripts)
+
+```bash
+# Fake hardware (default) — no real robot needed
+./launch.sh
+
+# Real robot
+./launch.sh --robot-ip 192.168.0.194
+
+# No RViz (lighter)
+./launch.sh --no-rviz
+
+# Dashboard (separate terminal)
+./dashboard.sh --fullscreen
+
+# Dashboard without ROS (UI testing only)
+./dashboard.sh --no-ros --fullscreen
+```
+
+`launch.sh` and `dashboard.sh` source ROS automatically. `launch.py` accepts `--robot-ip`, `--ros-ip`, and `--no-rviz` flags. No `--robot-ip` = fake hardware mode.
 
 ### Build the ROS workspace
 
@@ -191,7 +224,50 @@ Control Layer (ur_robot_driver / ros2_control)
 | **Right stick X** | — | End-effector left/right (Y) |
 | **Left stick Y** | — | End-effector up/down (Z) |
 | **Left stick X** | — | End-effector yaw |
+- `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). The capture camera uses a skybox background so the dashboard sees the full scene (does not affect the user's passthrough XR view). No webcam/passthrough capture — Quest 3 doesn't expose passthrough as a camera device.
 - `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating TextMeshPro panel tracks the camera, shows current mode and selected joint.
+
+## Dashboard (E-Stop & Debug Console)
+
+- **Path:** `dashboard/`
+- **Requirements:** PyQt5, rclpy (from ROS 2)
+- **Target display:** Steam Deck OLED (1280x800) via Ubuntu desktop streaming from laptop (3456x2160 HiDPI)
+
+### Running
+
+```bash
+# With ROS:
+source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
+python3 dashboard/main.py --fullscreen
+
+# Without ROS (UI testing):
+python3 dashboard/main.py --no-ros --fullscreen
+
+# Custom scale (default 2.5x in fullscreen for HiDPI→Steam Deck):
+QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
+```
+
+### Architecture
+
+- `main.py` — PyQt5 GUI. Status bar (top), tabbed screens (left), e-stop column (right, always visible). Polls ROS status at 30Hz. F11 toggles fullscreen. Left/Right arrow keys cycle tabs.
+- `ros_interface.py` — rclpy node (`holoassist_dashboard`). Independent of Unity/ros_tcp_endpoint — talks directly to ROS 2.
+
+### E-Stop Behaviour
+
+1. **Trigger:** Click the red EMERGENCY STOP button
+2. **Immediate:** Burst-publishes `[0,0,0,0,0,0]` to `/forward_velocity_controller/commands` (10x), then continuous zeros at 50Hz
+3. **Follow-up:** Deactivates `forward_velocity_controller` via `ros2 control switch_controllers`
+4. **Resume:** Hold yellow RESUME button for 5 seconds → reactivates `forward_velocity_controller` + deactivates `scaled_joint_trajectory_controller`
+5. **Cooldown:** 1-second cooldown after resume prevents accidental re-trigger
+
+### Screens (tabs)
+
+| Tab | Status | Description |
+|---|---|---|
+| STATUS | Working | Joint positions/velocities, event log |
+| HEADSET | Placeholder | Quest 3 XR view (stream source TBD) |
+| CAMERA | Placeholder | Depth camera ROS topics |
+| STATS | Placeholder | Latency, FPS, network metrics |
 
 ## Known Issues
 

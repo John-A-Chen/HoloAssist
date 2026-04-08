@@ -7,6 +7,13 @@
 
 
 
+extern void HeadsetStreamPublisher_Start_mCFA07294DAE49F73BBA341482B5DDA7C04E1C081 (void);
+extern void HeadsetStreamPublisher_SetupCaptureCamera_mDF4387BD68196A05BAD7E46847AA2782F6A18228 (void);
+extern void HeadsetStreamPublisher_LateUpdate_m9A9674A1D3E8F1CCC480510F5D73926057F66F1A (void);
+extern void HeadsetStreamPublisher_CaptureRender_mA8FC9344BED23B84CA3695108E8287AAFAFEDA8E (void);
+extern void HeadsetStreamPublisher_PublishImage_m201463B2C053772562759D3A9DE868CFFBABEB53 (void);
+extern void HeadsetStreamPublisher_OnDestroy_mF6E765CC6FF36D39F589607A6384608BABDE713E (void);
+extern void HeadsetStreamPublisher__ctor_m3F9DF07B63F69A11C5FCBC361B95C3D9B0D8A068 (void);
 extern void JointStateSubscriber_Start_mE344802A114B4C14AEDE540D3800514869EBA2D4 (void);
 extern void JointStateSubscriber_OnJointState_mF7FFC0F4B0F3C31E457DD33F5904A0D92A2B62E9 (void);
 extern void JointStateSubscriber__ctor_m596059340C267DA1905754D6F9E0F966B4F1F88C (void);
@@ -50,8 +57,15 @@ extern void UR3eKinematics_Manipulability_mA98BEC557D7BDD2845A53BF8EFA1CFB0BBF08
 extern void UR3eKinematics__cctor_m1BDB1BD3770D59120CC8BA20BFFADB4B0DE74F50 (void);
 extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_mBEB95BEB954BB63E9710BBC7AD5E78C4CB0A0033 (void);
 extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mE70FB23ACC1EA12ABC948AA22C2E78B2D0AA39B1 (void);
-static Il2CppMethodPointer s_methodPointers[43] = 
+static Il2CppMethodPointer s_methodPointers[50] = 
 {
+	HeadsetStreamPublisher_Start_mCFA07294DAE49F73BBA341482B5DDA7C04E1C081,
+	HeadsetStreamPublisher_SetupCaptureCamera_mDF4387BD68196A05BAD7E46847AA2782F6A18228,
+	HeadsetStreamPublisher_LateUpdate_m9A9674A1D3E8F1CCC480510F5D73926057F66F1A,
+	HeadsetStreamPublisher_CaptureRender_mA8FC9344BED23B84CA3695108E8287AAFAFEDA8E,
+	HeadsetStreamPublisher_PublishImage_m201463B2C053772562759D3A9DE868CFFBABEB53,
+	HeadsetStreamPublisher_OnDestroy_mF6E765CC6FF36D39F589607A6384608BABDE713E,
+	HeadsetStreamPublisher__ctor_m3F9DF07B63F69A11C5FCBC361B95C3D9B0D8A068,
 	JointStateSubscriber_Start_mE344802A114B4C14AEDE540D3800514869EBA2D4,
 	JointStateSubscriber_OnJointState_mF7FFC0F4B0F3C31E457DD33F5904A0D92A2B62E9,
 	JointStateSubscriber__ctor_m596059340C267DA1905754D6F9E0F966B4F1F88C,
@@ -96,8 +110,15 @@ static Il2CppMethodPointer s_methodPointers[43] =
 	UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_mBEB95BEB954BB63E9710BBC7AD5E78C4CB0A0033,
 	UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mE70FB23ACC1EA12ABC948AA22C2E78B2D0AA39B1,
 };
-static const int32_t s_InvokerIndices[43] = 
+static const int32_t s_InvokerIndices[50] = 
 {
+	23628,
+	23628,
+	23628,
+	23628,
+	17991,
+	23628,
+	23628,
 	23628,
 	17991,
 	23628,
@@ -146,7 +167,7 @@ IL2CPP_EXTERN_C const Il2CppCodeGenModule g_AssemblyU2DCSharp_CodeGenModule;
 const Il2CppCodeGenModule g_AssemblyU2DCSharp_CodeGenModule = 
 {
 	"Assembly-CSharp.dll",
-	43,
+	50,
 	s_methodPointers,
 	0,
 	NULL,
