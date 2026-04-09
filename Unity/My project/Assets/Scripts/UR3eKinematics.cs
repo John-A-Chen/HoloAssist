@@ -197,6 +197,69 @@ public static class UR3eKinematics
     }
 
     /// <summary>
+    /// Compute the 3x6 angular velocity Jacobian using the geometric method.
+    /// Each column is the joint's rotation axis (z_{i-1}) expressed in the base frame.
+    /// </summary>
+    public static void JacobianAngular(double[] q, double[,] Jw3x6)
+    {
+        // T accumulates T_0_{i-1}; z_{i-1} = third column of R_0_{i-1}
+        var T = new double[4, 4];
+        var Ti = new double[4, 4];
+        var temp = new double[4, 4];
+
+        // Identity (base frame)
+        T[0, 0] = 1; T[1, 1] = 1; T[2, 2] = 1; T[3, 3] = 1;
+
+        for (int i = 0; i < 6; i++)
+        {
+            // z_{i-1} before applying joint i
+            Jw3x6[0, i] = T[0, 2];
+            Jw3x6[1, i] = T[1, 2];
+            Jw3x6[2, i] = T[2, 2];
+
+            // Advance to next frame
+            DHMatrix(q[i], D[i], A[i], Alpha[i], Ti);
+            Mul4x4(T, Ti, temp);
+            System.Array.Copy(temp, T, 16);
+        }
+    }
+
+    /// <summary>
+    /// Resolve desired angular velocity [wx, wy, wz] to joint velocities using DLS pseudoinverse.
+    /// Uses 3x6 angular Jacobian. Same minimum-norm DLS approach as linear.
+    /// </summary>
+    public static void ResolveAngularVelocity(double[] q, double[] wDesired, double[] qDot, double damping = 0.01)
+    {
+        var Jw = new double[3, 6];
+        JacobianAngular(q, Jw);
+
+        // A = Jw * Jw^T + lambda^2 * I  (3x3)
+        var A3 = new double[3, 3];
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                double s = 0;
+                for (int k = 0; k < 6; k++)
+                    s += Jw[i, k] * Jw[j, k];
+                A3[i, j] = s;
+            }
+            A3[i, i] += damping * damping;
+        }
+
+        var y = new double[3];
+        Solve3x3(A3, wDesired, y);
+
+        for (int i = 0; i < 6; i++)
+        {
+            double s = 0;
+            for (int j = 0; j < 3; j++)
+                s += Jw[j, i] * y[j];
+            qDot[i] = s;
+        }
+    }
+
+    /// <summary>
     /// Get the end-effector position as a Vector3.
     /// </summary>
     public static Vector3 GetEndEffectorPosition(double[] q)

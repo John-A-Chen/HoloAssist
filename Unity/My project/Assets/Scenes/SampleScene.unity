@@ -2740,12 +2740,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b32553d05de9a351bf210044a4ccebb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RobotController
-  mode: 1
-  linearSpeed: 0.3
-  angularSpeed: 0.3
-  jointJogSpeed: 0.5
+  mode: 0
+  linearSpeed: 0.15
+  angularSpeed: 0.15
+  rmrcSubMode: 0
+  jointJogSpeed: 0.25
   publishRate: 20
   maxJointVelocity: 2
+  robotBase: {fileID: 1720349579}
+  positionGain: 5
+  maxTrackingSpeed: 0.3
   inputSmoothTime: 0.12
   damping: 0.01
   singularityThreshold: 0.01
@@ -4041,12 +4045,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RobotBasePlacer
   useRightHand: 1
-  pinchDistance: 0.01
   grabRadius: 0.5
   lockY: 0
   lockedYValue: 0
   smoothSpeed: 15
-  showDebugLogs: 1
+  allowRotation: 1
 --- !u!4 &1230243598
 Transform:
   m_ObjectHideFlags: 0
@@ -5730,6 +5733,7 @@ GameObject:
   - component: {fileID: 1720349578}
   - component: {fileID: 1720349577}
   - component: {fileID: 1720349581}
+  - component: {fileID: 1720349582}
   m_Layer: 0
   m_Name: ur3e_robot
   m_TagString: robot
@@ -5804,6 +5808,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f90c1d4ea9eccf790a20ecd99299e8bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JointStateSubscriber
+--- !u!114 &1720349582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1720349576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11bac8383e443467c8cec303d31fba33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpatialMarkers
+  controller: {fileID: 705389821}
+  axisLength: 0.08
+  axisThickness: 0.003
+  originRadius: 0.006
+  showVelocityArrow: 1
+  arrowMaxLength: 0.12
+  arrowThickness: 0.004
 --- !u!1 &1748304155
 GameObject:
   m_ObjectHideFlags: 0

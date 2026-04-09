@@ -19,16 +19,16 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ JointStateSubscriber.cs in place; joints register correctly in Unity Console
 - ✅ Digital twin working (Unity mirrors real UR3e joints) — fixed joint name mismatch between ROS and Unity
 - ✅ Quest 3 build connects to ROS over WiFi (ROS IP set to laptop's WiFi IP, ros_tcp_endpoint on 0.0.0.0)
-- ✅ RobotController.cs created with two control modes (Direct Joint + RMRC) — rewritten to use Unity Input System (was OVRInput, which didn't work without OVRManager)
+- ✅ RobotController.cs created with three control modes (Direct Joint + RMRC + Hand Guide) — rewritten to use Unity Input System (was OVRInput, which didn't work without OVRManager)
 - ✅ MoveIt 2 + Servo config already present in `ur_moveit_config` package (launch with `launch_servo:=true`)
-- ✅ RobotBasePlacer.cs working — hand-tracking pinch-to-grab and drag robot in MR (on parent wrapper GameObject)
+- ✅ RobotBasePlacer.cs working — controller grip-to-grab and drag robot in MR (on parent wrapper GameObject)
 - ✅ JointStateSubscriber.cs rewritten to be purely kinematic (no ArticulationBody physics, direct Transform rotations)
 - ✅ Joint axes fixed — extracts actual axis from ArticulationBody anchorRotation, composes with initial URDF rest rotation
 - ✅ Joint limits added from URDF (elbow ±180°, others ±360°)
 - ✅ Digital twin verified on Quest 3 — joints match real robot direction and axes
 - ✅ RobotControlActions.inputactions created — dedicated Input System actions for robot control
 - ✅ RobotController.cs disables conflicting XRI locomotion action maps at runtime (teleport, turn, snap turn, move, jump, rotate manipulation)
-- ✅ RobotHUD.cs created — floating TextMeshPro panel follows camera, shows mode + selected joint
+- ✅ RobotHUD.cs created — colour-coded floating HUD with mode, control hints, readable joint names
 - ✅ RobotController.cs tested on Quest 3 — teleoperation works but was jerky in Direct Joint mode
 - ✅ UR3eKinematics.cs created — forward kinematics + geometric Jacobian + DLS inverse for RMRC
 - ✅ RobotController.cs rewritten: Servo mode replaced with RMRC mode (Jacobian-based Cartesian velocity control, no MoveIt needed)
@@ -37,8 +37,14 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ Dashboard HEADSET tab verified working — shows Unity scene from operator's XR viewpoint
 - ✅ launch.sh / launch.py created — one-command launcher for UR driver + controller switch + TCP endpoint (fake hardware default, --robot-ip for real)
 - ✅ dashboard.sh created — sources ROS automatically before launching dashboard
-- ⬜ Test RMRC mode on Quest 3 with real robot
-- ⬜ Test full teleoperation loop with RMRC
+- ✅ RMRC mode tested on Quest 3 with real robot — works, some lag but functional
+- ✅ Full teleoperation loop with RMRC verified
+- ✅ SpatialMarkers.cs created — RGB axes on tool0 + yellow velocity arrow (coordinate fix applied)
+- ✅ RMRC Rotate sub-mode added — X button toggles Translate/Rotate, direct wrist joint control (joints 3/4/5)
+- ✅ Hand Guide mode added — hold right grip to track controller position in 3D space, robot EE follows hand via Jacobian IK. Mellow gain (2) + speed cap (0.15 m/s) + joint bias favouring wrist over base/shoulder. Axis mapping verified on Quest 3.
+- ⬜ Spatial markers / pose visualisation in XR (needed for D grade)
+- ⬜ Depth camera feed visualisation in MR (needed for HD grade, depends on perception subsystem)
+- ⬜ Trajectory preview visualisation (needed for Perfect grade)
 
 ## Repository Layout
 
@@ -51,10 +57,11 @@ nic/
   Unity/My project/ — Unity 6.3 project
     Assets/
       Scripts/JointStateSubscriber.cs  — subscribes to /joint_states, drives robot joints
-      Scripts/RobotController.cs       — robot control (RMRC + Direct Joint modes)
+      Scripts/RobotController.cs       — robot control (RMRC + Direct Joint + Hand Guide modes)
       Scripts/UR3eKinematics.cs        — UR3e forward kinematics + Jacobian for RMRC
-      Scripts/RobotBasePlacer.cs       — hand-tracking pinch-to-grab robot placement
-      Scripts/RobotHUD.cs              — floating HUD showing mode + selected joint
+      Scripts/RobotBasePlacer.cs       — controller grip-to-grab robot placement
+      Scripts/RobotHUD.cs              — colour-coded floating HUD with mode, controls, joint names
+      Scripts/SpatialMarkers.cs        — end-effector axes + velocity arrow visualisation
       Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
       URDF/                            — ur3e.urdf + meshes
@@ -152,12 +159,12 @@ No teach pendant needed. Ignore `urscript_interface` connection errors — that 
 
 ```
 Laptop (nic-XPS-15-9520):
-  ├─ Ethernet (192.168.0.100) ←──→ UR3e robot (192.168.0.194)
-  └─ WiFi (172.19.115.245)    ←──→ Quest 3 (172.19.119.95)
+  ├─ Ethernet (192.168.0.121) ←──→ UR3e robot (192.168.0.194)
+  └─ WiFi (172.19.115.104)    ←──→ Quest 3 (172.19.119.95)
 ```
 
-- **Teach pendant External Control host IP**: `192.168.0.100` (laptop Ethernet)
-- **Unity ROS Settings IP**: laptop's WiFi IP (e.g., `172.19.115.245`) — this is what the Quest connects to
+- **Teach pendant External Control host IP**: `192.168.0.121` (laptop Ethernet)
+- **Unity ROS Settings IP**: laptop's WiFi IP (e.g., `172.19.115.104`) — this is what the Quest connects to
 - **ros_tcp_endpoint**: `ROS_IP:=0.0.0.0` (listens on all interfaces, bridging both networks)
 - WiFi IP may change if network changes — re-check with `hostname -I`
 
@@ -204,28 +211,35 @@ Control Layer (ur_robot_driver / ros2_control)
 ### Key scripts
 
 - `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary.
-- `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR hand tracking — pinch to grab, drag to move. Pure transform movement, no physics.
-- `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK). DLS pseudoinverse for velocity resolution (3-DOF linear, no orientation constraint). Manipulability measure for adaptive damping.
-- `Assets/Scripts/RobotController.cs` — attach to any GameObject; uses **Unity Input System** (not OVRInput). Requires `RobotControlActions.inputactions` dragged into the Inspector's **Input Actions** field. Two control modes switched via Menu button:
-  - **RMRC mode** (default): Resolved Motion Rate Control — right stick = XY translation (forward/back, left/right), left stick Y = Z translation (up/down), left stick X = yaw. Uses `UR3eKinematics` numerical Jacobian (3-DOF linear) to resolve Cartesian velocity into coordinated joint velocities. Does not constrain tool orientation. Adaptive damping increases near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
+- `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR controller grip button — hold grip near rig to grab and drag. Supports Y-axis rotation while grabbed (keeps robot upright). Pure transform movement, no physics.
+- `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK), geometric angular Jacobian (3x6, joint z-axes). DLS pseudoinverse for both linear and angular velocity resolution. Manipulability measure for adaptive damping.
+- `Assets/Scripts/SpatialMarkers.cs` — attach to robot root GameObject (must contain `tool0` in hierarchy). RGB axis cylinders on end-effector + yellow velocity arrow showing commanded Cartesian velocity direction/magnitude.
+- `Assets/Scripts/RobotController.cs` — attach to any GameObject; uses **Unity Input System** (not OVRInput). Requires `RobotControlActions.inputactions` dragged into the Inspector's **Input Actions** field. Three control modes cycled via Menu button (RMRC → Direct Joint → Hand Guide → RMRC):
+  - **RMRC mode** (default): Resolved Motion Rate Control with two sub-modes toggled by X button (left controller):
+    - **Translate** (default): right stick = XY translation (forward/back, left/right), left stick Y = Z translation (up/down), left stick X = yaw. Uses 3x6 linear Jacobian.
+    - **Rotate**: directly drives wrist joints — right stick Y = wrist_1 (pitch/tilt), right stick X = wrist_2 (roll), left stick X = wrist_3 (yaw/spin). Uses `jointJogSpeed` for responsive 1:1 control (angular Jacobian approach was too sluggish).
+    - Both use `UR3eKinematics` DLS pseudoinverse. Adaptive damping near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
   - **Direct Joint mode**: A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`.
+  - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop. Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s) — deliberately mellow so robot gently catches up to hand. Joint bias weights (`[0.3, 0.3, 0.5, 1.0, 1.0, 1.0]`) favour wrist movement over base/shoulder. Axis mapping verified on Quest 3 (DH_x=-Unity_z, DH_y=Unity_x, DH_z=Unity_y).
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
   - Publish rate: 50Hz.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
 
 ### Controller mapping (Quest 3)
 
-| Input | Direct Joint Mode | RMRC Mode |
-|---|---|---|
-| **Menu button** (left) | Toggle to RMRC | Toggle to Direct Joint |
-| **A button** (right) | Next joint | — |
-| **B button** (right) | Previous joint | — |
-| **Right stick Y** | Jog selected joint (proportional velocity) | End-effector forward/back (X) |
-| **Right stick X** | — | End-effector left/right (Y) |
-| **Left stick Y** | — | End-effector up/down (Z) |
-| **Left stick X** | — | End-effector yaw |
+| Input | Direct Joint Mode | RMRC Translate | RMRC Rotate | Hand Guide |
+|---|---|---|---|---|
+| **Menu button** (left) | → Hand Guide | → Direct Joint | → Direct Joint | → RMRC |
+| **X button** (left) | — | Toggle to Rotate | Toggle to Translate | — |
+| **A button** (right) | Next joint | — | — | — |
+| **B button** (right) | Previous joint | — | — | — |
+| **Right grip** (right) | — | — | — | Hold to track hand |
+| **Right stick Y** | Jog selected joint | End-effector forward/back (X) | Wrist 1 (pitch/tilt) | — |
+| **Right stick X** | — | End-effector left/right (Y) | Wrist 2 (roll) | — |
+| **Left stick Y** | — | End-effector up/down (Z) | — | — |
+| **Left stick X** | — | End-effector yaw | Wrist 3 (yaw/spin) | — |
 - `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). The capture camera uses a skybox background so the dashboard sees the full scene (does not affect the user's passthrough XR view). No webcam/passthrough capture — Quest 3 doesn't expose passthrough as a camera device.
-- `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating TextMeshPro panel tracks the camera, shows current mode and selected joint.
+- `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating HUD panel tracks the camera with colour-coded mode title (amber=Joint, green=Translate, blue=Rotate, purple/red=Hand Guide), control hints for current mode, and readable joint names in Direct Joint mode.
 
 ## Dashboard (E-Stop & Debug Console)
 
@@ -284,3 +298,4 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 - **XRI Default Input Actions consume thumbsticks/buttons** — the MR template's XRI actions bind both thumbsticks to teleport/turn/move and A button to Jump. RobotController.cs now disables these conflicting action maps at runtime (`XRI Left Locomotion`, `XRI Right Locomotion`, plus individual Rotate Manipulation and UI Scroll actions).
 - **MoveIt Servo not currently used** — RMRC replaces MoveIt Servo for teleoperation. Servo config still exists in `ur_moveit_config/config/ur_servo.yaml` if needed later for collision-aware planning.
 - **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish `Float64MultiArray` to `/forward_velocity_controller/commands`. After launching the UR driver, switch controllers: `ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller`.
+- **RobotHUD may not render on Quest 3** — `Camera.main` can return null in the MR template (camera not tagged MainCamera), `Shader.Find` may return null on Android builds (shader stripping), and runtime-created TextMeshPro needs an explicit font asset. Partially patched with fallback camera/shader/font search but not fully verified on device. Functional enough for now.

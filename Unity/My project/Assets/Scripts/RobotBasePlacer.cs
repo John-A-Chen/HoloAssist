@@ -1,12 +1,10 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR.Hands;
-using Unity.XR.CoreUtils;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Attach to an EMPTY parent GameObject that contains the robot (and optionally the trolley).
-/// Pinch near it to grab and drag the whole rig. This moves the parent transform only —
-/// the ArticulationBody chain inside is never touched, so JointStateSubscriber keeps working.
+/// Hold grip on a controller near the rig to grab and drag the whole rig.
+/// This moves the parent transform only — the robot chain inside is untouched.
 ///
 /// Setup:
 ///   1. Create an empty GameObject called e.g. "RobotRig"
@@ -15,13 +13,12 @@ using Unity.XR.CoreUtils;
 /// </summary>
 public class RobotBasePlacer : MonoBehaviour
 {
-    [Header("Hand Tracking")]
+    [Header("Controller Settings")]
+    [Tooltip("Which hand to use for grabbing")]
     public bool useRightHand = true;
 
     [Header("Grab Settings")]
-    [Tooltip("Max finger-tip distance to count as a pinch (metres)")]
-    public float pinchDistance = 0.05f;
-    [Tooltip("How close your pinch must be to the rig origin to start a grab (metres)")]
+    [Tooltip("How close the controller must be to the rig origin to start a grab (metres)")]
     public float grabRadius = 1.5f;
 
     [Header("Placement")]
@@ -29,121 +26,116 @@ public class RobotBasePlacer : MonoBehaviour
     public float lockedYValue = 0f;
     public float smoothSpeed = 20f;
 
-    [Header("Debug")]
-    public bool showDebugLogs = true;
+    [Header("Rotation")]
+    [Tooltip("Allow rotating the rig while grabbed (controller rotation maps to rig Y-rotation)")]
+    public bool allowRotation = true;
 
-    private XRHandSubsystem handSubsystem;
+    private InputAction gripAction;
+    private InputAction positionAction;
+    private InputAction rotationAction;
+
     private bool isGrabbing = false;
     private Vector3 grabOffset;
-    private Transform xrOrigin;
-    private float debugTimer = 0f;
+    private Quaternion grabControllerRot;
+    private Quaternion grabRigRot;
 
     void Start()
     {
-        var origin = FindObjectOfType<XROrigin>();
-        if (origin != null)
-        {
-            xrOrigin = origin.transform;
-            Debug.Log($"[RobotBasePlacer] Found XR Origin at {xrOrigin.position}");
-        }
-        else
-        {
-            xrOrigin = Camera.main != null ? Camera.main.transform.parent : null;
-            Debug.LogWarning("[RobotBasePlacer] No XROrigin found, using camera parent as fallback");
-        }
+        string hand = useRightHand ? "RightHand" : "LeftHand";
 
-        Debug.Log("[RobotBasePlacer] Script started on wrapper GameObject. Waiting for hand subsystem...");
+        gripAction = new InputAction("PlacerGrip", InputActionType.Value,
+            $"<XRController>{{{hand}}}/grip");
+        positionAction = new InputAction("PlacerPos", InputActionType.Value,
+            $"<XRController>{{{hand}}}/devicePosition");
+        rotationAction = new InputAction("PlacerRot", InputActionType.Value,
+            $"<XRController>{{{hand}}}/deviceRotation");
+
+        gripAction.Enable();
+        positionAction.Enable();
+        rotationAction.Enable();
+
+        Debug.Log($"[RobotBasePlacer] Using {hand} controller. Grip near rig to grab.");
     }
 
     void Update()
     {
-        if (handSubsystem == null || !handSubsystem.running)
-        {
-            TryGetHandSubsystem();
-            return;
-        }
+        float grip = gripAction.ReadValue<float>();
+        Vector3 controllerPos = positionAction.ReadValue<Vector3>();
 
-        XRHand hand = useRightHand ? handSubsystem.rightHand : handSubsystem.leftHand;
+        // Controller position is in tracking space — convert to world via XR Origin
+        Transform trackingSpace = Camera.main != null ? Camera.main.transform.parent : null;
+        Vector3 worldPos = trackingSpace != null
+            ? trackingSpace.TransformPoint(controllerPos)
+            : controllerPos;
 
-        if (!hand.isTracked)
-        {
-            debugTimer += Time.deltaTime;
-            if (showDebugLogs && debugTimer > 3f)
-            {
-                Debug.Log($"[RobotBasePlacer] Hand NOT tracked. Show your {(useRightHand ? "right" : "left")} hand.");
-                debugTimer = 0f;
-            }
-            return;
-        }
-
-        if (!TryGetJointWorldPos(hand, XRHandJointID.ThumbTip, out Vector3 thumbTip)) return;
-        if (!TryGetJointWorldPos(hand, XRHandJointID.IndexTip, out Vector3 indexTip)) return;
-
-        float tipDistance = Vector3.Distance(thumbTip, indexTip);
-        bool isPinching = tipDistance < pinchDistance;
-        Vector3 pinchPos = (thumbTip + indexTip) / 2f;
-        float distToRig = Vector3.Distance(pinchPos, transform.position);
-
-        debugTimer += Time.deltaTime;
-        if (showDebugLogs && debugTimer > 2f)
-        {
-            Debug.Log($"[RobotBasePlacer] tipDist={tipDistance:F3}m pinchThresh={pinchDistance:F3}m " +
-                      $"distToRig={distToRig:F2}m grabRadius={grabRadius:F2}m " +
-                      $"isPinching={isPinching} isGrabbing={isGrabbing} pos={transform.position}");
-            debugTimer = 0f;
-        }
+        bool gripHeld = grip > 0.5f;
 
         if (!isGrabbing)
         {
-            if (isPinching && distToRig <= grabRadius)
+            if (gripHeld)
             {
-                isGrabbing = true;
-                grabOffset = transform.position - pinchPos;
-                Debug.Log("[RobotBasePlacer] GRABBED rig");
+                float dist = Vector3.Distance(worldPos, transform.position);
+                if (dist <= grabRadius)
+                {
+                    isGrabbing = true;
+                    grabOffset = transform.position - worldPos;
+
+                    if (allowRotation)
+                    {
+                        Quaternion controllerRot = rotationAction.ReadValue<Quaternion>();
+                        grabControllerRot = trackingSpace != null
+                            ? trackingSpace.rotation * controllerRot
+                            : controllerRot;
+                        grabRigRot = transform.rotation;
+                    }
+
+                    Debug.Log("[RobotBasePlacer] GRABBED rig");
+                }
             }
         }
         else
         {
-            if (tipDistance > pinchDistance * 2.5f)
+            if (!gripHeld)
             {
                 isGrabbing = false;
                 Debug.Log($"[RobotBasePlacer] PLACED rig at {transform.position}");
                 return;
             }
 
-            Vector3 targetPos = pinchPos + grabOffset;
-
+            // Position
+            Vector3 targetPos = worldPos + grabOffset;
             if (lockY)
                 targetPos.y = lockedYValue;
-
             transform.position = Vector3.Lerp(transform.position, targetPos, smoothSpeed * Time.deltaTime);
+
+            // Rotation (Y-axis only to keep robot upright)
+            if (allowRotation)
+            {
+                Quaternion controllerRot = rotationAction.ReadValue<Quaternion>();
+                Quaternion currentWorldRot = trackingSpace != null
+                    ? trackingSpace.rotation * controllerRot
+                    : controllerRot;
+
+                Quaternion deltaRot = currentWorldRot * Quaternion.Inverse(grabControllerRot);
+
+                // Extract only Y-axis rotation to keep the robot upright
+                Vector3 euler = deltaRot.eulerAngles;
+                Quaternion yOnly = Quaternion.Euler(0f, euler.y, 0f);
+
+                Quaternion targetRot = yOnly * grabRigRot;
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, smoothSpeed * Time.deltaTime);
+            }
         }
     }
 
-    bool TryGetJointWorldPos(XRHand hand, XRHandJointID jointId, out Vector3 worldPos)
+    void OnDestroy()
     {
-        XRHandJoint joint = hand.GetJoint(jointId);
-        if (joint.TryGetPose(out Pose pose))
-        {
-            if (xrOrigin != null)
-                worldPos = xrOrigin.TransformPoint(pose.position);
-            else
-                worldPos = pose.position;
-            return true;
-        }
-        worldPos = Vector3.zero;
-        return false;
-    }
-
-    void TryGetHandSubsystem()
-    {
-        var subsystems = new List<XRHandSubsystem>();
-        SubsystemManager.GetSubsystems(subsystems);
-        if (subsystems.Count > 0)
-        {
-            handSubsystem = subsystems[0];
-            Debug.Log($"[RobotBasePlacer] Found hand subsystem (running={handSubsystem.running})");
-        }
+        gripAction?.Disable();
+        gripAction?.Dispose();
+        positionAction?.Disable();
+        positionAction?.Dispose();
+        rotationAction?.Disable();
+        rotationAction?.Dispose();
     }
 
     void OnDrawGizmosSelected()

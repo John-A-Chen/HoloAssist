@@ -30305,7 +30305,7 @@ IL_00b4:
 		return L_27;
 	}
 }
-// Method Definition Index: 139021
+// Method Definition Index: 139041
 IL2CPP_MANAGED_FORCE_INLINE IL2CPP_METHOD_ATTR String_t* MessageRegistry_GetRosMessageName_TisRuntimeObject_m83669F7529945CFA169867D814FD3136B3341199_gshared_inline (const RuntimeMethod* method) 
 {
 	il2cpp_rgctx_method_init(method);
