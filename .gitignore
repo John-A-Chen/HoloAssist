@@ -93,3 +93,10 @@ Unity/**/*.userprefs
 Unity/**/*.pidb
 Unity/**/*.booproj
 Unity/**/*.svd
+Unity/**/*.slnx
+Unity/**/*.apk
+Unity/**/ignore.conf
+
+# Local cloned Unity dependency repos (not part of this repo history)
+ROS-TCP-Connector/
+URDF-Importer/
