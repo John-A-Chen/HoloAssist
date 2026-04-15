@@ -1,13 +1,9 @@
 # HoloAssist Perception Phase 4 Validation Pack
 
-This document formalises three subsystem tests for Sprint 2 presentation use.
+Last updated: 2026-04-15
+Scope: Perception + Foxglove observability evidence path
 
-Scope:
-- Subsystem: Perception and Mapping
-- Focus: defensible validation of current implementation and collected evidence
-- Out of scope: claiming completed MoveIt planning integration
-
-## 1) Verified Current Interfaces (from repo)
+## 1) Verified Interfaces (Current Branch)
 
 Perception input topics:
 - `/camera/camera/depth/image_rect_raw`
@@ -19,162 +15,219 @@ Perception output topics:
 - `/holo_assist_depth_tracker/pointcloud`
 - `/holo_assist_depth_tracker/obstacle_marker`
 
-Relay HTTP endpoints used by dashboard:
+Foxglove observability overlays now available:
+- `/holoassist/diagnostics`
+- `/holoassist/events`
+- `/holoassist/state/runtime`
+- `/holoassist/metrics/debug_image_hz`
+- `/holoassist/metrics/pointcloud_hz`
+
+Legacy relay endpoints (compat path):
 - `GET /api/perception/status`
 - `GET /api/perception/debug.jpg`
 
-Current diagnostics exposure:
-- No dedicated ROS `/diagnostics` topic in the perception stack.
-- Operational diagnostics are exposed through relay status JSON fields (`tracker_connection`, `rates_hz`, `counters`, `latest`, `capabilities`).
+## 2) Evidence Baseline
 
-## 2) Evidence Baseline Already Collected
-
-Recorded bags:
+Recorded bag baseline:
 - `2026-04-01_pass_workspace_monitor_remote_ui`
 - `2026-04-01_credit_boundary_candidate_human_entry`
 - `2026-04-01_rate_gate_trial_01`
 
-Measured live rate evidence (primary):
-- `/holo_assist_depth_tracker/bbox` about 4.6 Hz
-- `/holo_assist_depth_tracker/obstacle_marker` about 4.0 to 4.5 Hz
+Observed rate evidence target:
+- `/holo_assist_depth_tracker/bbox` around 4 to 5 Hz
+- `/holo_assist_depth_tracker/obstacle_marker` around 4 to 5 Hz
 
-Dashboard evidence support:
-- Rolling 60 s time-series chart for bbox and obstacle marker rates
-- Rolling freshness and point-count chart
-- Status badges for relay, tracker, source mode, and obstacle state
+## 3) Formal Test Set
 
-## 3) Formal Subsystem Tests
+### Test 1: Remote workspace monitoring (pass path)
 
-### Test 1 - Independent Workspace Monitoring on Remote Desktop UI (Pass)
-
-Requirement validated:
-- Depth camera monitors workspace independently of robot and publishes to desktop UI on a separate device.
-
-Assumptions:
-- RealSense D435i is running and visible to ROS 2.
-- Dashboard relay is reachable from second device.
-- Source mode is `depth_tracker` (not RGB fallback).
+Requirement:
+- Perception stream visible remotely and usable in runtime operations.
 
 Procedure:
-1. Launch RealSense + depth tracker + dashboard relay.
-2. Open dashboard on a second device over network.
-3. Observe live debug image and status badges.
-4. Move hand/object in and out of monitored workspace for ~20 s.
+1. Start depth tracker stack.
+2. Start Foxglove runtime (`holoassist_foxglove`) and connect from second device.
+3. Move object/hand in and out of workspace for ~20 s.
 
 Pass criteria:
-- Dashboard on second device remains live and responsive.
-- `Tracker` shows live (not stale).
-- Camera source indicates RealSense depth mode.
-- BBox and obstacle activity update with workspace changes.
+- Debug image updates remotely.
+- BBox/marker react to scene changes.
+- `/holoassist/diagnostics` shows perception section healthy or at most transient WARN.
 
-Fail criteria:
-- Remote dashboard cannot connect or repeatedly stalls.
-- Source drops to `no_data` for sustained period.
-- No bbox/obstacle updates during visible workspace motion.
+Evidence:
+- Foxglove screenshot (Image + 3D + diagnostics panel)
+- Optional relay dashboard screenshot for compatibility proof
 
-Evidence collected:
-- Remote dashboard screenshot showing live stream and status badges.
-- Optional short clip showing hand/object entry and live update.
-
-Supporting rosbag:
+Supporting bag:
 - `2026-04-01_pass_workspace_monitor_remote_ui`
 
-Presentation one-liner:
-- "This test confirms independent depth-based workspace monitoring on a separate desktop UI in real time."
+### Test 2: Obstacle extraction + boundary candidate generation
 
-### Test 2 - Obstacle Region Extraction and Boundary Candidate Generation (Early Credit Progress)
-
-Requirement validated:
-- Perception output supports assisted mode groundwork by producing boundary candidates suitable for planning handoff.
-
-Assumptions:
-- Depth tracker running in RealSense depth mode.
-- Obstacle marker publication enabled.
-- Test scene includes a human hand or object entering the workspace band.
+Requirement:
+- Depth-derived obstacle region and marker candidate available for planning handoff.
 
 Procedure:
-1. Run tracker and RViz/dashboard.
-2. Start with clear workspace, then introduce hand/object into target region.
-3. Hold briefly, then remove object.
-4. Observe bbox and obstacle marker behaviour.
+1. Start depth tracker and visualization.
+2. Insert object/hand into monitored region.
+3. Hold briefly, then remove.
 
 Pass criteria:
-- Valid bbox appears when obstacle region is present.
-- Obstacle marker publishes a cube candidate when region is detected.
-- Marker deactivates/removes when region exits or no valid blob remains.
+- BBox appears when obstacle present.
+- Obstacle marker appears/updates in 3D.
+- Marker deactivates when region clears.
 
-Fail criteria:
-- No valid bbox during clear obstacle presence.
-- No obstacle marker add/delete behaviour tied to scene change.
+Evidence:
+- Foxglove 3D panel screenshot with pointcloud + marker
+- Optional RViz screenshot for secondary confirmation
 
-Evidence collected:
-- RViz screenshot with pointcloud + obstacle marker.
-- Dashboard screenshot of bbox details and obstacle active state.
-
-Supporting rosbag:
+Supporting bag:
 - `2026-04-01_credit_boundary_candidate_human_entry`
 
-Presentation one-liner:
-- "This test shows depth-derived obstacle regions converted into a live 3D boundary candidate for later planning integration."
+### Test 3: Rate/instrumentation evidence
 
-### Test 3 - Perception Update-Rate and Instrumentation Evidence (Monitored Distinction Groundwork)
-
-Requirement validated:
-- Perception update behaviour is measurable and monitored, providing groundwork toward gated ~5 Hz safety-boundary updates.
-
-Assumptions:
-- Dashboard relay status endpoint and rolling charts are active.
-- Live rate checks are taken from bbox and obstacle topics.
-- Rate claim is based on measured evidence, not on pointcloud rate.
+Requirement:
+- Perception stream timing is measurable and visible in runtime telemetry.
 
 Procedure:
-1. Run perception pipeline and dashboard.
-2. Observe rolling 60 s rate chart.
-3. Measure live rates using `ros2 topic hz` for bbox and obstacle marker.
-4. Capture screenshot of chart + terminal rate output.
+1. Run perception + observability stack.
+2. Observe rates in Foxglove plots and CLI.
+3. Capture 30-60 s window for stable evidence.
 
 Pass criteria:
-- Dashboard shows stable rolling time-series for bbox and obstacle rates.
-- Live rates are consistently in approximately 4 to 5 Hz range.
-- Freshness metrics indicate active stream (not stale) during measurement.
+- Measurable BBox/obstacle rates (~4-5 Hz target zone).
+- Foxglove metrics and `ros2 topic hz` broadly align.
+- Stream freshness remains active during capture window.
 
-Fail criteria:
-- Rates are not observable in dashboard/CLI.
-- Stream frequently stale during measurement window.
+Evidence:
+- Foxglove plot screenshot
+- Terminal `ros2 topic hz` output screenshot
 
-Evidence collected:
-- Dashboard screenshot of rolling rate chart.
-- Terminal screenshot for `ros2 topic hz` outputs.
-
-Supporting rosbag:
+Supporting bag:
 - `2026-04-01_rate_gate_trial_01`
-
-Presentation one-liner:
-- "This test demonstrates measured and instrumented perception update behaviour, currently around 4-5 Hz, as groundwork toward gated updates."
 
 ## 4) Test-to-Evidence Mapping
 
-| Test | Primary screenshots | Rosbag | Notes |
+| Test | Primary evidence | Bag | Notes |
 |---|---|---|---|
-| Test 1 (Pass) | Remote dashboard Overview with live stream + status badges | `2026-04-01_pass_workspace_monitor_remote_ui` | Proves independent remote monitoring path |
-| Test 2 (Early Credit) | RViz pointcloud + obstacle marker, Perception tab bbox/obstacle panel | `2026-04-01_credit_boundary_candidate_human_entry` | Proves extraction + boundary-candidate output |
-| Test 3 (Rate instrumentation) | Rolling rate chart (bbox/obstacle), `ros2 topic hz` terminal capture | `2026-04-01_rate_gate_trial_01` | Use bbox + obstacle as primary evidence |
+| Test 1 | Foxglove Image + diagnostics + remote access screenshot | `*_pass_workspace_monitor_remote_ui` | Proves remote monitoring path |
+| Test 2 | Foxglove 3D (pointcloud + marker) screenshot | `*_credit_boundary_candidate_human_entry` | Proves boundary candidate extraction |
+| Test 3 | Foxglove rate plots + `ros2 topic hz` output | `*_rate_gate_trial_01` | Proves measurable update behavior |
 
-## 5) Claim Boundaries (Do Not Overclaim)
+## 5) Claim Boundaries
 
 Allowed claims now:
-- Independent workspace monitoring on a separate desktop UI is working.
-- Obstacle-region extraction and 3D boundary-candidate output are working.
-- Update rates are instrumented and measurable at approximately 4 to 5 Hz for bbox/obstacle outputs.
+- Remote perception monitoring works.
+- Obstacle extraction + marker candidate output works.
+- Update-rate behavior is instrumented and observable.
 
 Avoid claiming now:
-- Completed MoveIt planning-scene integration from this perception path.
-- Fully tuned distinction-level gated boundary update logic.
-- Pointcloud frequency as primary rate evidence.
+- Fully completed planning-scene integration via perception path.
+- Fully tuned distinction-grade gating logic.
+- Hardware-grade safety guarantee from perception alone.
 
-## 6) Suggested Slide Captions
+## 6) No-Hardware Behavior
 
-- Test 1: "Remote desktop dashboard showing independent depth-based workspace monitoring."
-- Test 2: "Obstacle extraction with bbox and 3D marker boundary candidate from live depth data."
-- Test 3: "Rolling telemetry confirms monitored perception update behaviour (bbox/obstacle ~4-5 Hz)."
+If no RealSense is connected:
+- Perception diagnostics will show stale/missing stream WARN/ERROR.
+- Foxglove stack still runs and records these states for bringup validation.
+- Webcam fallback path can still be used for basic image relay checks:
 
+```bash
+ros2 launch holo_assist_depth_tracker webcam_rgb_monitor.launch.py
+```
+
+## 7) Rosbag Workflow (Merged)
+
+### Naming
+
+Pattern:
+- `YYYY-MM-DD_<test_suffix>`
+
+Suggested suffixes:
+- `pass_workspace_monitor_remote_ui`
+- `credit_boundary_candidate_human_entry`
+- `rate_gate_trial_01`
+
+### Recording setup
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/git/RS2-HoloAssist/john/ros2_ws/install/setup.bash
+```
+
+### Test A recording command
+
+```bash
+ros2 bag record \
+  -o "$HOME/rosbags/holoassist/$(date +%F)_pass_workspace_monitor_remote_ui" \
+  --compression-mode file --compression-format zstd \
+  /camera/camera/depth/image_rect_raw \
+  /camera/camera/depth/camera_info \
+  /holo_assist_depth_tracker/debug_image \
+  /holo_assist_depth_tracker/bbox \
+  /holo_assist_depth_tracker/obstacle_marker \
+  /holoassist/diagnostics \
+  /holoassist/events \
+  /holoassist/state/runtime \
+  /tf /tf_static
+```
+
+### Test B recording command
+
+```bash
+ros2 bag record \
+  -o "$HOME/rosbags/holoassist/$(date +%F)_credit_boundary_candidate_human_entry" \
+  --compression-mode file --compression-format zstd \
+  /camera/camera/depth/image_rect_raw \
+  /camera/camera/depth/camera_info \
+  /holo_assist_depth_tracker/debug_image \
+  /holo_assist_depth_tracker/bbox \
+  /holo_assist_depth_tracker/pointcloud \
+  /holo_assist_depth_tracker/obstacle_marker \
+  /holoassist/diagnostics \
+  /holoassist/events \
+  /tf /tf_static
+```
+
+### Test C recording command
+
+```bash
+ros2 bag record \
+  -o "$HOME/rosbags/holoassist/$(date +%F)_rate_gate_trial_01" \
+  --compression-mode file --compression-format zstd \
+  /camera/camera/depth/image_rect_raw \
+  /camera/camera/depth/camera_info \
+  /holo_assist_depth_tracker/debug_image \
+  /holo_assist_depth_tracker/bbox \
+  /holo_assist_depth_tracker/obstacle_marker \
+  /holo_assist_depth_tracker/pointcloud \
+  /holoassist/diagnostics \
+  /holoassist/metrics/debug_image_hz \
+  /holoassist/metrics/pointcloud_hz \
+  /tf /tf_static
+```
+
+### Scripted helpers
+
+```bash
+cd ~/git/RS2-HoloAssist/john
+./ros2_ws/scripts/perception_rosbag_record.sh test_a 45
+./ros2_ws/scripts/perception_rosbag_record.sh test_b 60
+./ros2_ws/scripts/perception_rosbag_record.sh test_c 75
+```
+
+Playback:
+
+```bash
+./ros2_ws/scripts/perception_rosbag_play.sh 2026-04-01_pass_workspace_monitor_remote_ui
+./ros2_ws/scripts/perception_rosbag_play.sh "$HOME/rosbags/holoassist/2026-04-01_rate_gate_trial_01" 0.5
+```
+
+### Verification
+
+```bash
+ros2 bag info "$HOME/rosbags/holoassist/<bag_name>"
+ros2 bag play "$HOME/rosbags/holoassist/<bag_name>" --clock
+ros2 topic hz /holo_assist_depth_tracker/bbox
+ros2 topic hz /holo_assist_depth_tracker/obstacle_marker
+```

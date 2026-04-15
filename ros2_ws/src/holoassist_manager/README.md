@@ -1,91 +1,65 @@
 # holoassist_manager
 
-Central supervisor node for the HoloAssist framework. It manages system-wide operating modes and monitors the health of all subsystem nodes via heartbeat signals.
+Central runtime supervisor for HoloAssist mode + heartbeat diagnostics.
 
 ## Operating Modes
 
-| Mode     | Description |
-|----------|-------------|
-| `MANUAL` | Full human-in-the-loop teleoperation |
-| `HYBRID` | Combined manual + autonomous behaviour |
+| Mode | Description |
+|---|---|
+| `MANUAL` | Human-in-the-loop teleoperation |
+| `HYBRID` | Combined manual + autonomous behavior |
 
-## Supervised Subsystems
+## Supervised Heartbeats
 
-The manager monitors heartbeats from the following subsystems (configurable timeout):
+Expected heartbeat topics:
+- `/xr_interface/heartbeat`
+- `/perception/heartbeat`
+- `/planning/heartbeat`
+- `/control/heartbeat`
+- `/rviz/heartbeat`
+- `/unity_bridge/heartbeat`
+- `/robot_bringup/heartbeat`
 
-| Subsystem       | Heartbeat Topic               |
-|-----------------|-------------------------------|
-| xr_interface    | `/xr_interface/heartbeat`     |
-| perception      | `/perception/heartbeat`       |
-| planning        | `/planning/heartbeat`         |
-| control         | `/control/heartbeat`          |
-| rviz            | `/rviz/heartbeat`             |
-| unity_bridge    | `/unity_bridge/heartbeat`     |
-| robot_bringup   | `/robot_bringup/heartbeat`    |
-
-Each subsystem is expected to publish a `std_msgs/String` on its heartbeat topic. If no message is received within the configured timeout the subsystem is flagged as **down**.
+`holoassist_foxglove/runtime_observability_node` publishes compatible heartbeats.
 
 ## ROS Interface
 
-### Published Topics
+Published:
+- `~/mode` (`std_msgs/String`, latched)
+- `~/diagnostics` (`diagnostic_msgs/DiagnosticArray`)
 
-| Topic              | Type                                  | Description                    |
-|--------------------|---------------------------------------|--------------------------------|
-| `~/mode`           | `std_msgs/String`                     | Current operating mode (latched) |
-| `~/diagnostics`    | `diagnostic_msgs/DiagnosticArray`     | Per-subsystem health status    |
+Services:
+- `~/set_manual` (`std_srvs/Trigger`)
+- `~/set_hybrid` (`std_srvs/Trigger`)
+- `~/get_mode` (`std_srvs/Trigger`)
+- `~/system_status` (`std_srvs/Trigger`)
 
-### Services
+Common absolute names when node name is `holoassist_manager`:
+- `/holoassist_manager/mode`
+- `/holoassist_manager/diagnostics`
+- `/holoassist_manager/set_manual`
+- `/holoassist_manager/set_hybrid`
+- `/holoassist_manager/get_mode`
+- `/holoassist_manager/system_status`
 
-| Service            | Type                | Description                        |
-|--------------------|---------------------|------------------------------------|
-| `~/set_manual`     | `std_srvs/Trigger`  | Switch to MANUAL mode              |
-| `~/set_hybrid`     | `std_srvs/Trigger`  | Switch to HYBRID mode              |
-| `~/get_mode`       | `std_srvs/Trigger`  | Query the current mode             |
-| `~/system_status`  | `std_srvs/Trigger`  | Aggregated alive/down report       |
+Parameters:
+- `initial_mode` (default `MANUAL`)
+- `status_publish_rate` (default `1.0` Hz)
+- `heartbeat_timeout_sec` (default `5.0` sec)
 
-### Parameters
-
-| Parameter               | Type     | Default    | Description                                      |
-|-------------------------|----------|------------|--------------------------------------------------|
-| `initial_mode`          | `string` | `"MANUAL"` | Starting mode (`MANUAL` or `HYBRID`)             |
-| `status_publish_rate`   | `double` | `1.0`      | Diagnostics publish rate in Hz                   |
-| `heartbeat_timeout_sec` | `double` | `5.0`      | Seconds before a subsystem is considered down    |
-
-## Building
-
-```bash
-cd ros2_ws
-colcon build --packages-select holoassist_manager
-```
-
-## Running
+## Build and Run
 
 ```bash
-source ros2_ws/install/setup.bash
+cd ~/git/RS2-HoloAssist/john/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select holoassist_manager --symlink-install
+source install/setup.bash
 
-# Run the node directly
-ros2 run holoassist_manager manager_node
-
-# Or use the launch file (loads config/manager_params.yaml)
 ros2 launch holoassist_manager manager.launch.py
 ```
 
-When running the Foxglove runtime integration, `holoassist_foxglove/runtime_observability_node`
-publishes heartbeat topics compatible with this manager node so that subsystem diagnostics
-are visible in Foxglove on `/holoassist_manager/diagnostics`.
+## Foxglove Integration
 
-## Example Usage
-
-```bash
-# Switch to hybrid mode
-ros2 service call /holoassist_manager/set_hybrid std_srvs/srv/Trigger
-
-# Query current mode
-ros2 service call /holoassist_manager/get_mode std_srvs/srv/Trigger
-
-# Check system health
-ros2 service call /holoassist_manager/system_status std_srvs/srv/Trigger
-
-# Monitor mode topic
-ros2 topic echo /holoassist_manager/mode
-```
+With observability launch enabled:
+- manager diagnostics appear in Foxglove on `/holoassist_manager/diagnostics`
+- manager mode appears on `/holoassist_manager/mode`
