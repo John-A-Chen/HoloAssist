@@ -42,9 +42,9 @@ The proposed revision reframes the evaluation around deliverables I directly own
 
 **Current:** Mixed reality UI supports visualisation and debugging of the depth camera feed, such as highlighting or painting regions of interest in the workspace.
 
-**Proposed:** The operator dashboard integrates live perception telemetry from the depth camera pipeline (image feed, bounding boxes, point cloud rates, obstacle marker rates, command latency and age metrics). Teleoperation sessions are logged with quantitative performance metrics (task completion time, number of e-stop interventions, control mode usage, average command latency).
+**Proposed:** Teleoperation includes a hand-guided tracking mode using Jacobian IK, allowing the operator to intuitively guide the end-effector by moving the controller in 3D space. Teleoperation sessions are logged with quantitative performance metrics (task completion time, number of e-stop interventions, control mode usage, command latency). The dashboard displays real-time system telemetry including ROS topic health, joint states, and latency metrics.
 
-**Justification:** The current HD criterion requires John's full perception pipeline to be rendered inside Unity's MR environment — a deep cross-subsystem dependency. The proposed criterion still consumes John's perception data, but via ROS topic subscriptions on the dashboard rather than requiring MR rendering integration. This is independently testable: if John's topics are publishing, my dashboard displays them; the evaluation is not blocked by Unity-side integration. The addition of quantitative logging adds rigour to the testing deliverable (D7) and supports the system evaluation's requirement for "quantitative comparison between freeform and assisted modes."
+**Justification:** The current HD criterion requires John's full perception pipeline to be rendered inside Unity's MR environment — a deep cross-subsystem dependency that gates my grade on another team member's progress. The proposed criterion replaces this with two independently-owned deliverables: (1) a hand-guided tracking mode using Jacobian IK with joint bias weighting and speed limiting — a technically demanding interaction mode that goes well beyond basic teleoperation, and (2) quantitative session logging that adds rigour to the testing deliverable (D7) and supports the system evaluation's requirement for "quantitative comparison between freeform and assisted modes." Both are fully self-contained.
 
 ---
 
@@ -65,7 +65,7 @@ The proposed revision reframes the evaluation around deliverables I directly own
 | P | None | None |
 | C | Oliver (control) | None (dashboard is standalone) |
 | D | Sebastian (visualisation) | None (dashboard is standalone) |
-| HD | John (perception in MR) | John (ROS topics only — no MR integration needed) |
+| HD | John (perception in MR) | None (hand-guide mode + logging + dashboard telemetry) |
 | Perfect | Oliver + John + Sebastian (full integration) | None (resilience testing is self-contained) |
 
 The total scope of work increases (dashboard development, headset streaming, metrics logging, resilience testing) while cross-subsystem risk decreases. All proposed criteria still serve the project's goals of safe, observable, constraint-aware teleoperation.

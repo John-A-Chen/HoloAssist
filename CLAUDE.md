@@ -42,9 +42,10 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ SpatialMarkers.cs created — RGB axes on tool0 + yellow velocity arrow (coordinate fix applied)
 - ✅ RMRC Rotate sub-mode added — X button toggles Translate/Rotate, direct wrist joint control (joints 3/4/5)
 - ✅ Hand Guide mode added — hold right grip to track controller position in 3D space, robot EE follows hand via Jacobian IK. Mellow gain (2) + speed cap (0.15 m/s) + joint bias favouring wrist over base/shoulder. Axis mapping verified on Quest 3.
-- ⬜ Spatial markers / pose visualisation in XR (needed for D grade)
-- ⬜ Depth camera feed visualisation in MR (needed for HD grade, depends on perception subsystem)
-- ⬜ Trajectory preview visualisation (needed for Perfect grade)
+- ✅ Subsystem 3 evaluation renegotiated — HD/Perfect criteria revised to remove cross-subsystem dependencies (see `subsystem3_renegotiation.md`)
+- ⬜ Quantitative session logging (task completion time, e-stop count, mode usage, latency) — needed for HD grade
+- ⬜ Dashboard ROS topic health + latency metrics display — needed for HD grade
+- ⬜ Resilience under adverse conditions (WiFi dropout → auto e-stop, latency spike detection, graceful recovery) — needed for Perfect grade
 
 ## Repository Layout
 
@@ -75,6 +76,8 @@ nic/
   ROS-TCP-Connector/  — Unity package (local, referenced via file:// in manifest.json)
   URDF-Importer/      — Unity package (local, referenced via file:// in manifest.json)
   SETUP.md            — full onboarding guide for new contributors
+  subsystem3_renegotiation.md  — Nic's proposed evaluation criteria changes (no cross-subsystem deps)
+  subsystem2_renegotiation_options.md — Options for Oliver's subsystem renegotiation
 ```
 
 ## Development Environment
@@ -132,7 +135,7 @@ source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller
 ```
 
-Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.100`).
+Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.121`).
 Then hit Play in Unity.
 
 **Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. The `forward_velocity_controller` must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation.
@@ -293,7 +296,7 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 - **JointStateSubscriber: ArticulationBody approach abandoned** — `SetDriveTarget` with high stiffness caused physics conflicts with hand-tracking grab. Rewritten to disable ArticulationBody entirely and set `Transform.localRotation` directly. Joint axis assumed `Vector3.forward` — needs verification with real robot.
 - **`/joint_states` not arriving in Unity despite subscription registering** — caused by duplicate message class registration. Delete `Assets/RosMessages/` entirely; those types are already built into ROS-TCP-Connector and the duplicates silently break deserialization. (Fixed — RosMessages deleted.)
 - **ROS joint names don't match Unity GameObject names** — URDF importer names GameObjects after links (`shoulder_link`, `upper_arm_link`, `forearm_link`, `wrist_1_link`, etc.) but ROS publishes joint names (`shoulder_pan_joint`, `shoulder_lift_joint`, `elbow_joint`, `wrist_1_joint`, etc.). Fixed with a `rosToUnity` mapping dictionary in JointStateSubscriber.cs.
-- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.100` ↔ `192.168.0.194`), Quest connects to laptop via WiFi. Both must be on the same WiFi network. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.100`.
+- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.100` ↔ `192.168.0.194`), Quest connects to laptop via WiFi. Both must be on the same WiFi network. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.121`.
 - **OVRInput does nothing on Quest 3 (MR template)** — the Mixed Reality template uses Unity Input System + XR Interaction Toolkit, not OVR. `OVRInput.Get()` silently returns zero without `OVRManager` in the scene. Fixed by rewriting RobotController.cs to use `InputAction` from Unity Input System with `<XRController>` bindings.
 - **XRI Default Input Actions consume thumbsticks/buttons** — the MR template's XRI actions bind both thumbsticks to teleport/turn/move and A button to Jump. RobotController.cs now disables these conflicting action maps at runtime (`XRI Left Locomotion`, `XRI Right Locomotion`, plus individual Rotate Manipulation and UI Scroll actions).
 - **MoveIt Servo not currently used** — RMRC replaces MoveIt Servo for teleoperation. Servo config still exists in `ur_moveit_config/config/ur_servo.yaml` if needed later for collision-aware planning.
