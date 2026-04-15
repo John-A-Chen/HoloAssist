@@ -15,6 +15,69 @@ The project explores how immersive spatial interfaces can improve safety, flexib
 
 ---
 
+## Runtime Observability (Foxglove-First)
+
+The project now uses **Foxglove** as the primary runtime visualization and observability layer.
+
+Primary package:
+
+- `ros2_ws/src/holoassist_foxglove`
+
+Related runtime packages merged into this branch:
+
+- `ros2_ws/src/holoassist_manager`
+- `ros2_ws/src/holoassist_movement`
+- `ros2_ws/src/ur3_keyboard_teleop`
+- `ros2_ws/src/ur3_joint_position_controller`
+
+Key runtime observability topics:
+
+- `/holoassist/diagnostics`
+- `/holoassist/events`
+- `/holoassist/state/teleop`
+- `/holoassist/state/planner`
+- `/holoassist/state/safety`
+- `/holoassist/state/runtime`
+- `/holoassist/metrics/*`
+
+The legacy `holoassist-dashboard` web UI remains available as a compatibility path, but new runtime workflows should target Foxglove.
+
+### Build
+
+```bash
+cd ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+### Launch (Recommended)
+
+```bash
+ros2 launch holoassist_foxglove holoassist_foxglove_runtime.launch.py
+```
+
+### Foxglove Bridge Only
+
+```bash
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+```
+
+### Steam Deck / Browser Client
+
+Connect Foxglove Studio from a browser to:
+
+```text
+ws://<robot-host-ip>:8765
+```
+
+Layout guidance:
+
+- `ros2_ws/src/holoassist_foxglove/config/foxglove_layout_spec.yaml`
+- `ros2_ws/FOXGLOVE_RUNTIME.md`
+
+---
+
 ## Project Overview
 
 HoloAssist integrates a Meta Quest 2/3 headset with a collaborative robot system to enable:

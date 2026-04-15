@@ -70,6 +70,10 @@ ros2 run holoassist_manager manager_node
 ros2 launch holoassist_manager manager.launch.py
 ```
 
+When running the Foxglove runtime integration, `holoassist_foxglove/runtime_observability_node`
+publishes heartbeat topics compatible with this manager node so that subsystem diagnostics
+are visible in Foxglove on `/holoassist_manager/diagnostics`.
+
 ## Example Usage
 
 ```bash

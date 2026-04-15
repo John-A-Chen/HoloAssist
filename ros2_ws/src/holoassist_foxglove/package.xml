@@ -1,20 +1,25 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>holoassist_unity_bridge</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="cohnjhen@gmail.com">john</maintainer>
-  <license>TODO: License declaration</license>
+  <name>holoassist_foxglove</name>
+  <version>0.1.0</version>
+  <description>Foxglove-first runtime observability package for HoloAssist.</description>
+  <maintainer email="john@example.com">john</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>rclpy</depend>
-  <depend>geometry_msgs</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>std_msgs</depend>
-  <exec_depend>holoassist_foxglove</exec_depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>holoassist_manager</exec_depend>
 
-  <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>

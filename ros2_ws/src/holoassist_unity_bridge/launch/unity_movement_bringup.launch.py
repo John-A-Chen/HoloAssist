@@ -9,6 +9,10 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     enable_click_to_plan = LaunchConfiguration('enable_click_to_plan')
+    enable_foxglove_observability = LaunchConfiguration('enable_foxglove_observability')
+    enable_foxglove_bridge = LaunchConfiguration('enable_foxglove_bridge')
+    enable_manager = LaunchConfiguration('enable_manager')
+    enable_tf_marker_bridge = LaunchConfiguration('enable_tf_marker_bridge')
 
     ros_ip = LaunchConfiguration('ros_ip')
     ros_tcp_port = LaunchConfiguration('ros_tcp_port')
@@ -27,6 +31,10 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('enable_click_to_plan', default_value='true'),
+        DeclareLaunchArgument('enable_foxglove_observability', default_value='true'),
+        DeclareLaunchArgument('enable_foxglove_bridge', default_value='true'),
+        DeclareLaunchArgument('enable_manager', default_value='true'),
+        DeclareLaunchArgument('enable_tf_marker_bridge', default_value='false'),
         DeclareLaunchArgument('ros_ip', default_value='0.0.0.0'),
         DeclareLaunchArgument('ros_tcp_port', default_value='10000'),
         DeclareLaunchArgument('command_frame', default_value='base_link'),
@@ -78,5 +86,22 @@ def generate_launch_description():
                 'tcp_frame': tcp_frame,
                 'tcp_yaw_rad': tcp_yaw_rad,
             }],
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('holoassist_foxglove'),
+                    'launch',
+                    'observability.launch.py',
+                ])
+            ),
+            condition=IfCondition(enable_foxglove_observability),
+            launch_arguments={
+                'enable_foxglove_bridge': enable_foxglove_bridge,
+                'enable_manager': enable_manager,
+                'enable_tf_marker_bridge': enable_tf_marker_bridge,
+                'unity_tcp_host': '127.0.0.1',
+                'unity_tcp_port': ros_tcp_port,
+            }.items(),
         ),
     ])

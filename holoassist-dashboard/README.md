@@ -1,6 +1,12 @@
-# RS2 HoloAssist Dashboard
+# RS2 HoloAssist Dashboard (Legacy Path)
 
 Local web dashboard for RS2 HoloAssist.
+
+Foxglove migration status:
+
+- Primary runtime observability path: `ros2_ws/src/holoassist_foxglove`
+- This dashboard is retained for compatibility and fallback debugging.
+- New runtime telemetry should be published as ROS topics for Foxglove first.
 
 Current default page is a tabbed System Dashboard that reads from the depth tracker dashboard relay:
 - `GET /api/perception/status`
