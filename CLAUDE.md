@@ -43,8 +43,11 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ RMRC Rotate sub-mode added — X button toggles Translate/Rotate, direct wrist joint control (joints 3/4/5)
 - ✅ Hand Guide mode added — hold right grip to track controller position in 3D space, robot EE follows hand via Jacobian IK. Mellow gain (2) + speed cap (0.15 m/s) + joint bias favouring wrist over base/shoulder. Axis mapping verified on Quest 3.
 - ✅ Subsystem 3 evaluation renegotiated — HD/Perfect criteria revised to remove cross-subsystem dependencies (see `subsystem3_renegotiation.md`)
-- ⬜ Quantitative session logging (task completion time, e-stop count, mode usage, latency) — needed for HD grade
-- ⬜ Dashboard ROS topic health + latency metrics display — needed for HD grade
+- ✅ SessionLogger.cs created — tracks mode switches, per-mode durations, session time; publishes JSON to `/session/status` (2Hz) + `/session/events`; saves session log JSON to `Application.persistentDataPath/SessionLogs/` on quit
+- ✅ Dashboard STATS tab reworked — session info bar (duration, mode, switches, e-stops, mode usage %) + rolling joint velocity graph (6 joints, 30s) + topic health graph (3 topics as % of expected rate, 60s)
+- ✅ Dashboard LATENCY tab added — live latency numbers + rolling message age graph (joint_state & velocity_cmd freshness, 30s) + command interval graph (time between velocity commands, 30s)
+- ✅ Dashboard SESSION tab added — text-based overview: control mode, sub-mode, hand guide state, mode durations, connection status, all topic rates
+- ✅ Dashboard saves session log to `~/holoassist_sessions/` on shutdown (events, e-stop count, Unity session info)
 - ⬜ Resilience under adverse conditions (WiFi dropout → auto e-stop, latency spike detection, graceful recovery) — needed for Perfect grade
 
 ## Repository Layout
@@ -64,6 +67,7 @@ nic/
       Scripts/RobotHUD.cs              — colour-coded floating HUD with mode, controls, joint names
       Scripts/SpatialMarkers.cs        — end-effector axes + velocity arrow visualisation
       Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
+      Scripts/SessionLogger.cs           — session metrics: mode tracking, durations, events → ROS + file
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
       URDF/                            — ur3e.urdf + meshes
       (RosMessages/ deleted — types built into ROS-TCP-Connector)
@@ -242,6 +246,7 @@ Control Layer (ur_robot_driver / ros2_control)
 | **Left stick Y** | — | End-effector up/down (Z) | — | — |
 | **Left stick X** | — | End-effector yaw | Wrist 3 (yaw/spin) | — |
 - `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). The capture camera uses a skybox background so the dashboard sees the full scene (does not affect the user's passthrough XR view). No webcam/passthrough capture — Quest 3 doesn't expose passthrough as a camera device.
+- `Assets/Scripts/SessionLogger.cs` — attach to any GameObject; assign `RobotController` in Inspector (auto-finds via `FindObjectOfType` if not set). Publishes JSON session status to `/session/status` at 2Hz (mode, sub-mode, session time, mode switches, per-mode durations) and discrete events to `/session/events`. On application quit, saves a JSON session log to `Application.persistentDataPath/SessionLogs/session_YYYY-MM-DD_HH-MM-SS.json`. On Quest 3 the persistent path is `/storage/emulated/0/Android/data/com.DefaultCompany.MixedRealityTemplate/files/SessionLogs/` — pull via `adb pull`.
 - `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating HUD panel tracks the camera with colour-coded mode title (amber=Joint, green=Translate, blue=Rotate, purple/red=Hand Guide), control hints for current mode, and readable joint names in Direct Joint mode.
 
 ## Dashboard (E-Stop & Debug Console)
@@ -266,8 +271,8 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 
 ### Architecture
 
-- `main.py` — PyQt5 GUI. Status bar (top), tabbed screens (left), e-stop column (right, always visible). Polls ROS status at 30Hz. F11 toggles fullscreen. Left/Right arrow keys cycle tabs.
-- `ros_interface.py` — rclpy node (`holoassist_dashboard`). Independent of Unity/ros_tcp_endpoint — talks directly to ROS 2.
+- `main.py` — PyQt5 GUI. Status bar (top), 6 tabbed screens (left), e-stop column (right, always visible). Polls ROS status at 30Hz. F11 toggles fullscreen. Left/Right arrow keys cycle tabs. Includes `RollingGraph` QPainter widget for real-time line charts.
+- `ros_interface.py` — rclpy node (`holoassist_dashboard`). Independent of Unity/ros_tcp_endpoint — talks directly to ROS 2. Subscribes to `/session/status` and `/session/events` from Unity `SessionLogger`. Samples rolling data buffers: joint velocities (10Hz, 30s), topic health % (2Hz, 60s), latency metrics (10Hz, 30s). Saves dashboard-side session log to `~/holoassist_sessions/` on shutdown.
 
 ### E-Stop Behaviour
 
@@ -282,9 +287,11 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 | Tab | Status | Description |
 |---|---|---|
 | STATUS | Working | Joint positions/velocities, event log |
-| HEADSET | Placeholder | Quest 3 XR view (stream source TBD) |
+| HEADSET | Working | Quest 3 XR scene view (JPEG stream from `HeadsetStreamPublisher.cs`) |
 | CAMERA | Placeholder | Depth camera ROS topics |
-| STATS | Placeholder | Latency, FPS, network metrics |
+| STATS | Working | Session info bar (duration, mode, switches, e-stops, mode %) + rolling joint velocity graph (6 coloured lines, 30s) + topic health graph (joint_states/vel_cmd/headset as % of expected Hz, 60s) |
+| LATENCY | Working | Live latency numbers (colour-coded) + rolling message age graph (joint_state & vel_cmd freshness, 30s) + command interval graph (time between velocity commands, 30s) |
+| SESSION | Working | Text overview: control mode, sub-mode, hand guide state, mode durations, e-stop count, connection status, all 11 topic rates |
 
 ## Known Issues
 

@@ -6,10 +6,13 @@ and controller switching.
 Runs rclpy in a background thread; all public methods are thread-safe.
 """
 
+import json
+import os
 import subprocess
 import threading
 import time
 from collections import deque
+from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
@@ -18,7 +21,7 @@ try:
     import rclpy
     from rclpy.node import Node
     from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, qos_profile_sensor_data
-    from std_msgs.msg import Float64MultiArray, Float32MultiArray, Bool
+    from std_msgs.msg import Float64MultiArray, Float32MultiArray, Bool, String
     from sensor_msgs.msg import JointState, Image, CompressedImage, PointCloud2
     from geometry_msgs.msg import PoseStamped, TwistStamped, PointStamped
     from visualization_msgs.msg import Marker
@@ -73,6 +76,12 @@ class DashboardStatus:
     last_twist_age_s: float = -1.0
     # Unity integration
     unity_map_loaded: Optional[bool] = None
+    # Session metrics from Unity SessionLogger
+    session_info: dict = field(default_factory=dict)
+    # Rolling graph data (downsampled for display)
+    velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
+    rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
+    latency_history: list = field(default_factory=list)     # [(t, [joint_age_ms, vel_age_ms, cmd_interval_ms])]
 
 
 # All topic names matching John's defaults
@@ -122,6 +131,13 @@ class RosInterface:
         self._rate_streams: dict[str, deque] = {
             name: deque() for name in TOPIC_DEFAULTS
         }
+
+        # Rolling graph data (downsampled)
+        self._velocity_history: deque = deque(maxlen=300)   # 10Hz * 30s
+        self._rate_history: deque = deque(maxlen=120)       # 2Hz * 60s
+        self._latency_history: deque = deque(maxlen=300)    # 10Hz * 30s
+        self._session_info: dict = {}
+        self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
 
     def start(self):
         """Initialize rclpy and start spinning in a background thread."""
@@ -208,6 +224,28 @@ class RosInterface:
             Bool, TOPIC_DEFAULTS["unity_map_loaded"],
             self._unity_map_cb, 10,
         )
+
+        # Velocity commands (from Unity — track rate + timestamp for latency)
+        self._node.create_subscription(
+            Float64MultiArray, TOPIC_DEFAULTS["velocity_cmd"],
+            self._velocity_cmd_cb, qos_profile_sensor_data,
+        )
+
+        # Session status (from Unity SessionLogger)
+        self._node.create_subscription(
+            String, "/session/status",
+            self._session_status_cb, 10,
+        )
+
+        # Session events (from Unity SessionLogger)
+        self._node.create_subscription(
+            String, "/session/events",
+            self._session_event_cb, 10,
+        )
+
+        # Sampling timers for rolling graph data
+        self._node.create_timer(0.1, self._sample_velocities)   # 10Hz
+        self._node.create_timer(0.5, self._sample_rates)        # 2Hz
 
         self._running = True
         with self._lock:
@@ -315,6 +353,50 @@ class RosInterface:
             self._status.unity_map_loaded = msg.data
         state = "loaded" if msg.data else "not loaded"
         self._add_event(f"Unity map: {state}")
+
+    def _velocity_cmd_cb(self, msg):
+        self._tick_rate("velocity_cmd")
+        self._last_vel_cmd_time = time.time()
+
+    def _session_status_cb(self, msg):
+        try:
+            info = json.loads(msg.data)
+            with self._lock:
+                self._session_info = info
+        except (json.JSONDecodeError, Exception):
+            pass
+
+    def _session_event_cb(self, msg):
+        try:
+            evt = json.loads(msg.data)
+            self._add_event(f"[Unity] {evt.get('type', '?')}: {evt.get('detail', '')}")
+        except (json.JSONDecodeError, Exception):
+            pass
+
+    def _sample_velocities(self):
+        """Downsample joint velocities + latency to 10Hz for rolling graphs."""
+        now = time.time()
+        with self._lock:
+            vels = list(self._status.joint_velocities) if self._status.joint_velocities else None
+            joint_time = self._status.last_joint_time
+        if vels and len(vels) == 6:
+            self._velocity_history.append((now, vels))
+
+        # Latency: joint state age, velocity cmd age, cmd interval
+        joint_age_ms = (now - joint_time) * 1000 if joint_time > 0 else -1
+        vel_age_ms = (now - self._last_vel_cmd_time) * 1000 if self._last_vel_cmd_time > 0 else -1
+        vel_hz = self._get_hz("velocity_cmd")
+        cmd_interval_ms = (1000.0 / vel_hz) if vel_hz > 0 else -1
+        self._latency_history.append((now, [joint_age_ms, vel_age_ms, cmd_interval_ms]))
+
+    def _sample_rates(self):
+        """Sample topic health as % of expected rate, for rolling graph."""
+        expected = [("joint_states", 500), ("velocity_cmd", 50), ("headset_image", 15)]
+        pcts = []
+        for topic, exp_hz in expected:
+            hz = self._get_hz(topic)
+            pcts.append(min(hz / exp_hz * 100, 120) if exp_hz > 0 else 0.0)
+        self._rate_history.append((time.time(), pcts))
 
     # ── E-STOP ──────────────────────────────────────────────────────
 
@@ -433,7 +515,13 @@ class RosInterface:
                 rx_count=len(stream), last_rx_time=last_time, hz=hz
             )
 
+        # Snapshot rolling graph data (GIL-safe deque → list)
+        vel_hist = list(self._velocity_history)
+        rate_hist = list(self._rate_history)
+        lat_hist = list(self._latency_history)
+
         with self._lock:
+            session_info_copy = dict(self._session_info)
             status = DashboardStatus(
                 robot_state=self._status.robot_state,
                 ros_connected=self._status.ros_connected,
@@ -455,6 +543,10 @@ class RosInterface:
                 last_target_age_s=self._status.last_target_age_s,
                 last_twist_age_s=self._status.last_twist_age_s,
                 unity_map_loaded=self._status.unity_map_loaded,
+                session_info=session_info_copy,
+                velocity_history=vel_hist,
+                rate_history=rate_hist,
+                latency_history=lat_hist,
             )
         return status
 
@@ -470,6 +562,7 @@ class RosInterface:
     def shutdown(self):
         self._running = False
         self._safety_stop.set()
+        self._save_session_log()
         if self._node is not None:
             self._node.destroy_node()
         if ROS_AVAILABLE:
@@ -478,3 +571,29 @@ class RosInterface:
             except Exception:
                 pass
         self._add_event("Dashboard shutdown")
+
+    def _save_session_log(self):
+        """Save dashboard-side session log (events, e-stop count) to JSON."""
+        log_dir = os.path.expanduser("~/holoassist_sessions")
+        os.makedirs(log_dir, exist_ok=True)
+        filename = f"dashboard_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        path = os.path.join(log_dir, filename)
+
+        with self._lock:
+            events_copy = list(self._events)
+            session_copy = dict(self._session_info)
+
+        estop_count = sum(1 for _, msg in events_copy if "EMERGENCY STOP" in msg)
+        data = {
+            "estop_count": estop_count,
+            "event_count": len(events_copy),
+            "session_info_from_unity": session_copy,
+            "events": [{"t": t, "msg": msg} for t, msg in events_copy],
+        }
+
+        try:
+            with open(path, "w") as f:
+                json.dump(data, f, indent=2)
+            print(f"Session log saved to {path}")
+        except Exception as e:
+            print(f"Failed to save session log: {e}")
