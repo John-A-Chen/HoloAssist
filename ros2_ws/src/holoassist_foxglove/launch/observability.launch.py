@@ -25,6 +25,21 @@ def generate_launch_description() -> LaunchDescription:
         default_value="false",
         description="Start tf_marker_bridge marker publisher from holoassist_manager.",
     )
+    enable_object_pose_adapter_arg = DeclareLaunchArgument(
+        "enable_object_pose_adapter",
+        default_value="true",
+        description=(
+            "Start object pose adapter that maps obstacle markers into "
+            "/holoassist/perception/object_pose topics."
+        ),
+    )
+    object_workspace_frame_arg = DeclareLaunchArgument(
+        "object_workspace_frame",
+        default_value="base_link",
+        description=(
+            "Target frame used for /holoassist/perception/object_pose_workspace."
+        ),
+    )
     diagnostics_rate_hz_arg = DeclareLaunchArgument(
         "diagnostics_rate_hz",
         default_value="1.0",
@@ -88,6 +103,18 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         condition=IfCondition(LaunchConfiguration("enable_tf_marker_bridge")),
     )
+    object_pose_adapter_node = Node(
+        package="holoassist_foxglove",
+        executable="obstacle_to_object_pose_adapter",
+        name="holoassist_object_pose_adapter",
+        output="screen",
+        parameters=[
+            {
+                "workspace_frame": LaunchConfiguration("object_workspace_frame"),
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration("enable_object_pose_adapter")),
+    )
 
     try:
         foxglove_launch_file = os.path.join(
@@ -113,6 +140,8 @@ def generate_launch_description() -> LaunchDescription:
             enable_foxglove_bridge_arg,
             enable_manager_arg,
             enable_tf_marker_bridge_arg,
+            enable_object_pose_adapter_arg,
+            object_workspace_frame_arg,
             diagnostics_rate_hz_arg,
             stale_timeout_s_arg,
             unity_tcp_host_arg,
@@ -122,6 +151,7 @@ def generate_launch_description() -> LaunchDescription:
             runtime_observability_node,
             manager_node,
             tf_marker_bridge_node,
+            object_pose_adapter_node,
             foxglove_bridge_action,
         ]
     )

@@ -265,13 +265,13 @@
       }
     },
     "com.unity.robotics.ros-tcp-connector": {
-      "version": "file:/home/nic/git/RS2-HoloAssist/nic/ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
+      "version": "file:../../../ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
       "depth": 0,
       "source": "local",
       "dependencies": {}
     },
     "com.unity.robotics.urdf-importer": {
-      "version": "file:/home/nic/git/RS2-HoloAssist/nic/URDF-Importer/com.unity.robotics.urdf-importer",
+      "version": "file:../../../URDF-Importer/com.unity.robotics.urdf-importer",
       "depth": 0,
       "source": "local",
       "dependencies": {

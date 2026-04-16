@@ -27,6 +27,14 @@ def generate_launch_description() -> LaunchDescription:
         default_value="true",
         description="Start holo_assist_depth_tracker node.",
     )
+    start_workspace_perception_arg = DeclareLaunchArgument(
+        "start_workspace_perception",
+        default_value="false",
+        description=(
+            "Start workspace perception adapter (bench plane + culling + "
+            "foreground object localization)."
+        ),
+    )
     start_rviz_arg = DeclareLaunchArgument(
         "start_rviz",
         default_value="true",
@@ -46,6 +54,13 @@ def generate_launch_description() -> LaunchDescription:
         "params_file",
         default_value=default_params,
         description="Path to tracker parameter YAML.",
+    )
+    workspace_params_file_arg = DeclareLaunchArgument(
+        "workspace_params_file",
+        default_value=PathJoinSubstitution(
+            [pkg_share, "config", "workspace_perception_params.yaml"]
+        ),
+        description="Path to workspace perception parameter YAML.",
     )
     rviz_config_arg = DeclareLaunchArgument(
         "rviz_config",
@@ -78,6 +93,18 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
     )
 
+    workspace_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [pkg_share, "launch", "workspace_perception.launch.py"]
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration("start_workspace_perception")),
+        launch_arguments={
+            "params_file": LaunchConfiguration("workspace_params_file"),
+        }.items(),
+    )
+
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
@@ -91,13 +118,16 @@ def generate_launch_description() -> LaunchDescription:
         [
             start_camera_arg,
             start_tracker_arg,
+            start_workspace_perception_arg,
             start_rviz_arg,
             camera_name_arg,
             depth_profile_arg,
             params_file_arg,
+            workspace_params_file_arg,
             rviz_config_arg,
             camera_launch,
             tracker_launch,
+            workspace_launch,
             rviz_node,
         ]
     )

@@ -49,6 +49,25 @@ def generate_launch_description() -> LaunchDescription:
         default_value="false",
         description="Start RealSense camera launch along with depth tracker.",
     )
+    enable_workspace_perception_arg = DeclareLaunchArgument(
+        "enable_workspace_perception",
+        default_value="false",
+        description=(
+            "Start bench workspace perception adapter "
+            "(plane + ROI culling + foreground object localization)."
+        ),
+    )
+    workspace_perception_params_file_arg = DeclareLaunchArgument(
+        "workspace_perception_params_file",
+        default_value=PathJoinSubstitution(
+            [
+                FindPackageShare("holo_assist_depth_tracker"),
+                "config",
+                "workspace_perception_params.yaml",
+            ]
+        ),
+        description="Path to workspace perception parameter YAML.",
+    )
     enable_pointcloud_obstacle_arg = DeclareLaunchArgument(
         "enable_pointcloud_obstacle",
         default_value="false",
@@ -90,6 +109,18 @@ def generate_launch_description() -> LaunchDescription:
         default_value="false",
         description="Enable tf_marker_bridge from observability stack.",
     )
+    enable_object_pose_adapter_arg = DeclareLaunchArgument(
+        "enable_object_pose_adapter",
+        default_value="true",
+        description="Enable obstacle->object pose adapter from observability stack.",
+    )
+    object_workspace_frame_arg = DeclareLaunchArgument(
+        "object_workspace_frame",
+        default_value="base_link",
+        description=(
+            "Target frame for /holoassist/perception/object_pose_workspace."
+        ),
+    )
 
     unity_bringup = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -112,6 +143,8 @@ def generate_launch_description() -> LaunchDescription:
             "enable_foxglove_bridge": LaunchConfiguration("enable_foxglove_bridge"),
             "enable_manager": LaunchConfiguration("enable_manager"),
             "enable_tf_marker_bridge": LaunchConfiguration("enable_tf_marker_bridge"),
+            "enable_object_pose_adapter": LaunchConfiguration("enable_object_pose_adapter"),
+            "object_workspace_frame": LaunchConfiguration("object_workspace_frame"),
         }.items(),
     )
 
@@ -130,6 +163,8 @@ def generate_launch_description() -> LaunchDescription:
             "enable_foxglove_bridge": LaunchConfiguration("enable_foxglove_bridge"),
             "enable_manager": LaunchConfiguration("enable_manager"),
             "enable_tf_marker_bridge": LaunchConfiguration("enable_tf_marker_bridge"),
+            "enable_object_pose_adapter": LaunchConfiguration("enable_object_pose_adapter"),
+            "object_workspace_frame": LaunchConfiguration("object_workspace_frame"),
             "unity_tcp_port": LaunchConfiguration("ros_tcp_port"),
         }.items(),
     )
@@ -148,6 +183,8 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             "start_camera": LaunchConfiguration("enable_depth_camera"),
             "start_tracker": "true",
+            "start_workspace_perception": LaunchConfiguration("enable_workspace_perception"),
+            "workspace_params_file": LaunchConfiguration("workspace_perception_params_file"),
             "start_rviz": "false",
         }.items(),
     )
@@ -203,6 +240,8 @@ def generate_launch_description() -> LaunchDescription:
             eef_frame_arg,
             enable_depth_tracker_arg,
             enable_depth_camera_arg,
+            enable_workspace_perception_arg,
+            workspace_perception_params_file_arg,
             enable_pointcloud_obstacle_arg,
             enable_ur3_keyboard_teleop_arg,
             enable_ur3_joint_controller_arg,
@@ -211,6 +250,8 @@ def generate_launch_description() -> LaunchDescription:
             enable_foxglove_bridge_arg,
             enable_manager_arg,
             enable_tf_marker_bridge_arg,
+            enable_object_pose_adapter_arg,
+            object_workspace_frame_arg,
             unity_bringup,
             observability,
             depth_tracker,

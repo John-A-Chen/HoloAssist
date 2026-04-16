@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "runtime_observability_node = holoassist_foxglove.runtime_observability_node:main",
+            "obstacle_to_object_pose_adapter = holoassist_foxglove.obstacle_to_object_pose_adapter:main",
         ],
     },
 )

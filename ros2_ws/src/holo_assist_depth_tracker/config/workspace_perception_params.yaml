@@ -1,0 +1,80 @@
+holoassist_workspace_perception:
+  ros__parameters:
+    input_pointcloud_topic: /holo_assist_depth_tracker/pointcloud
+    workspace_frame: workspace_frame
+
+    use_tag_refinement: true
+    tag_family: 36h11
+    tag_ids: [0, 1]
+    tag_frame_names: ["tag36h11:0", "tag36h11:1"]
+    tag_size_m: 0.035
+    tag_timeout_s: 0.5
+    tag_min_separation_m: 0.08
+
+    plane_fit_max_points: 18000
+    plane_ransac_iterations: 140
+    plane_inlier_threshold_m: 0.015
+    plane_min_inlier_ratio: 0.35
+    plane_min_inliers: 600
+    plane_smoothing_alpha: 0.25
+
+    roi_x_min: -0.45
+    roi_x_max: 0.45
+    roi_y_min: -0.35
+    roi_y_max: 0.35
+    roi_z_min: 0.005
+    roi_z_max: 0.35
+
+    pedestal_exclusion_enabled: false
+    pedestal_center_x: 0.00
+    pedestal_center_y: 0.00
+    pedestal_radius: 0.08
+    pedestal_z_min: -0.05
+    pedestal_z_max: 0.50
+
+    max_points_per_frame: 30000
+
+    background_voxel_size: 0.015
+    background_increment: 0.04
+    background_decay: 0.01
+    background_threshold: 0.65
+    background_warmup_frames: 20
+    background_max_points: 20000
+
+    cluster_voxel_size: 0.02
+    min_foreground_points: 80
+    min_cluster_points: 80
+    max_cluster_points: 50000
+    persistence_distance_m: 0.09
+    persistence_gain: 0.25
+    persistence_decay: 0.85
+
+    cropped_cloud_topic: /holoassist/perception/cropped_pointcloud
+    cropped_cloud_workspace_topic: /holoassist/perception/cropped_pointcloud_workspace
+    foreground_cloud_topic: /holoassist/perception/foreground_pointcloud
+    foreground_cloud_workspace_topic: /holoassist/perception/foreground_pointcloud_workspace
+
+    object_pose_topic: /holoassist/perception/object_pose
+    object_pose_workspace_topic: /holoassist/perception/object_pose_workspace
+    object_marker_topic: /holoassist/perception/object_marker
+
+    plane_marker_topic: /holoassist/perception/bench_plane_marker
+    tag_marker_topic: /holoassist/perception/workspace_tag_markers
+    axes_marker_topic: /holoassist/perception/workspace_axes_marker
+    plane_coeff_topic: /holoassist/perception/bench_plane_coefficients
+    workspace_mode_topic: /holoassist/perception/workspace_mode
+    workspace_diag_topic: /holoassist/perception/workspace_diagnostics
+    object_metrics_topic: /holoassist/perception/object_metrics
+
+    publish_workspace_clouds: true
+    publish_foreground_clouds: true
+    publish_debug_markers: true
+    publish_tf: true
+
+    marker_alpha: 0.35
+    plane_marker_thickness_m: 0.006
+    axes_marker_length_m: 0.12
+    axes_marker_radius_m: 0.01
+    object_marker_min_extent_m: 0.02
+
+    random_seed: 42

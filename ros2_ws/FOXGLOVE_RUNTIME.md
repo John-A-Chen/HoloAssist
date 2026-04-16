@@ -3,6 +3,9 @@
 Last updated: 2026-04-15
 Primary branch: `john`
 
+For the full operator runbook (dependencies, calibration, verification, troubleshooting, parity mapping), use:
+- `ros2_ws/HOLOASSIST_RUNTIME_UNIFICATION_RUNBOOK.md`
+
 ## Runtime Model
 
 Foxglove is the default runtime observability layer.
@@ -26,6 +29,43 @@ source install/setup.bash
 ```
 
 ## Launch Paths
+
+### Unified stack entrypoint (recommended)
+
+Default no-hardware-safe profile:
+
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py
+```
+
+Full-hardware profile:
+
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py profile:=full_hardware
+```
+
+No-hardware profile with depth + AprilTag calibration path:
+
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py \
+  profile:=no_hardware \
+  enable_depth_tracker:=true \
+  enable_depth_camera:=true \
+  enable_apriltag_tracking:=true \
+  apriltag_start_camera:=false
+```
+
+No-hardware profile with workspace understanding (bench plane + foreground object localization):
+
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py \
+  profile:=no_hardware \
+  enable_depth_tracker:=true \
+  enable_depth_camera:=true \
+  enable_workspace_perception:=true \
+  enable_object_pose_adapter:=false \
+  enable_unity_bringup:=false
+```
 
 ### Observability-only
 

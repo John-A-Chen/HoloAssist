@@ -34,6 +34,8 @@ setup(
             "foxglove_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
             "holo_assist_webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
             "webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
+            "workspace_perception_node = holo_assist_depth_tracker.workspace_perception_node:main",
+            "holoassist_workspace_perception = holo_assist_depth_tracker.workspace_perception_node:main",
         ],
     },
 )

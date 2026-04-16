@@ -1,4 +1,5 @@
 #!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source /opt/ros/humble/setup.bash
-source /home/nic/git/RS2-HoloAssist/nic/ros2_ws/install/setup.bash
-python3 /home/nic/git/RS2-HoloAssist/nic/dashboard/main.py "$@"
+source "${SCRIPT_DIR}/ros2_ws/install/setup.bash"
+python3 "${SCRIPT_DIR}/dashboard/main.py" "$@"

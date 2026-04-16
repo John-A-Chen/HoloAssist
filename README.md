@@ -50,6 +50,22 @@ source install/setup.bash
 
 ## Runtime Launches
 
+Unified stack entrypoint (default profile = no-hardware-safe):
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py
+```
+
+Unified stack full hardware profile:
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py profile:=full_hardware
+```
+
+Unified stack with AprilTag tracking (for workbench calibration):
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py \
+  enable_apriltag_tracking:=true apriltag_start_camera:=false
+```
+
 Recommended integrated runtime:
 ```bash
 ros2 launch holoassist_foxglove holoassist_foxglove_runtime.launch.py
@@ -122,6 +138,63 @@ ws://<host-ip>:8765
 Layout guidance:
 - `ros2_ws/src/holoassist_foxglove/config/foxglove_layout_spec.yaml`
 - `ros2_ws/FOXGLOVE_RUNTIME.md`
+- `ros2_ws/HOLOASSIST_RUNTIME_UNIFICATION_RUNBOOK.md`
+
+## Workspace Pipeline (Bench Plane + Tags)
+
+Bench-understanding adapter node:
+- `holo_assist_depth_tracker/workspace_perception_node.py`
+- Fits bench plane from depth pointcloud
+- Publishes `workspace_frame` TF
+- Uses two AprilTag corner frames (when available) to stabilize in-plane orientation
+- Publishes cropped + foreground clouds and final object pose/marker
+
+### Plane-only bringup (today)
+
+```bash
+cd ~/git/RS2-HoloAssist/john/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+
+ros2 launch holoassist_foxglove holoassist_stack.launch.py \
+  profile:=no_hardware \
+  enable_depth_tracker:=true \
+  enable_depth_camera:=true \
+  enable_workspace_perception:=true \
+  enable_object_pose_adapter:=false \
+  enable_unity_bringup:=false
+```
+
+### Plane + AprilTag stabilization (2 corner tags)
+
+```bash
+ros2 launch holoassist_foxglove holoassist_stack.launch.py \
+  profile:=no_hardware \
+  enable_depth_tracker:=true \
+  enable_depth_camera:=true \
+  enable_workspace_perception:=true \
+  enable_object_pose_adapter:=false \
+  enable_apriltag_tracking:=true \
+  apriltag_start_camera:=false \
+  enable_unity_bringup:=false
+```
+
+### Validation topic checklist
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/git/RS2-HoloAssist/john/ros2_ws/install/setup.bash
+
+ros2 topic list | rg "^/holoassist/perception/(bench_plane|cropped|foreground|object|workspace)"
+ros2 topic echo /holoassist/perception/workspace_mode --once
+ros2 topic echo /holoassist/perception/workspace_diagnostics --once
+ros2 topic echo /holoassist/perception/bench_plane_coefficients --once
+ros2 topic hz /holoassist/perception/cropped_pointcloud
+ros2 topic hz /holoassist/perception/foreground_pointcloud
+ros2 topic echo /holoassist/perception/object_pose --once
+ros2 topic echo /holoassist/perception/object_pose_workspace --once
+```
 
 ## Key Runtime Topics
 

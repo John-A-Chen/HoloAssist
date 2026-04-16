@@ -5,6 +5,7 @@ Foxglove-first runtime observability package for HoloAssist.
 ## What It Provides
 
 - Runtime aggregation node: `runtime_observability_node`
+- Object pose adapter node: `obstacle_to_object_pose_adapter`
 - Unified diagnostics: `/holoassist/diagnostics`
 - Event stream: `/holoassist/events`
 - Runtime state summaries: `/holoassist/state/*`
@@ -23,6 +24,9 @@ Foxglove-first runtime observability package for HoloAssist.
   - integrated runtime convenience launch
   - optional perception/motion stacks
   - optional Unity bringup + observability
+
+- `launch/apriltag_workbench.launch.py`
+  - optional AprilTag tracker + optional RealSense launch for workbench calibration
 
 ## Quick Start
 

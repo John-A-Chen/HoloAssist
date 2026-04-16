@@ -13,6 +13,8 @@ def generate_launch_description():
     enable_foxglove_bridge = LaunchConfiguration('enable_foxglove_bridge')
     enable_manager = LaunchConfiguration('enable_manager')
     enable_tf_marker_bridge = LaunchConfiguration('enable_tf_marker_bridge')
+    enable_object_pose_adapter = LaunchConfiguration('enable_object_pose_adapter')
+    object_workspace_frame = LaunchConfiguration('object_workspace_frame')
 
     ros_ip = LaunchConfiguration('ros_ip')
     ros_tcp_port = LaunchConfiguration('ros_tcp_port')
@@ -35,6 +37,8 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_foxglove_bridge', default_value='true'),
         DeclareLaunchArgument('enable_manager', default_value='true'),
         DeclareLaunchArgument('enable_tf_marker_bridge', default_value='false'),
+        DeclareLaunchArgument('enable_object_pose_adapter', default_value='true'),
+        DeclareLaunchArgument('object_workspace_frame', default_value='base_link'),
         DeclareLaunchArgument('ros_ip', default_value='0.0.0.0'),
         DeclareLaunchArgument('ros_tcp_port', default_value='10000'),
         DeclareLaunchArgument('command_frame', default_value='base_link'),
@@ -100,6 +104,8 @@ def generate_launch_description():
                 'enable_foxglove_bridge': enable_foxglove_bridge,
                 'enable_manager': enable_manager,
                 'enable_tf_marker_bridge': enable_tf_marker_bridge,
+                'enable_object_pose_adapter': enable_object_pose_adapter,
+                'object_workspace_frame': object_workspace_frame,
                 'unity_tcp_host': '127.0.0.1',
                 'unity_tcp_port': ros_tcp_port,
             }.items(),

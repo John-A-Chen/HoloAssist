@@ -2,13 +2,15 @@
 """HoloAssist ROS 2 launcher — starts UR driver, controller switch, and TCP endpoint."""
 
 import argparse
+import os
 import subprocess
 import signal
 import sys
 import time
 import socket
 
-ROS2_WS = "/home/nic/git/RS2-HoloAssist/nic/ros2_ws"
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+ROS2_WS = os.path.join(REPO_ROOT, "ros2_ws")
 SOURCE_CMD = f"source /opt/ros/humble/setup.bash && source {ROS2_WS}/install/setup.bash"
 
 DEFAULT_WIFI_IP = "172.19.115.104"

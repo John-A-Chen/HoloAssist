@@ -43,6 +43,39 @@ Visualization Manager:
       Selectable: true
       Use Fixed Frame: true
       Use rainbow: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Workspace Cropped PointCloud
+      Enabled: true
+      Topic:
+        Value: /holoassist/perception/cropped_pointcloud
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.01
+      Alpha: 1
+      Decay Time: 0
+      Queue Size: 10
+      Color Transformer: AxisColor
+      Axis: Z
+      Position Transformer: XYZ
+      Selectable: true
+      Use Fixed Frame: true
+      Use rainbow: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Foreground PointCloud
+      Enabled: true
+      Topic:
+        Value: /holoassist/perception/foreground_pointcloud
+      Style: Points
+      Size (Pixels): 4
+      Size (m): 0.01
+      Alpha: 1
+      Decay Time: 0
+      Queue Size: 10
+      Color Transformer: FlatColor
+      Color: 255; 140; 60
+      Position Transformer: XYZ
+      Selectable: true
+      Use Fixed Frame: true
     - Class: rviz_default_plugins/Marker
       Name: Obstacle Marker
       Enabled: true
@@ -51,6 +84,45 @@ Visualization Manager:
       Queue Size: 100
       Namespaces:
         holo_assist_depth_tracker_obstacle: true
+    - Class: rviz_default_plugins/Marker
+      Name: Bench Plane Marker
+      Enabled: true
+      Marker Topic:
+        Value: /holoassist/perception/bench_plane_marker
+      Queue Size: 100
+      Namespaces:
+        holoassist_bench_plane: true
+    - Class: rviz_default_plugins/Marker
+      Name: Workspace Tag Markers
+      Enabled: true
+      Marker Topic:
+        Value: /holoassist/perception/workspace_tag_markers
+      Queue Size: 100
+      Namespaces:
+        holoassist_workspace_tags: true
+    - Class: rviz_default_plugins/Marker
+      Name: Workspace Axes Marker
+      Enabled: true
+      Marker Topic:
+        Value: /holoassist/perception/workspace_axes_marker
+      Queue Size: 100
+      Namespaces:
+        holoassist_workspace_axes: true
+    - Class: rviz_default_plugins/Marker
+      Name: Object Marker
+      Enabled: true
+      Marker Topic:
+        Value: /holoassist/perception/object_marker
+      Queue Size: 100
+      Namespaces:
+        holoassist_object: true
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Marker Scale: 0.2
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
     - Class: rviz_default_plugins/Image
       Name: Tracker Debug Image
       Enabled: true
