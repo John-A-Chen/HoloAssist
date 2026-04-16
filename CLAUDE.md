@@ -4,11 +4,25 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-HoloAssist is a ROS 2-based XR teleoperation framework integrating a Meta Quest 3 headset with a Universal Robots UR3e collaborative arm. This branch (`nic`) is one of several personal branches in a shared research team repository (other branches: `john`, `ollie`, `seb`).
+HoloAssist is a ROS 2-based XR robotic sorting system. A UR3e collaborative arm with an OnRobot gripper sorts physical objects into bins within a workspace. An Intel RealSense depth camera detects and identifies objects as they enter the workspace, and the system operates in two modes:
 
-The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e end-effector via Cartesian velocity commands using RMRC (Resolved Motion Rate Control) — Jacobian-based velocity resolution computed locally in Unity, no MoveIt needed.
+- **Teleoperation mode** — a human operator wearing a Meta Quest 3 headset controls the robot arm and gripper in mixed reality to pick and sort objects.
+- **Autonomous mode** — the robot autonomously sorts objects using MoveIt 2 trajectory planning without human input.
 
-### Progress Status
+Real-world objects are mapped to different virtual objects in the XR scene (e.g., a physical tomato appears as a bomb that needs "defusing" into the correct bin), creating a gamified operator experience.
+
+This branch (`nic`) is one of several personal branches in a shared research team repository (other branches: `john`, `ollie`, `seb`).
+
+### Subsystem Ownership
+
+| Subsystem | Lead | Scope |
+|---|---|---|
+| Perception | John | RealSense depth camera, object detection/classification, pose tracking |
+| Autonomous Sorting | Oliver | MoveIt 2 trajectory planning, autonomous pick-and-place |
+| Teleoperation & Interaction | Nic | XR teleop (RMRC, Direct Joint, Hand Guide), gripper control, e-stop dashboard, session logging |
+| XR Scene & Visualisation | Sebastian | Unity environment, virtual object overlays (real->XR mapping), bin visualisation |
+
+### Progress Status (Nic's Subsystem)
 - ✅ Unity XR template (Mixed Reality / passthrough) working on Quest 3
 - ✅ Meta XR All-in-One SDK v85.0.0 installed and configured
 - ✅ ROS-TCP-Connector installed (local package, file:// in manifest.json)
@@ -20,7 +34,6 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ Digital twin working (Unity mirrors real UR3e joints) — fixed joint name mismatch between ROS and Unity
 - ✅ Quest 3 build connects to ROS over WiFi (ROS IP set to laptop's WiFi IP, ros_tcp_endpoint on 0.0.0.0)
 - ✅ RobotController.cs created with three control modes (Direct Joint + RMRC + Hand Guide) — rewritten to use Unity Input System (was OVRInput, which didn't work without OVRManager)
-- ✅ MoveIt 2 + Servo config already present in `ur_moveit_config` package (launch with `launch_servo:=true`)
 - ✅ RobotBasePlacer.cs working — controller grip-to-grab and drag robot in MR (on parent wrapper GameObject)
 - ✅ JointStateSubscriber.cs rewritten to be purely kinematic (no ArticulationBody physics, direct Transform rotations)
 - ✅ Joint axes fixed — extracts actual axis from ArticulationBody anchorRotation, composes with initial URDF rest rotation
@@ -41,14 +54,15 @@ The current focus is **XR teleoperation**: Quest 3 controllers drive the UR3e en
 - ✅ Full teleoperation loop with RMRC verified
 - ✅ SpatialMarkers.cs created — RGB axes on tool0 + yellow velocity arrow (coordinate fix applied)
 - ✅ RMRC Rotate sub-mode added — X button toggles Translate/Rotate, direct wrist joint control (joints 3/4/5)
-- ✅ Hand Guide mode added — hold right grip to track controller position in 3D space, robot EE follows hand via Jacobian IK. Mellow gain (2) + speed cap (0.15 m/s) + joint bias favouring wrist over base/shoulder. Axis mapping verified on Quest 3.
-- ✅ Subsystem 3 evaluation renegotiated — HD/Perfect criteria revised to remove cross-subsystem dependencies (see `subsystem3_renegotiation.md`)
-- ✅ SessionLogger.cs created — tracks mode switches, per-mode durations, session time; publishes JSON to `/session/status` (2Hz) + `/session/events`; saves session log JSON to `Application.persistentDataPath/SessionLogs/` on quit
-- ✅ Dashboard STATS tab reworked — session info bar (duration, mode, switches, e-stops, mode usage %) + rolling joint velocity graph (6 joints, 30s) + topic health graph (3 topics as % of expected rate, 60s)
-- ✅ Dashboard LATENCY tab added — live latency numbers + rolling message age graph (joint_state & velocity_cmd freshness, 30s) + command interval graph (time between velocity commands, 30s)
-- ✅ Dashboard SESSION tab added — text-based overview: control mode, sub-mode, hand guide state, mode durations, connection status, all topic rates
-- ✅ Dashboard saves session log to `~/holoassist_sessions/` on shutdown (events, e-stop count, Unity session info)
-- ⬜ Resilience under adverse conditions (WiFi dropout → auto e-stop, latency spike detection, graceful recovery) — needed for Perfect grade
+- ✅ Hand Guide mode added — hold right grip to track controller position in 3D space, robot EE follows hand via Jacobian IK
+- ✅ SessionLogger.cs created — tracks mode switches, per-mode durations, session time; publishes JSON to `/session/status` (2Hz) + `/session/events`; saves session log JSON on quit
+- ✅ Dashboard STATS tab — session info bar + rolling joint velocity graph + topic health graph
+- ✅ Dashboard LATENCY tab — live latency numbers + message age graph + command interval graph
+- ✅ Dashboard SESSION tab — text overview of control mode, durations, connection status, topic rates
+- ✅ Dashboard saves session log to `~/holoassist_sessions/` on shutdown
+- ⬜ **OnRobot gripper ROS driver** — install/configure driver, open/close commands via ROS
+- ⬜ **Gripper control from XR** — trigger or button to open/close gripper during teleoperation
+- ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
 
 ## Repository Layout
 
@@ -70,7 +84,6 @@ nic/
       Scripts/SessionLogger.cs           — session metrics: mode tracking, durations, events → ROS + file
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
       URDF/                            — ur3e.urdf + meshes
-      (RosMessages/ deleted — types built into ROS-TCP-Connector)
   dashboard/           — Python/PyQt5 e-stop & debug dashboard (streamed to Steam Deck)
     main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
     ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
@@ -79,8 +92,9 @@ nic/
   dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
   ROS-TCP-Connector/  — Unity package (local, referenced via file:// in manifest.json)
   URDF-Importer/      — Unity package (local, referenced via file:// in manifest.json)
-  SETUP.md            — full onboarding guide for new contributors
-  subsystem3_renegotiation.md  — Nic's proposed evaluation criteria changes (no cross-subsystem deps)
+  PROJECT_PLAN.md    — Full project plan (all subsystems, architecture, milestones)
+  SETUP.md            — Onboarding guide for new contributors
+  subsystem3_renegotiation.md  — Nic's evaluation criteria renegotiation
   subsystem2_renegotiation_options.md — Options for Oliver's subsystem renegotiation
 ```
 
@@ -142,7 +156,7 @@ ros2 control switch_controllers --activate forward_velocity_controller --deactiv
 Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.121`).
 Then hit Play in Unity.
 
-**Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. The `forward_velocity_controller` must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation.
+**Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. The `forward_velocity_controller` must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
 
 ### Simulated Hardware (no real robot)
 
@@ -160,7 +174,7 @@ source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 ```
 
-No teach pendant needed. Ignore `urscript_interface` connection errors — that node doesn't check for fake hardware mode. Joint states and controllers work fine. Robot moves in RViz and Unity digital twin.
+No teach pendant needed. Ignore `urscript_interface` connection errors — that node doesn't check for fake hardware mode. Joint states and controllers work fine.
 
 ### Network Setup
 
@@ -175,37 +189,32 @@ Laptop (nic-XPS-15-9520):
 - **ros_tcp_endpoint**: `ROS_IP:=0.0.0.0` (listens on all interfaces, bridging both networks)
 - WiFi IP may change if network changes — re-check with `hostname -I`
 
-## Architecture
+## System Architecture
 
 ```
-Meta Quest 3 (XR Interface)
-  └─ controller poses, button input → Cartesian velocity commands
+Intel RealSense (Depth Camera)
+  └─ object detection, colour/CV classification, pose tracking
        ↓
-Perception Layer (RGB-D camera)
-  └─ point clouds → obstacle/workspace detection → collision map updates
+ROS 2 Network
+  ├─ Object poses broadcast (robot frame, via QR code calibration)
+  ├─ ros_tcp_endpoint → Unity (XR overlays + teleop)
+  └─ MoveIt 2 (autonomous trajectory planning — Oliver's subsystem)
        ↓
-Planning Layer (MoveIt 2)
-  └─ trajectory generation, collision checking, dynamic no-go zone enforcement
+Two Operating Modes:
+  ├─ TELEOP (Nic): Quest 3 controllers → RMRC/Hand Guide → velocity commands → UR3e + gripper
+  └─ AUTONOMOUS (Oliver): MoveIt 2 → planned trajectories → UR3e + gripper
        ↓
-Control Layer (ur_robot_driver / ros2_control)
-  └─ Cartesian velocity control or joint trajectory execution → UR3e hardware
+UR3e + OnRobot Gripper
+  └─ picks objects, places in bins
+       ↓
+Depth Camera verifies correct bin placement
 ```
 
-**Teleoperation modes (planned):**
-- **Freeform**: Direct end-effector velocity control from XR controllers
-- **Assisted**: Operator intent + system-enforced collision avoidance, velocity limits, no-go zones
-- **Training**: Record XR demonstrations as replayable trajectories
-
-**Planned ROS package layout** (to be created in `ros2_ws/src/`):
-
-| Package | Purpose |
-|---|---|
-| `xr_interface` | Meta Quest input, spatial tracking, XR overlays |
-| `perception` | RGB-D processing, point cloud pipeline |
-| `planning` | Trajectory generation, workspace constraints |
-| `control` | Low-level robot control, velocity scaling |
-| `robot_bringup` | Hardware launch files and configuration |
-| `experiments` | Research evaluation and data collection |
+**Teleoperation modes (Nic's subsystem):**
+- **RMRC**: Jacobian-based Cartesian velocity control (translate + rotate sub-modes)
+- **Direct Joint**: Individual joint jogging
+- **Hand Guide**: Controller position tracking with Jacobian IK
+- **Gripper**: Open/close from XR controller (to be implemented)
 
 ## Unity Project
 
@@ -215,7 +224,7 @@ Control Layer (ur_robot_driver / ros2_control)
 - **Scene:** `Assets/Scenes/SampleScene.unity`
 - **ROS IP:** Set to laptop's WiFi IP for Quest builds (e.g., `172.19.115.245`), Port: 10000 (configured in Robotics → ROS Settings). Use `0.0.0.0` for ros_tcp_endpoint so it listens on all interfaces.
 
-### Key scripts
+### Key Scripts
 
 - `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary.
 - `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR controller grip button — hold grip near rig to grab and drag. Supports Y-axis rotation while grabbed (keeps robot upright). Pure transform movement, no physics.
@@ -224,15 +233,18 @@ Control Layer (ur_robot_driver / ros2_control)
 - `Assets/Scripts/RobotController.cs` — attach to any GameObject; uses **Unity Input System** (not OVRInput). Requires `RobotControlActions.inputactions` dragged into the Inspector's **Input Actions** field. Three control modes cycled via Menu button (RMRC → Direct Joint → Hand Guide → RMRC):
   - **RMRC mode** (default): Resolved Motion Rate Control with two sub-modes toggled by X button (left controller):
     - **Translate** (default): right stick = XY translation (forward/back, left/right), left stick Y = Z translation (up/down), left stick X = yaw. Uses 3x6 linear Jacobian.
-    - **Rotate**: directly drives wrist joints — right stick Y = wrist_1 (pitch/tilt), right stick X = wrist_2 (roll), left stick X = wrist_3 (yaw/spin). Uses `jointJogSpeed` for responsive 1:1 control (angular Jacobian approach was too sluggish).
+    - **Rotate**: directly drives wrist joints — right stick Y = wrist_1 (pitch/tilt), right stick X = wrist_2 (roll), left stick X = wrist_3 (yaw/spin). Uses `jointJogSpeed` for responsive 1:1 control.
     - Both use `UR3eKinematics` DLS pseudoinverse. Adaptive damping near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
   - **Direct Joint mode**: A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`.
-  - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop. Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s) — deliberately mellow so robot gently catches up to hand. Joint bias weights (`[0.3, 0.3, 0.5, 1.0, 1.0, 1.0]`) favour wrist movement over base/shoulder. Axis mapping verified on Quest 3 (DH_x=-Unity_z, DH_y=Unity_x, DH_z=Unity_y).
+  - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop. Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s). Joint bias weights (`[0.3, 0.3, 0.5, 1.0, 1.0, 1.0]`) favour wrist movement over base/shoulder.
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
   - Publish rate: 50Hz.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
+- `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). Uses a skybox background so the dashboard sees the full scene.
+- `Assets/Scripts/SessionLogger.cs` — attach to any GameObject; assign `RobotController` in Inspector (auto-finds via `FindObjectOfType` if not set). Publishes JSON session status to `/session/status` at 2Hz and discrete events to `/session/events`. On application quit, saves a JSON session log to `Application.persistentDataPath/SessionLogs/`.
+- `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating HUD panel tracks the camera with colour-coded mode title (amber=Joint, green=Translate, blue=Rotate, purple/red=Hand Guide), control hints for current mode, and readable joint names in Direct Joint mode.
 
-### Controller mapping (Quest 3)
+### Controller Mapping (Quest 3)
 
 | Input | Direct Joint Mode | RMRC Translate | RMRC Rotate | Hand Guide |
 |---|---|---|---|---|
@@ -241,13 +253,11 @@ Control Layer (ur_robot_driver / ros2_control)
 | **A button** (right) | Next joint | — | — | — |
 | **B button** (right) | Previous joint | — | — | — |
 | **Right grip** (right) | — | — | — | Hold to track hand |
-| **Right stick Y** | Jog selected joint | End-effector forward/back (X) | Wrist 1 (pitch/tilt) | — |
-| **Right stick X** | — | End-effector left/right (Y) | Wrist 2 (roll) | — |
-| **Left stick Y** | — | End-effector up/down (Z) | — | — |
-| **Left stick X** | — | End-effector yaw | Wrist 3 (yaw/spin) | — |
-- `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). The capture camera uses a skybox background so the dashboard sees the full scene (does not affect the user's passthrough XR view). No webcam/passthrough capture — Quest 3 doesn't expose passthrough as a camera device.
-- `Assets/Scripts/SessionLogger.cs` — attach to any GameObject; assign `RobotController` in Inspector (auto-finds via `FindObjectOfType` if not set). Publishes JSON session status to `/session/status` at 2Hz (mode, sub-mode, session time, mode switches, per-mode durations) and discrete events to `/session/events`. On application quit, saves a JSON session log to `Application.persistentDataPath/SessionLogs/session_YYYY-MM-DD_HH-MM-SS.json`. On Quest 3 the persistent path is `/storage/emulated/0/Android/data/com.DefaultCompany.MixedRealityTemplate/files/SessionLogs/` — pull via `adb pull`.
-- `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating HUD panel tracks the camera with colour-coded mode title (amber=Joint, green=Translate, blue=Rotate, purple/red=Hand Guide), control hints for current mode, and readable joint names in Direct Joint mode.
+| **Right stick Y** | Jog selected joint | EE forward/back (X) | Wrist 1 (pitch/tilt) | — |
+| **Right stick X** | — | EE left/right (Y) | Wrist 2 (roll) | — |
+| **Left stick Y** | — | EE up/down (Z) | — | — |
+| **Left stick X** | — | EE yaw | Wrist 3 (yaw/spin) | — |
+| **Gripper button** (TBD) | Open/close gripper | Open/close gripper | Open/close gripper | Open/close gripper |
 
 ## Dashboard (E-Stop & Debug Console)
 
@@ -288,24 +298,23 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 |---|---|---|
 | STATUS | Working | Joint positions/velocities, event log |
 | HEADSET | Working | Quest 3 XR scene view (JPEG stream from `HeadsetStreamPublisher.cs`) |
-| CAMERA | Placeholder | Depth camera ROS topics |
-| STATS | Working | Session info bar (duration, mode, switches, e-stops, mode %) + rolling joint velocity graph (6 coloured lines, 30s) + topic health graph (joint_states/vel_cmd/headset as % of expected Hz, 60s) |
-| LATENCY | Working | Live latency numbers (colour-coded) + rolling message age graph (joint_state & vel_cmd freshness, 30s) + command interval graph (time between velocity commands, 30s) |
-| SESSION | Working | Text overview: control mode, sub-mode, hand guide state, mode durations, e-stop count, connection status, all 11 topic rates |
+| CAMERA | Placeholder | Depth camera ROS topics (will show RealSense feed) |
+| STATS | Working | Session info bar (duration, mode, switches, e-stops, mode %) + rolling joint velocity graph (6 coloured lines, 30s) + topic health graph (3 topics, 60s) |
+| LATENCY | Working | Live latency numbers (colour-coded) + rolling message age graph (30s) + command interval graph (30s) |
+| SESSION | Working | Text overview: control mode, sub-mode, hand guide state, mode durations, e-stop count, connection status, all topic rates |
 
 ## Known Issues
 
 - **UR driver segfault (exit code -11)** — apt-installed `ros-humble-ur-robot-driver` crashes on Ubuntu 22.04. Fixed by building `Universal_Robots_ROS2_Driver` from source (already in `ros2_ws/src/`).
-- **Robot falls in Unity on Play** — no longer an issue. JointStateSubscriber.cs now disables all ArticulationBody components entirely (purely kinematic). No physics simulation on the robot.
+- **Robot falls in Unity on Play** — no longer an issue. JointStateSubscriber.cs disables all ArticulationBody components (purely kinematic).
 - **Git HTTPS clone fails on this machine** — always use SSH (`git@github.com:...`).
 - **Unity Package Manager can't find robotics packages** — clone locally, reference via `file://` in `Packages/manifest.json`.
-- **ros_tcp_endpoint crashes on Unity disconnect/reconnect** — known race condition in v0.7.0 (`InvalidHandle` exception). Restart the endpoint after every Unity Play/Stop cycle. Command must be on one line (no line breaks in `--ros-args`): `ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0`
-- **JointStateSubscriber: ArticulationBody approach abandoned** — `SetDriveTarget` with high stiffness caused physics conflicts with hand-tracking grab. Rewritten to disable ArticulationBody entirely and set `Transform.localRotation` directly. Joint axis assumed `Vector3.forward` — needs verification with real robot.
-- **`/joint_states` not arriving in Unity despite subscription registering** — caused by duplicate message class registration. Delete `Assets/RosMessages/` entirely; those types are already built into ROS-TCP-Connector and the duplicates silently break deserialization. (Fixed — RosMessages deleted.)
-- **ROS joint names don't match Unity GameObject names** — URDF importer names GameObjects after links (`shoulder_link`, `upper_arm_link`, `forearm_link`, `wrist_1_link`, etc.) but ROS publishes joint names (`shoulder_pan_joint`, `shoulder_lift_joint`, `elbow_joint`, `wrist_1_joint`, etc.). Fixed with a `rosToUnity` mapping dictionary in JointStateSubscriber.cs.
-- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.100` ↔ `192.168.0.194`), Quest connects to laptop via WiFi. Both must be on the same WiFi network. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.121`.
-- **OVRInput does nothing on Quest 3 (MR template)** — the Mixed Reality template uses Unity Input System + XR Interaction Toolkit, not OVR. `OVRInput.Get()` silently returns zero without `OVRManager` in the scene. Fixed by rewriting RobotController.cs to use `InputAction` from Unity Input System with `<XRController>` bindings.
-- **XRI Default Input Actions consume thumbsticks/buttons** — the MR template's XRI actions bind both thumbsticks to teleport/turn/move and A button to Jump. RobotController.cs now disables these conflicting action maps at runtime (`XRI Left Locomotion`, `XRI Right Locomotion`, plus individual Rotate Manipulation and UI Scroll actions).
-- **MoveIt Servo not currently used** — RMRC replaces MoveIt Servo for teleoperation. Servo config still exists in `ur_moveit_config/config/ur_servo.yaml` if needed later for collision-aware planning.
-- **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish `Float64MultiArray` to `/forward_velocity_controller/commands`. After launching the UR driver, switch controllers: `ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller`.
-- **RobotHUD may not render on Quest 3** — `Camera.main` can return null in the MR template (camera not tagged MainCamera), `Shader.Find` may return null on Android builds (shader stripping), and runtime-created TextMeshPro needs an explicit font asset. Partially patched with fallback camera/shader/font search but not fully verified on device. Functional enough for now.
+- **ros_tcp_endpoint crashes on Unity disconnect/reconnect** — known race condition in v0.7.0 (`InvalidHandle` exception). Restart the endpoint after every Unity Play/Stop cycle. Command must be on one line: `ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0`
+- **`/joint_states` not arriving in Unity despite subscription registering** — caused by duplicate message class registration. Delete `Assets/RosMessages/` entirely; types are built into ROS-TCP-Connector. (Fixed — RosMessages deleted.)
+- **ROS joint names don't match Unity GameObject names** — Fixed with a `rosToUnity` mapping dictionary in JointStateSubscriber.cs.
+- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.121` ↔ `192.168.0.194`), Quest connects via WiFi. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.121`.
+- **OVRInput does nothing on Quest 3 (MR template)** — the Mixed Reality template uses Unity Input System + XR Interaction Toolkit, not OVR. Fixed by rewriting RobotController.cs to use `InputAction` with `<XRController>` bindings.
+- **XRI Default Input Actions consume thumbsticks/buttons** — RobotController.cs disables conflicting action maps at runtime.
+- **MoveIt Servo not used for teleoperation** — RMRC replaces it. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
+- **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. Switch controllers after launching the UR driver.
+- **RobotHUD may not render on Quest 3** — `Camera.main` can return null in the MR template, `Shader.Find` may return null on Android (shader stripping), runtime TextMeshPro needs an explicit font asset. Partially patched, functional enough.
