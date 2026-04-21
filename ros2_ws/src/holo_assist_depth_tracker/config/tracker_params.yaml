@@ -12,11 +12,33 @@ holo_assist_depth_tracker:
 
     publish_pointcloud: true
     pointcloud_topic: /holo_assist_depth_tracker/pointcloud
-    point_stride_px: 2
+    # Increase stride to reduce CPU + RViz load.
+    point_stride_px: 3
     temporal_alpha: 0.35
-    max_points: 120000
+    # Keep this moderate for interactive RViz performance.
+    max_points: 40000
 
-    publish_obstacle_marker: true
+    # Disable legacy single obstacle cube (often captures bench/background).
+    # Use /holoassist/perception/object_marker from workspace perception instead.
+    publish_obstacle_marker: false
     obstacle_topic: /holo_assist_depth_tracker/obstacle_marker
     obstacle_padding_m: 0.05
     obstacle_min_size_m: 0.08
+
+    # RGB debug overlay (boxes + distance + pose text).
+    use_rgb_debug_image: true
+    rgb_topic: /camera/camera/color/image_raw
+    rgb_topic_fallback: /camera/color/image_raw
+    rgb_timeout_s: 0.6
+    object_pose_topic: /holoassist/perception/object_pose
+    object_pose_timeout_s: 0.8
+
+    # Centroid stability: only update when the blob is noticeably closer,
+    # with a force-update fallback for large lateral motion.
+    centroid_update_closer_only: true
+    centroid_min_closer_m: 0.03
+    centroid_smoothing_alpha: 0.25
+    centroid_force_update_px: 80.0
+    centroid_reset_after_missed_frames: 8
+    max_debug_boxes: 6
+    max_component_area_ratio: 0.30

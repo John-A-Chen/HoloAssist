@@ -50,6 +50,21 @@ def generate_launch_description() -> LaunchDescription:
         default_value="848,480,15",
         description="Depth stream profile W,H,FPS.",
     )
+    color_profile_arg = DeclareLaunchArgument(
+        "color_profile",
+        default_value="640,480,15",
+        description="Color stream profile W,H,FPS.",
+    )
+    enable_color_arg = DeclareLaunchArgument(
+        "enable_color",
+        default_value="true",
+        description="Enable RGB stream for debug image overlays.",
+    )
+    align_depth_arg = DeclareLaunchArgument(
+        "align_depth",
+        default_value="false",
+        description="Enable RealSense align depth filter.",
+    )
     params_file_arg = DeclareLaunchArgument(
         "params_file",
         default_value=default_params,
@@ -78,6 +93,9 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             "camera_name": LaunchConfiguration("camera_name"),
             "depth_profile": LaunchConfiguration("depth_profile"),
+            "color_profile": LaunchConfiguration("color_profile"),
+            "enable_color": LaunchConfiguration("enable_color"),
+            "align_depth": LaunchConfiguration("align_depth"),
         }.items(),
     )
 
@@ -122,6 +140,9 @@ def generate_launch_description() -> LaunchDescription:
             start_rviz_arg,
             camera_name_arg,
             depth_profile_arg,
+            color_profile_arg,
+            enable_color_arg,
+            align_depth_arg,
             params_file_arg,
             workspace_params_file_arg,
             rviz_config_arg,

@@ -28,7 +28,7 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
     - Class: rviz_default_plugins/PointCloud2
       Name: Depth PointCloud
-      Enabled: true
+      Enabled: false
       Topic:
         Value: /holo_assist_depth_tracker/pointcloud
       Style: Points
@@ -124,10 +124,21 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
     - Class: rviz_default_plugins/Image
-      Name: Tracker Debug Image
+      Name: Tracker RGB Overlay
       Enabled: true
       Topic:
         Value: /holo_assist_depth_tracker/debug_image
+      Queue Size: 2
+      Max Value: 1
+      Min Value: 0
+      Normalize Range: true
+      Median window: 5
+      Transport Hint: raw
+    - Class: rviz_default_plugins/Image
+      Name: Camera Color Raw
+      Enabled: false
+      Topic:
+        Value: /camera/camera/color/image_raw
       Queue Size: 2
       Max Value: 1
       Min Value: 0

@@ -12,7 +12,8 @@ holoassist_workspace_perception:
     tag_min_separation_m: 0.08
 
     plane_fit_max_points: 18000
-    plane_ransac_iterations: 140
+    # Lower iterations for faster runtime while keeping robust fit.
+    plane_ransac_iterations: 90
     plane_inlier_threshold_m: 0.015
     plane_min_inlier_ratio: 0.35
     plane_min_inliers: 600
@@ -27,6 +28,13 @@ holoassist_workspace_perception:
     roi_y_max: 0.35
     roi_z_min: 0.005
     roi_z_max: 0.35
+    # When 2 tags are visible, derive active ROI from the tag corner pair.
+    # This lets you place tags on arbitrary bench corners and resize/re-anchor
+    # the culling box without editing fixed ROI values each run.
+    roi_from_tags_enabled: true
+    roi_from_tags_margin_m: 0.03
+    roi_from_tags_min_span_m: 0.12
+    roi_from_tags_smoothing_alpha: 0.35
     # Hard reject anything under the fitted bench plane.
     enforce_above_plane_cull: true
     # Set >0.0 only if depth noise causes clipping at the plane boundary.
@@ -46,14 +54,15 @@ holoassist_workspace_perception:
     pedestal_z_min: -0.05
     pedestal_z_max: 0.50
 
-    max_points_per_frame: 30000
+    # Reduce point budget for faster clustering and RViz interactivity.
+    max_points_per_frame: 22000
 
     background_voxel_size: 0.015
     background_increment: 0.04
     background_decay: 0.01
     background_threshold: 0.65
     background_warmup_frames: 20
-    background_max_points: 20000
+    background_max_points: 14000
 
     cluster_voxel_size: 0.02
     min_foreground_points: 80
@@ -66,6 +75,16 @@ holoassist_workspace_perception:
     persistence_distance_m: 0.09
     persistence_gain: 0.25
     persistence_decay: 0.85
+    # Publish-stability gate: only move published centroid if object gets
+    # noticeably closer to camera.
+    centroid_update_closer_only: true
+    centroid_min_closer_m: 0.03
+    centroid_smoothing_alpha: 0.25
+    max_tracked_objects: 6
+    track_match_distance_m: 0.12
+    track_spawn_deadzone_m: 0.08
+    track_smoothing_alpha: 0.35
+    track_max_missed_frames: 8
 
     cropped_cloud_topic: /holoassist/perception/cropped_pointcloud
     cropped_cloud_workspace_topic: /holoassist/perception/cropped_pointcloud_workspace

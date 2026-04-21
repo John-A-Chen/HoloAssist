@@ -13,6 +13,7 @@ from rclpy.qos import (
     ReliabilityPolicy,
     qos_profile_sensor_data,
 )
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import CameraInfo, Image, PointCloud2, PointField
 from std_msgs.msg import Float32MultiArray
 from visualization_msgs.msg import Marker
@@ -45,6 +46,19 @@ class DepthTrackerNode(Node):
         )
         self.declare_parameter("obstacle_padding_m", 0.05)
         self.declare_parameter("obstacle_min_size_m", 0.08)
+        self.declare_parameter("use_rgb_debug_image", True)
+        self.declare_parameter("rgb_topic", "/camera/camera/color/image_raw")
+        self.declare_parameter("rgb_topic_fallback", "/camera/color/image_raw")
+        self.declare_parameter("rgb_timeout_s", 0.6)
+        self.declare_parameter("object_pose_topic", "/holoassist/perception/object_pose")
+        self.declare_parameter("object_pose_timeout_s", 0.8)
+        self.declare_parameter("centroid_update_closer_only", True)
+        self.declare_parameter("centroid_min_closer_m", 0.03)
+        self.declare_parameter("centroid_smoothing_alpha", 0.25)
+        self.declare_parameter("centroid_force_update_px", 80.0)
+        self.declare_parameter("centroid_reset_after_missed_frames", 8)
+        self.declare_parameter("max_debug_boxes", 6)
+        self.declare_parameter("max_component_area_ratio", 0.30)
 
         self.depth_topic = str(self.get_parameter("depth_topic").value)
         self.camera_info_topic = str(self.get_parameter("camera_info_topic").value)
@@ -64,6 +78,37 @@ class DepthTrackerNode(Node):
         self.obstacle_padding_m = float(self.get_parameter("obstacle_padding_m").value)
         self.obstacle_min_size_m = float(
             self.get_parameter("obstacle_min_size_m").value
+        )
+        self.use_rgb_debug_image = bool(
+            self.get_parameter("use_rgb_debug_image").value
+        )
+        self.rgb_topic = str(self.get_parameter("rgb_topic").value)
+        self.rgb_topic_fallback = str(
+            self.get_parameter("rgb_topic_fallback").value
+        )
+        self.rgb_timeout_s = float(self.get_parameter("rgb_timeout_s").value)
+        self.object_pose_topic = str(self.get_parameter("object_pose_topic").value)
+        self.object_pose_timeout_s = float(
+            self.get_parameter("object_pose_timeout_s").value
+        )
+        self.centroid_update_closer_only = bool(
+            self.get_parameter("centroid_update_closer_only").value
+        )
+        self.centroid_min_closer_m = float(
+            self.get_parameter("centroid_min_closer_m").value
+        )
+        self.centroid_smoothing_alpha = float(
+            self.get_parameter("centroid_smoothing_alpha").value
+        )
+        self.centroid_force_update_px = float(
+            self.get_parameter("centroid_force_update_px").value
+        )
+        self.centroid_reset_after_missed_frames = int(
+            self.get_parameter("centroid_reset_after_missed_frames").value
+        )
+        self.max_debug_boxes = int(self.get_parameter("max_debug_boxes").value)
+        self.max_component_area_ratio = float(
+            self.get_parameter("max_component_area_ratio").value
         )
 
         if self.max_depth_m <= self.min_depth_m:
@@ -102,9 +147,49 @@ class DepthTrackerNode(Node):
                 "obstacle_min_size_m must be > 0. Using obstacle_min_size_m=0.08."
             )
             self.obstacle_min_size_m = 0.08
+        if self.rgb_timeout_s <= 0.0:
+            self.get_logger().warn("rgb_timeout_s must be > 0. Using rgb_timeout_s=0.6.")
+            self.rgb_timeout_s = 0.6
+        if self.object_pose_timeout_s <= 0.0:
+            self.get_logger().warn(
+                "object_pose_timeout_s must be > 0. Using object_pose_timeout_s=0.8."
+            )
+            self.object_pose_timeout_s = 0.8
+        if self.centroid_min_closer_m < 0.0:
+            self.get_logger().warn(
+                "centroid_min_closer_m must be >= 0. Using centroid_min_closer_m=0.03."
+            )
+            self.centroid_min_closer_m = 0.03
+        if self.centroid_force_update_px < 0.0:
+            self.get_logger().warn(
+                "centroid_force_update_px must be >= 0. Using centroid_force_update_px=80."
+            )
+            self.centroid_force_update_px = 80.0
+        if not 0.0 < self.centroid_smoothing_alpha <= 1.0:
+            self.get_logger().warn(
+                "centroid_smoothing_alpha must be in (0,1]. Using centroid_smoothing_alpha=0.25."
+            )
+            self.centroid_smoothing_alpha = 0.25
+        if self.centroid_reset_after_missed_frames < 1:
+            self.get_logger().warn(
+                "centroid_reset_after_missed_frames must be >= 1. Using 8."
+            )
+            self.centroid_reset_after_missed_frames = 8
+        if self.max_debug_boxes < 1:
+            self.get_logger().warn("max_debug_boxes must be >= 1. Using 6.")
+            self.max_debug_boxes = 6
+        self.max_component_area_ratio = min(
+            max(self.max_component_area_ratio, 0.02), 1.0
+        )
 
         self.bridge = CvBridge()
         self.latest_camera_info: Optional[CameraInfo] = None
+        self.latest_rgb_bgr: Optional[np.ndarray] = None
+        self.latest_rgb_stamp: Optional[rclpy.time.Time] = None
+        self.latest_rgb_source_topic = ""
+        self.latest_object_pose: Optional[PoseStamped] = None
+        self.latest_object_pose_stamp: Optional[rclpy.time.Time] = None
+        self._last_debug_image_is_rgb = False
         self.depth_ema: Optional[np.ndarray] = None
         self.frame_count = 0
         self.published_bbox_count = 0
@@ -112,6 +197,12 @@ class DepthTrackerNode(Node):
         self.last_point_count = 0
         self.obstacle_active = False
         self.last_depth_rx_time: Optional[rclpy.time.Time] = None
+        self._stable_bbox_cx: Optional[float] = None
+        self._stable_bbox_cy: Optional[float] = None
+        self._stable_bbox_w: Optional[float] = None
+        self._stable_bbox_h: Optional[float] = None
+        self._stable_bbox_depth_m: Optional[float] = None
+        self._stable_bbox_miss_count = 0
 
         self.depth_sub = self.create_subscription(
             Image,
@@ -119,10 +210,30 @@ class DepthTrackerNode(Node):
             self.depth_callback,
             qos_profile_sensor_data,
         )
+        self.rgb_sub = self.create_subscription(
+            Image,
+            self.rgb_topic,
+            lambda msg: self.rgb_callback(msg, self.rgb_topic),
+            qos_profile_sensor_data,
+        )
+        self.rgb_fallback_sub = None
+        if self.rgb_topic_fallback and self.rgb_topic_fallback != self.rgb_topic:
+            self.rgb_fallback_sub = self.create_subscription(
+                Image,
+                self.rgb_topic_fallback,
+                lambda msg: self.rgb_callback(msg, self.rgb_topic_fallback),
+                qos_profile_sensor_data,
+            )
         self.camera_info_sub = self.create_subscription(
             CameraInfo,
             self.camera_info_topic,
             self.camera_info_callback,
+            qos_profile_sensor_data,
+        )
+        self.object_pose_sub = self.create_subscription(
+            PoseStamped,
+            self.object_pose_topic,
+            self.object_pose_callback,
             qos_profile_sensor_data,
         )
 
@@ -184,9 +295,50 @@ class DepthTrackerNode(Node):
                 f"Obstacle marker topic={self.obstacle_topic}, padding={self.obstacle_padding_m:.3f} m, "
                 f"min_size={self.obstacle_min_size_m:.3f} m"
             )
+        self.get_logger().info(
+            f"RGB debug={'on' if self.use_rgb_debug_image else 'off'} "
+            f"rgb_topic={self.rgb_topic} rgb_topic_fallback={self.rgb_topic_fallback} "
+            f"object_pose_topic={self.object_pose_topic}"
+        )
+        self.get_logger().info(
+            f"Centroid stabilization closer_only={self.centroid_update_closer_only} "
+            f"min_closer={self.centroid_min_closer_m:.3f}m alpha={self.centroid_smoothing_alpha:.2f} "
+            f"force_px={self.centroid_force_update_px:.1f}"
+        )
 
     def camera_info_callback(self, msg: CameraInfo) -> None:
         self.latest_camera_info = msg
+
+    def rgb_callback(self, msg: Image, source_topic: str = "") -> None:
+        if not self.use_rgb_debug_image:
+            return
+
+        try:
+            bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except CvBridgeError as exc:
+            if self.frame_count % 60 == 0:
+                self.get_logger().warn(f"RGB conversion failed: {exc}")
+            return
+
+        self.latest_rgb_bgr = bgr
+        self.latest_rgb_source_topic = source_topic
+        try:
+            stamp = rclpy.time.Time.from_msg(msg.header.stamp)
+            if stamp.nanoseconds == 0:
+                stamp = self.get_clock().now()
+        except Exception:
+            stamp = self.get_clock().now()
+        self.latest_rgb_stamp = stamp
+
+    def object_pose_callback(self, msg: PoseStamped) -> None:
+        self.latest_object_pose = msg
+        try:
+            stamp = rclpy.time.Time.from_msg(msg.header.stamp)
+            if stamp.nanoseconds == 0:
+                stamp = self.get_clock().now()
+        except Exception:
+            stamp = self.get_clock().now()
+        self.latest_object_pose_stamp = stamp
 
     def depth_callback(self, msg: Image) -> None:
         self.frame_count += 1
@@ -227,44 +379,54 @@ class DepthTrackerNode(Node):
             (cleaned > 0).astype(np.uint8),
             connectivity=8,
         )
-
-        largest_label = -1
-        largest_area = 0
+        image_area = float(smoothed_depth_m.shape[0] * smoothed_depth_m.shape[1])
+        max_component_area_px = max(
+            self.min_area_px,
+            int(self.max_component_area_ratio * image_area),
+        )
+        components = []
+        filtered_large_count = 0
         for label in range(1, num_labels):
-            area = int(stats[label, cv2.CC_STAT_AREA])
-            if area >= self.min_area_px and area > largest_area:
-                largest_area = area
-                largest_label = label
+            area_px = int(stats[label, cv2.CC_STAT_AREA])
+            if area_px < self.min_area_px:
+                continue
+            if area_px > max_component_area_px:
+                filtered_large_count += 1
+                continue
 
-        debug_bgr = self._create_debug_image(smoothed_depth_m)
+            x = int(stats[label, cv2.CC_STAT_LEFT])
+            y = int(stats[label, cv2.CC_STAT_TOP])
+            w = int(stats[label, cv2.CC_STAT_WIDTH])
+            h = int(stats[label, cv2.CC_STAT_HEIGHT])
+            cx, cy = centroids[label]
 
-        bbox_msg = Float32MultiArray()
-        bbox_msg.data = list(SENTINEL_BBOX)
-
-        if largest_label != -1:
-            x = int(stats[largest_label, cv2.CC_STAT_LEFT])
-            y = int(stats[largest_label, cv2.CC_STAT_TOP])
-            w = int(stats[largest_label, cv2.CC_STAT_WIDTH])
-            h = int(stats[largest_label, cv2.CC_STAT_HEIGHT])
-            area_px = int(stats[largest_label, cv2.CC_STAT_AREA])
-            cx, cy = centroids[largest_label]
-
-            blob_mask = labels == largest_label
+            blob_mask = labels == label
             blob_depths = smoothed_depth_m[blob_mask]
             blob_depths = blob_depths[np.isfinite(blob_depths) & (blob_depths > 0.0)]
             if blob_depths.size == 0:
-                median_depth_m = -1.0
-            else:
-                median_depth_m = float(np.median(blob_depths))
+                continue
+            median_depth_m = float(np.median(blob_depths))
 
-            cv2.rectangle(debug_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.circle(debug_bgr, (int(cx), int(cy)), 4, (0, 255, 255), -1)
+            components.append(
+                {
+                    "label": int(label),
+                    "x": x,
+                    "y": y,
+                    "w": w,
+                    "h": h,
+                    "cx": float(cx),
+                    "cy": float(cy),
+                    "area_px": int(area_px),
+                    "median_depth_m": float(median_depth_m),
+                }
+            )
 
-            label = f"z={median_depth_m:.2f}m area={area_px}"
+        debug_bgr = self._create_debug_image(smoothed_depth_m)
+        if self.use_rgb_debug_image and not self._last_debug_image_is_rgb:
             cv2.putText(
                 debug_bgr,
-                label,
-                (x, max(0, y - 8)),
+                f"RGB missing: waiting on {self.rgb_topic} / {self.rgb_topic_fallback}",
+                (12, 28),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.55,
                 (255, 255, 255),
@@ -272,25 +434,119 @@ class DepthTrackerNode(Node):
                 cv2.LINE_AA,
             )
 
-            bbox_msg.data = [
-                float(x),
-                float(y),
-                float(x + w),
-                float(y + h),
-                float(cx),
-                float(cy),
-                float(median_depth_m),
-                float(area_px),
-            ]
-            self._publish_obstacle_from_mask(msg, blob_mask)
-        else:
-            self._publish_obstacle_delete(msg.header.frame_id)
+        bbox_msg = Float32MultiArray()
+        bbox_msg.data = list(SENTINEL_BBOX)
+
+        components_by_area = sorted(
+            components, key=lambda c: int(c["area_px"]), reverse=True
+        )
+        for idx, component in enumerate(components_by_area[: self.max_debug_boxes]):
+            color = self._debug_color(idx)
+            x = int(component["x"])
+            y = int(component["y"])
+            w = int(component["w"])
+            h = int(component["h"])
+            cx = float(component["cx"])
+            cy = float(component["cy"])
+            depth = float(component["median_depth_m"])
+            area_px = int(component["area_px"])
+
+            cv2.rectangle(debug_bgr, (x, y), (x + w, y + h), color, 2)
+            cv2.circle(debug_bgr, (int(round(cx)), int(round(cy))), 3, color, -1)
+            label_text = f"#{idx+1} d={depth:.2f}m a={area_px}"
             cv2.putText(
                 debug_bgr,
-                "No blob in depth band",
+                label_text,
+                (x, max(0, y - 8)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.50,
+                color,
+                2,
+                cv2.LINE_AA,
+            )
+
+        if components:
+            primary_component = min(
+                components, key=lambda c: float(c["median_depth_m"])
+            )
+            x = int(primary_component["x"])
+            y = int(primary_component["y"])
+            w = int(primary_component["w"])
+            h = int(primary_component["h"])
+            area_px = int(primary_component["area_px"])
+            cx = float(primary_component["cx"])
+            cy = float(primary_component["cy"])
+            median_depth_m = float(primary_component["median_depth_m"])
+
+            sx, sy, sw, sh, sdepth = self._stabilize_blob_estimate(
+                x=x,
+                y=y,
+                w=w,
+                h=h,
+                cx=cx,
+                cy=cy,
+                median_depth_m=median_depth_m,
+            )
+
+            x0 = int(round(sx))
+            y0 = int(round(sy))
+            x1 = int(round(sx + sw))
+            y1 = int(round(sy + sh))
+            cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
+
+            pose_text = self._format_pose_text()
+            label = f"primary dist={sdepth:.2f}m area={area_px}"
+            cv2.putText(
+                debug_bgr,
+                label,
+                (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            if pose_text is not None:
+                cv2.putText(
+                    debug_bgr,
+                    pose_text,
+                    (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.48,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+
+            bbox_msg.data = [
+                float(sx),
+                float(sy),
+                float(sx + sw),
+                float(sy + sh),
+                float(sx + 0.5 * sw),
+                float(sy + 0.5 * sh),
+                float(sdepth),
+                float(area_px),
+            ]
+            self._publish_obstacle_from_mask(
+                msg,
+                labels == int(primary_component["label"]),
+            )
+        else:
+            self._on_blob_missed()
+            self._publish_obstacle_delete(msg.header.frame_id)
+            no_blob_msg = "No valid components in depth band"
+            if filtered_large_count > 0:
+                no_blob_msg = (
+                    "Components too large filtered; lower depth band or "
+                    "increase max_component_area_ratio"
+                )
+            cv2.putText(
+                debug_bgr,
+                no_blob_msg,
                 (12, 28),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
+                0.55,
                 (255, 255, 255),
                 2,
                 cv2.LINE_AA,
@@ -317,6 +573,109 @@ class DepthTrackerNode(Node):
 
         self.debug_image_pub.publish(debug_msg)
         self._publish_bbox(bbox_msg.data)
+
+    def _stabilize_blob_estimate(
+        self,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        cx: float,
+        cy: float,
+        median_depth_m: float,
+    ) -> tuple[float, float, float, float, float]:
+        cx_raw = float(cx)
+        cy_raw = float(cy)
+        w_raw = float(max(1, w))
+        h_raw = float(max(1, h))
+        depth_raw = float(median_depth_m)
+
+        if self._stable_bbox_cx is None:
+            self._stable_bbox_cx = cx_raw
+            self._stable_bbox_cy = cy_raw
+            self._stable_bbox_w = w_raw
+            self._stable_bbox_h = h_raw
+            self._stable_bbox_depth_m = depth_raw
+            self._stable_bbox_miss_count = 0
+            return (
+                float(x),
+                float(y),
+                w_raw,
+                h_raw,
+                depth_raw,
+            )
+
+        assert self._stable_bbox_cy is not None
+        assert self._stable_bbox_w is not None
+        assert self._stable_bbox_h is not None
+        assert self._stable_bbox_depth_m is not None
+
+        accept_update = True
+        if self.centroid_update_closer_only:
+            accept_update = False
+            if depth_raw > 0.0 and self._stable_bbox_depth_m > 0.0:
+                if depth_raw <= (self._stable_bbox_depth_m - self.centroid_min_closer_m):
+                    accept_update = True
+            dx = abs(cx_raw - self._stable_bbox_cx)
+            dy = abs(cy_raw - self._stable_bbox_cy)
+            if dx >= self.centroid_force_update_px or dy >= self.centroid_force_update_px:
+                accept_update = True
+
+        if accept_update:
+            alpha = self.centroid_smoothing_alpha
+            self._stable_bbox_cx = (1.0 - alpha) * self._stable_bbox_cx + alpha * cx_raw
+            self._stable_bbox_cy = (1.0 - alpha) * self._stable_bbox_cy + alpha * cy_raw
+            self._stable_bbox_w = (1.0 - alpha) * self._stable_bbox_w + alpha * w_raw
+            self._stable_bbox_h = (1.0 - alpha) * self._stable_bbox_h + alpha * h_raw
+            if depth_raw > 0.0:
+                if self._stable_bbox_depth_m > 0.0:
+                    self._stable_bbox_depth_m = (
+                        (1.0 - alpha) * self._stable_bbox_depth_m + alpha * depth_raw
+                    )
+                else:
+                    self._stable_bbox_depth_m = depth_raw
+
+        self._stable_bbox_miss_count = 0
+        x_stable = self._stable_bbox_cx - 0.5 * self._stable_bbox_w
+        y_stable = self._stable_bbox_cy - 0.5 * self._stable_bbox_h
+        return (
+            float(x_stable),
+            float(y_stable),
+            float(self._stable_bbox_w),
+            float(self._stable_bbox_h),
+            float(self._stable_bbox_depth_m),
+        )
+
+    def _on_blob_missed(self) -> None:
+        self._stable_bbox_miss_count += 1
+        if self._stable_bbox_miss_count < self.centroid_reset_after_missed_frames:
+            return
+        self._stable_bbox_cx = None
+        self._stable_bbox_cy = None
+        self._stable_bbox_w = None
+        self._stable_bbox_h = None
+        self._stable_bbox_depth_m = None
+        self._stable_bbox_miss_count = 0
+
+    def _format_pose_text(self) -> Optional[str]:
+        if self.latest_object_pose is None or self.latest_object_pose_stamp is None:
+            return None
+        age_s = (self.get_clock().now() - self.latest_object_pose_stamp).nanoseconds / 1e9
+        if age_s > self.object_pose_timeout_s:
+            return None
+        pose = self.latest_object_pose.pose.position
+        return f"pose[{self.latest_object_pose.header.frame_id}]: x={pose.x:.2f} y={pose.y:.2f} z={pose.z:.2f}"
+
+    def _debug_color(self, idx: int) -> tuple[int, int, int]:
+        palette = [
+            (0, 255, 0),
+            (255, 200, 0),
+            (255, 0, 255),
+            (0, 220, 255),
+            (255, 120, 0),
+            (120, 255, 120),
+        ]
+        return palette[idx % len(palette)]
 
     def _publish_bbox(self, data: list[float]) -> None:
         bbox_msg = Float32MultiArray()
@@ -513,6 +872,13 @@ class DepthTrackerNode(Node):
         self.obstacle_active = False
 
     def _create_debug_image(self, depth_m: np.ndarray) -> np.ndarray:
+        if self.use_rgb_debug_image:
+            rgb = self._latest_rgb_for_shape(depth_m.shape)
+            if rgb is not None:
+                self._last_debug_image_is_rgb = True
+                return rgb
+
+        self._last_debug_image_is_rgb = False
         depth_range = max(1e-3, self.max_depth_m - self.min_depth_m)
         clipped = np.clip(depth_m, self.min_depth_m, self.max_depth_m)
 
@@ -521,6 +887,19 @@ class DepthTrackerNode(Node):
         norm[invalid] = 0
 
         return cv2.applyColorMap(norm, cv2.COLORMAP_TURBO)
+
+    def _latest_rgb_for_shape(self, depth_shape: tuple[int, int]) -> Optional[np.ndarray]:
+        if self.latest_rgb_bgr is None or self.latest_rgb_stamp is None:
+            return None
+        age_s = (self.get_clock().now() - self.latest_rgb_stamp).nanoseconds / 1e9
+        if age_s > self.rgb_timeout_s:
+            return None
+
+        height, width = depth_shape
+        image = self.latest_rgb_bgr
+        if image.shape[0] != height or image.shape[1] != width:
+            image = cv2.resize(image, (width, height), interpolation=cv2.INTER_LINEAR)
+        return image.copy()
 
 
 def main(args=None):

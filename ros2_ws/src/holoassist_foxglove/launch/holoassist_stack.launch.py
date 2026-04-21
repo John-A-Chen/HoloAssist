@@ -238,11 +238,11 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("apriltag_start_camera", default_value="false"),
             DeclareLaunchArgument(
                 "apriltag_image_topic",
-                default_value="/camera/color/image_raw",
+                default_value="/camera/camera/color/image_raw",
             ),
             DeclareLaunchArgument(
                 "apriltag_camera_info_topic",
-                default_value="/camera/color/camera_info",
+                default_value="/camera/camera/color/camera_info",
             ),
             DeclareLaunchArgument(
                 "apriltag_params_file",

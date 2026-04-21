@@ -24,6 +24,21 @@ def generate_launch_description() -> LaunchDescription:
         default_value="848,480,15",
         description="Depth stream profile W,H,FPS (higher resolution default)",
     )
+    color_profile_arg = DeclareLaunchArgument(
+        "color_profile",
+        default_value="640,480,15",
+        description="Color stream profile W,H,FPS",
+    )
+    enable_color_arg = DeclareLaunchArgument(
+        "enable_color",
+        default_value="true",
+        description="Enable RGB color stream (used for RViz debug overlay).",
+    )
+    align_depth_arg = DeclareLaunchArgument(
+        "align_depth",
+        default_value="false",
+        description="Enable depth alignment filter.",
+    )
 
     rs_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -34,20 +49,24 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             "camera_name": LaunchConfiguration("camera_name"),
             "enable_depth": "true",
-            "enable_color": "false",
+            "enable_color": LaunchConfiguration("enable_color"),
             "enable_infra": "false",
             "enable_infra1": "false",
             "enable_infra2": "false",
             "enable_gyro": "false",
             "enable_accel": "false",
             "pointcloud.enable": "false",
-            "align_depth.enable": "false",
+            "align_depth.enable": LaunchConfiguration("align_depth"),
             "depth_module.depth_profile": LaunchConfiguration("depth_profile"),
+            "rgb_camera.color_profile": LaunchConfiguration("color_profile"),
         }.items(),
     )
 
     return LaunchDescription([
         camera_name_arg,
         depth_profile_arg,
+        color_profile_arg,
+        enable_color_arg,
+        align_depth_arg,
         rs_launch,
     ])

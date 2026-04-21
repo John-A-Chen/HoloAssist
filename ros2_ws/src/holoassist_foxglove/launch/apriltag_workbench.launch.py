@@ -17,12 +17,12 @@ def generate_launch_description() -> LaunchDescription:
     )
     image_topic_arg = DeclareLaunchArgument(
         "image_topic",
-        default_value="/camera/color/image_raw",
+        default_value="/camera/camera/color/image_raw",
         description="Image topic remapped into apriltag_ros image_rect input.",
     )
     camera_info_topic_arg = DeclareLaunchArgument(
         "camera_info_topic",
-        default_value="/camera/color/camera_info",
+        default_value="/camera/camera/color/camera_info",
         description="CameraInfo topic remapped into apriltag_ros camera_info input.",
     )
     params_file_arg = DeclareLaunchArgument(

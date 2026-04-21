@@ -165,6 +165,17 @@ class WorkspacePerceptionNode(Node):
         self._background_scores: Dict[Tuple[int, int, int], float] = {}
         self._last_object_center_w: Optional[np.ndarray] = None
         self._object_persistence_score: float = 0.0
+        self._last_published_center_w: Optional[np.ndarray] = None
+        self._last_published_center_c: Optional[np.ndarray] = None
+        self._last_published_extent_w: Optional[np.ndarray] = None
+        self._tracks: Dict[int, Dict[str, object]] = {}
+        self._next_track_id: int = 1
+        self._last_marker_ids: set[int] = set()
+        self._last_primary_track_id: Optional[int] = None
+        self._active_roi_x_min = self.roi_x_min
+        self._active_roi_x_max = self.roi_x_max
+        self._active_roi_y_min = self.roi_y_min
+        self._active_roi_y_max = self.roi_y_max
 
         self.get_logger().info(
             "Workspace perception started. input=%s workspace_frame=%s tags=%s"
@@ -202,6 +213,10 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("roi_y_max", 0.35)
         self.declare_parameter("roi_z_min", 0.005)
         self.declare_parameter("roi_z_max", 0.35)
+        self.declare_parameter("roi_from_tags_enabled", True)
+        self.declare_parameter("roi_from_tags_margin_m", 0.03)
+        self.declare_parameter("roi_from_tags_min_span_m", 0.12)
+        self.declare_parameter("roi_from_tags_smoothing_alpha", 0.35)
         self.declare_parameter("enforce_above_plane_cull", True)
         self.declare_parameter("below_plane_tolerance_m", 0.0)
 
@@ -232,6 +247,14 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("persistence_distance_m", 0.09)
         self.declare_parameter("persistence_gain", 0.25)
         self.declare_parameter("persistence_decay", 0.85)
+        self.declare_parameter("centroid_update_closer_only", True)
+        self.declare_parameter("centroid_min_closer_m", 0.03)
+        self.declare_parameter("centroid_smoothing_alpha", 0.25)
+        self.declare_parameter("max_tracked_objects", 6)
+        self.declare_parameter("track_match_distance_m", 0.12)
+        self.declare_parameter("track_spawn_deadzone_m", 0.08)
+        self.declare_parameter("track_smoothing_alpha", 0.35)
+        self.declare_parameter("track_max_missed_frames", 8)
 
         self.declare_parameter(
             "cropped_cloud_topic", "/holoassist/perception/cropped_pointcloud"
@@ -337,6 +360,18 @@ class WorkspacePerceptionNode(Node):
         self.roi_y_max = float(self.get_parameter("roi_y_max").value)
         self.roi_z_min = float(self.get_parameter("roi_z_min").value)
         self.roi_z_max = float(self.get_parameter("roi_z_max").value)
+        self.roi_from_tags_enabled = bool(
+            self.get_parameter("roi_from_tags_enabled").value
+        )
+        self.roi_from_tags_margin_m = float(
+            self.get_parameter("roi_from_tags_margin_m").value
+        )
+        self.roi_from_tags_min_span_m = float(
+            self.get_parameter("roi_from_tags_min_span_m").value
+        )
+        self.roi_from_tags_smoothing_alpha = float(
+            self.get_parameter("roi_from_tags_smoothing_alpha").value
+        )
         self.enforce_above_plane_cull = bool(
             self.get_parameter("enforce_above_plane_cull").value
         )
@@ -395,6 +430,28 @@ class WorkspacePerceptionNode(Node):
         )
         self.persistence_gain = float(self.get_parameter("persistence_gain").value)
         self.persistence_decay = float(self.get_parameter("persistence_decay").value)
+        self.centroid_update_closer_only = bool(
+            self.get_parameter("centroid_update_closer_only").value
+        )
+        self.centroid_min_closer_m = float(
+            self.get_parameter("centroid_min_closer_m").value
+        )
+        self.centroid_smoothing_alpha = float(
+            self.get_parameter("centroid_smoothing_alpha").value
+        )
+        self.max_tracked_objects = int(self.get_parameter("max_tracked_objects").value)
+        self.track_match_distance_m = float(
+            self.get_parameter("track_match_distance_m").value
+        )
+        self.track_spawn_deadzone_m = float(
+            self.get_parameter("track_spawn_deadzone_m").value
+        )
+        self.track_smoothing_alpha = float(
+            self.get_parameter("track_smoothing_alpha").value
+        )
+        self.track_max_missed_frames = int(
+            self.get_parameter("track_max_missed_frames").value
+        )
 
         self.cropped_cloud_topic = str(self.get_parameter("cropped_cloud_topic").value)
         self.cropped_cloud_workspace_topic = str(
@@ -461,6 +518,11 @@ class WorkspacePerceptionNode(Node):
             self.roi_y_min, self.roi_y_max = -0.35, 0.35
         if self.roi_z_max <= self.roi_z_min:
             self.roi_z_min, self.roi_z_max = 0.005, 0.35
+        self.roi_from_tags_margin_m = max(0.0, self.roi_from_tags_margin_m)
+        self.roi_from_tags_min_span_m = max(0.01, self.roi_from_tags_min_span_m)
+        self.roi_from_tags_smoothing_alpha = min(
+            max(self.roi_from_tags_smoothing_alpha, 0.0), 1.0
+        )
         self.below_plane_tolerance_m = max(0.0, self.below_plane_tolerance_m)
 
         self.plane_fit_max_points = max(200, self.plane_fit_max_points)
@@ -494,6 +556,13 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_max_extent_m = max(
             self.object_marker_min_extent_m, self.object_marker_max_extent_m
         )
+        self.centroid_min_closer_m = max(0.0, self.centroid_min_closer_m)
+        self.centroid_smoothing_alpha = min(max(self.centroid_smoothing_alpha, 0.0), 1.0)
+        self.max_tracked_objects = max(1, self.max_tracked_objects)
+        self.track_match_distance_m = max(0.01, self.track_match_distance_m)
+        self.track_spawn_deadzone_m = max(0.0, self.track_spawn_deadzone_m)
+        self.track_smoothing_alpha = min(max(self.track_smoothing_alpha, 0.0), 1.0)
+        self.track_max_missed_frames = max(0, self.track_max_missed_frames)
 
         self.max_points_per_frame = max(500, self.max_points_per_frame)
         self.tag_size_m = max(0.01, self.tag_size_m)
@@ -503,6 +572,8 @@ class WorkspacePerceptionNode(Node):
 
         xyz_all = self._extract_xyz(msg)
         if xyz_all is None or xyz_all.shape[0] < self.plane_min_inliers:
+            self._tracks.clear()
+            self._last_primary_track_id = None
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
@@ -520,6 +591,8 @@ class WorkspacePerceptionNode(Node):
 
         plane_fit = self._fit_bench_plane(xyz)
         if plane_fit is None:
+            self._tracks.clear()
+            self._last_primary_track_id = None
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
@@ -538,6 +611,8 @@ class WorkspacePerceptionNode(Node):
             tag_points_c=tag_points_c,
         )
         if basis is None:
+            self._tracks.clear()
+            self._last_primary_track_id = None
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
@@ -576,6 +651,7 @@ class WorkspacePerceptionNode(Node):
             )
 
         self._publish_plane_coefficients(normal, d)
+        roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
         if self.publish_debug_markers:
             self._publish_plane_marker(msg.header.stamp)
             self._publish_axes_markers(msg.header.stamp)
@@ -619,8 +695,15 @@ class WorkspacePerceptionNode(Node):
                 stamp=msg.header.stamp,
             )
 
-        object_result = self._select_object_cluster(fg_points_w)
-        if object_result is None:
+        cluster_candidates = self._extract_cluster_candidates(fg_points_w)
+        tracked_objects = self._update_tracks(cluster_candidates)
+
+        if not tracked_objects:
+            self._last_published_center_w = None
+            self._last_published_center_c = None
+            self._last_published_extent_w = None
+            self._last_primary_track_id = None
+            self._object_persistence_score *= self.persistence_decay
             self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
             self._publish_workspace_state(
                 mode=mode,
@@ -635,21 +718,47 @@ class WorkspacePerceptionNode(Node):
                     "inlier_ratio": round(inlier_ratio, 3),
                     "cropped_points": int(cropped_points_c.shape[0]),
                     "foreground_points": int(fg_points_c.shape[0]),
+                    "cluster_count": int(len(cluster_candidates)),
+                    "roi_source": roi_source,
+                    "roi_x_min": round(self._active_roi_x_min, 3),
+                    "roi_x_max": round(self._active_roi_x_max, 3),
+                    "roi_y_min": round(self._active_roi_y_min, 3),
+                    "roi_y_max": round(self._active_roi_y_max, 3),
                     "culled_below_plane": culled_below_plane,
                     "tags_used": int(len(tag_points_c)),
                 },
             )
             self._publish_object_metrics(
                 foreground_points=int(fg_points_c.shape[0]),
-                cluster_count=0,
+                cluster_count=int(len(cluster_candidates)),
                 selected_points=0,
                 center_w=None,
                 persistence=self._object_persistence_score,
             )
             return
 
-        center_w, extent_w, selected_points, cluster_count = object_result
+        primary = tracked_objects[0]
+        primary_track_id = int(primary["track_id"])
+        center_w = np.asarray(primary["center_w"], dtype=np.float32)
+        extent_w = np.asarray(primary["extent_w"], dtype=np.float32)
+        selected_points = int(primary["points"])
+        cluster_count = int(len(cluster_candidates))
         center_c = origin_c + basis_c @ center_w
+        center_w, center_c, extent_w, centroid_updated, closer_delta = self._stabilize_published_object(
+            center_w=center_w,
+            center_c=center_c,
+            extent_w=extent_w,
+        )
+
+        if self._last_primary_track_id is None:
+            self._object_persistence_score = min(1.0, self.persistence_gain)
+        elif self._last_primary_track_id == primary_track_id:
+            self._object_persistence_score = min(
+                1.0, self._object_persistence_score + self.persistence_gain
+            )
+        else:
+            self._object_persistence_score *= self.persistence_decay
+        self._last_primary_track_id = primary_track_id
 
         object_pose_c = PoseStamped()
         object_pose_c.header.frame_id = msg.header.frame_id
@@ -669,12 +778,15 @@ class WorkspacePerceptionNode(Node):
         object_pose_w.pose.orientation.w = 1.0
         self.object_pose_workspace_pub.publish(object_pose_w)
 
-        self._publish_object_marker(
+        self._publish_object_markers(
             frame_id=msg.header.frame_id,
             stamp=msg.header.stamp,
-            center_c=center_c,
-            extent_w=extent_w,
+            origin_c=origin_c,
             basis_c=basis_c,
+            tracked_objects=tracked_objects,
+            primary_track_id=primary_track_id,
+            primary_center_w=center_w,
+            primary_extent_w=extent_w,
         )
 
         self._publish_workspace_state(
@@ -693,6 +805,15 @@ class WorkspacePerceptionNode(Node):
                 "cluster_count": int(cluster_count),
                 "selected_points": int(selected_points),
                 "culled_below_plane": culled_below_plane,
+                "roi_source": roi_source,
+                "roi_x_min": round(self._active_roi_x_min, 3),
+                "roi_x_max": round(self._active_roi_x_max, 3),
+                "roi_y_min": round(self._active_roi_y_min, 3),
+                "roi_y_max": round(self._active_roi_y_max, 3),
+                "tracked_objects": int(len(tracked_objects)),
+                "primary_track_id": int(primary_track_id),
+                "centroid_updated": centroid_updated,
+                "centroid_closer_delta_m": round(closer_delta, 4),
                 "tags_used": int(len(tag_points_c)),
             },
         )
@@ -939,12 +1060,79 @@ class WorkspacePerceptionNode(Node):
         signed_dist = points_c @ normal + float(d)
         return signed_dist >= -self.below_plane_tolerance_m
 
+    def _compute_active_roi_bounds(
+        self,
+        tag_points_c: Dict[str, np.ndarray],
+        origin_c: np.ndarray,
+        basis_c: np.ndarray,
+    ) -> str:
+        target_x_min = self.roi_x_min
+        target_x_max = self.roi_x_max
+        target_y_min = self.roi_y_min
+        target_y_max = self.roi_y_max
+        roi_source = "configured"
+
+        if self.roi_from_tags_enabled and len(tag_points_c) >= 2:
+            tag_points_w: List[np.ndarray] = []
+            for frame in self.tag_frames:
+                if frame not in tag_points_c:
+                    continue
+                point_w = self._to_workspace(
+                    tag_points_c[frame].reshape(1, 3), origin_c, basis_c
+                )[0]
+                tag_points_w.append(point_w)
+
+            if len(tag_points_w) >= 2:
+                tag_arr = np.asarray(tag_points_w, dtype=np.float32)
+                tx_min = float(np.min(tag_arr[:, 0])) - self.roi_from_tags_margin_m
+                tx_max = float(np.max(tag_arr[:, 0])) + self.roi_from_tags_margin_m
+                ty_min = float(np.min(tag_arr[:, 1])) - self.roi_from_tags_margin_m
+                ty_max = float(np.max(tag_arr[:, 1])) + self.roi_from_tags_margin_m
+
+                cfg_span_x = max(0.02, self.roi_x_max - self.roi_x_min)
+                cfg_span_y = max(0.02, self.roi_y_max - self.roi_y_min)
+                span_x = tx_max - tx_min
+                span_y = ty_max - ty_min
+
+                cx = 0.5 * (tx_min + tx_max)
+                cy = 0.5 * (ty_min + ty_max)
+                if span_x < self.roi_from_tags_min_span_m:
+                    half_x = 0.5 * cfg_span_x
+                    tx_min = cx - half_x
+                    tx_max = cx + half_x
+                if span_y < self.roi_from_tags_min_span_m:
+                    half_y = 0.5 * cfg_span_y
+                    ty_min = cy - half_y
+                    ty_max = cy + half_y
+
+                target_x_min = tx_min
+                target_x_max = tx_max
+                target_y_min = ty_min
+                target_y_max = ty_max
+                roi_source = "tag_corners"
+
+        alpha = self.roi_from_tags_smoothing_alpha if roi_source == "tag_corners" else 1.0
+        if alpha > 0.0:
+            self._active_roi_x_min = (1.0 - alpha) * self._active_roi_x_min + alpha * target_x_min
+            self._active_roi_x_max = (1.0 - alpha) * self._active_roi_x_max + alpha * target_x_max
+            self._active_roi_y_min = (1.0 - alpha) * self._active_roi_y_min + alpha * target_y_min
+            self._active_roi_y_max = (1.0 - alpha) * self._active_roi_y_max + alpha * target_y_max
+
+        if self._active_roi_x_max <= self._active_roi_x_min:
+            self._active_roi_x_min = self.roi_x_min
+            self._active_roi_x_max = self.roi_x_max
+        if self._active_roi_y_max <= self._active_roi_y_min:
+            self._active_roi_y_min = self.roi_y_min
+            self._active_roi_y_max = self.roi_y_max
+
+        return roi_source
+
     def _workspace_roi_mask(self, points_w: np.ndarray) -> np.ndarray:
         mask = (
-            (points_w[:, 0] >= self.roi_x_min)
-            & (points_w[:, 0] <= self.roi_x_max)
-            & (points_w[:, 1] >= self.roi_y_min)
-            & (points_w[:, 1] <= self.roi_y_max)
+            (points_w[:, 0] >= self._active_roi_x_min)
+            & (points_w[:, 0] <= self._active_roi_x_max)
+            & (points_w[:, 1] >= self._active_roi_y_min)
+            & (points_w[:, 1] <= self._active_roi_y_max)
             & (points_w[:, 2] >= self.roi_z_min)
             & (points_w[:, 2] <= self.roi_z_max)
         )
@@ -1019,12 +1207,11 @@ class WorkspacePerceptionNode(Node):
 
         return points_c[fg_mask], points_w[fg_mask]
 
-    def _select_object_cluster(
+    def _extract_cluster_candidates(
         self, foreground_points_w: np.ndarray
-    ) -> Optional[Tuple[np.ndarray, np.ndarray, int, int]]:
+    ) -> List[Dict[str, object]]:
         if foreground_points_w.shape[0] < self.min_foreground_points:
-            self._object_persistence_score *= self.persistence_decay
-            return None
+            return []
 
         voxel_idx = np.floor(foreground_points_w / self.cluster_voxel_size).astype(np.int32)
         voxel_to_indices: Dict[Tuple[int, int, int], List[int]] = defaultdict(list)
@@ -1057,15 +1244,9 @@ class WorkspacePerceptionNode(Node):
                 clusters.append(cluster_indices)
 
         if not clusters:
-            self._object_persistence_score *= self.persistence_decay
-            return None
+            return []
 
-        best_score = -1e9
-        best_cluster = None
-        best_center = None
-        best_extent = None
-        best_dist = None
-
+        candidates: List[Dict[str, object]] = []
         for cluster_indices in clusters:
             n_points = len(cluster_indices)
             if n_points > self.max_cluster_points:
@@ -1093,47 +1274,194 @@ class WorkspacePerceptionNode(Node):
                 0.0,
                 1.0,
             )
-
             border_margin = min(
-                center[0] - self.roi_x_min,
-                self.roi_x_max - center[0],
-                center[1] - self.roi_y_min,
-                self.roi_y_max - center[1],
+                center[0] - self._active_roi_x_min,
+                self._active_roi_x_max - center[0],
+                center[1] - self._active_roi_y_min,
+                self._active_roi_y_max - center[1],
             )
             border_score = np.clip(border_margin / 0.12, 0.0, 1.0)
+            score = 0.45 * size_score + 0.30 * height_score + 0.25 * border_score
 
-            persistence_bonus = 0.0
-            dist_to_prev = None
-            if self._last_object_center_w is not None:
-                dist_to_prev = float(np.linalg.norm(center - self._last_object_center_w))
-                if dist_to_prev < self.persistence_distance_m:
-                    persistence_bonus = min(
-                        1.0, self._object_persistence_score + self.persistence_gain
-                    )
-
-            score = 0.45 * size_score + 0.25 * border_score + 0.20 * height_score + 0.10 * persistence_bonus
-            if score > best_score:
-                best_score = score
-                best_cluster = cluster_indices
-                best_center = center
-                best_extent = extent
-                best_dist = dist_to_prev
-
-        if best_cluster is None or best_center is None or best_extent is None:
-            self._object_persistence_score *= self.persistence_decay
-            return None
-
-        if self._last_object_center_w is None:
-            self._object_persistence_score = min(1.0, self.persistence_gain)
-        elif best_dist is not None and best_dist < self.persistence_distance_m:
-            self._object_persistence_score = min(
-                1.0, self._object_persistence_score + self.persistence_gain
+            candidates.append(
+                {
+                    "center_w": center.astype(np.float32, copy=False),
+                    "extent_w": extent.astype(np.float32, copy=False),
+                    "points": int(n_points),
+                    "score": float(score),
+                }
             )
-        else:
-            self._object_persistence_score *= self.persistence_decay
 
-        self._last_object_center_w = best_center.copy()
-        return best_center, best_extent, len(best_cluster), len(clusters)
+        candidates.sort(
+            key=lambda c: (float(c["score"]), float(c["points"])),
+            reverse=True,
+        )
+        max_candidates = max(self.max_tracked_objects, self.max_tracked_objects * 4)
+        return candidates[:max_candidates]
+
+    def _update_tracks(
+        self, candidates: List[Dict[str, object]]
+    ) -> List[Dict[str, object]]:
+        matched_track_ids: set[int] = set()
+        matched_candidate_ids: set[int] = set()
+
+        distances: List[Tuple[float, int, int]] = []
+        for track_id, track in self._tracks.items():
+            track_center_w = np.asarray(track["center_w"], dtype=np.float32)
+            for cand_idx, candidate in enumerate(candidates):
+                cand_center_w = np.asarray(candidate["center_w"], dtype=np.float32)
+                dist = float(np.linalg.norm(cand_center_w - track_center_w))
+                if dist <= self.track_match_distance_m:
+                    distances.append((dist, track_id, cand_idx))
+
+        distances.sort(key=lambda item: item[0])
+        for dist, track_id, cand_idx in distances:
+            if track_id in matched_track_ids or cand_idx in matched_candidate_ids:
+                continue
+            matched_track_ids.add(track_id)
+            matched_candidate_ids.add(cand_idx)
+            track = self._tracks[track_id]
+            candidate = candidates[cand_idx]
+
+            prev_center_w = np.asarray(track["center_w"], dtype=np.float32)
+            prev_extent_w = np.asarray(track["extent_w"], dtype=np.float32)
+            cand_center_w = np.asarray(candidate["center_w"], dtype=np.float32)
+            cand_extent_w = np.asarray(candidate["extent_w"], dtype=np.float32)
+
+            alpha = self.track_smoothing_alpha
+            if alpha > 0.0:
+                new_center_w = (1.0 - alpha) * prev_center_w + alpha * cand_center_w
+                new_extent_w = (1.0 - alpha) * prev_extent_w + alpha * cand_extent_w
+            else:
+                new_center_w = cand_center_w
+                new_extent_w = cand_extent_w
+
+            track["center_w"] = new_center_w.astype(np.float32, copy=False)
+            track["extent_w"] = new_extent_w.astype(np.float32, copy=False)
+            track["points"] = int(candidate["points"])
+            track["score"] = float(candidate["score"])
+            track["age"] = int(track.get("age", 0)) + 1
+            track["missed"] = 0
+            track["match_dist"] = float(dist)
+
+        for track_id in list(self._tracks.keys()):
+            if track_id in matched_track_ids:
+                continue
+            track = self._tracks[track_id]
+            track["missed"] = int(track.get("missed", 0)) + 1
+            track["score"] = float(track.get("score", 0.0)) * self.persistence_decay
+            if int(track["missed"]) > self.track_max_missed_frames:
+                del self._tracks[track_id]
+
+        unmatched_candidates = [
+            idx for idx in range(len(candidates)) if idx not in matched_candidate_ids
+        ]
+        unmatched_candidates.sort(
+            key=lambda idx: float(candidates[idx]["score"]), reverse=True
+        )
+        for cand_idx in unmatched_candidates:
+            if len(self._tracks) >= self.max_tracked_objects:
+                break
+            candidate = candidates[cand_idx]
+            cand_center_w = np.asarray(candidate["center_w"], dtype=np.float32)
+
+            # Spawn deadzone: do not create a new track if it would overlap an
+            # existing one. This avoids duplicate markers on the same object.
+            if self.track_spawn_deadzone_m > 0.0:
+                suppress_spawn = False
+                for existing_track in self._tracks.values():
+                    existing_center_w = np.asarray(
+                        existing_track["center_w"], dtype=np.float32
+                    )
+                    if (
+                        float(np.linalg.norm(cand_center_w - existing_center_w))
+                        < self.track_spawn_deadzone_m
+                    ):
+                        suppress_spawn = True
+                        break
+                if suppress_spawn:
+                    continue
+
+            track_id = self._next_track_id
+            self._next_track_id += 1
+            self._tracks[track_id] = {
+                "track_id": int(track_id),
+                "center_w": cand_center_w.copy(),
+                "extent_w": np.asarray(candidate["extent_w"], dtype=np.float32).copy(),
+                "points": int(candidate["points"]),
+                "score": float(candidate["score"]),
+                "age": 1,
+                "missed": 0,
+                "match_dist": 0.0,
+            }
+
+        active_tracks: List[Dict[str, object]] = []
+        for track_id, track in self._tracks.items():
+            if int(track.get("missed", 0)) > 0:
+                continue
+            active_tracks.append(
+                {
+                    "track_id": int(track_id),
+                    "center_w": np.asarray(track["center_w"], dtype=np.float32),
+                    "extent_w": np.asarray(track["extent_w"], dtype=np.float32),
+                    "points": int(track.get("points", 0)),
+                    "score": float(track.get("score", 0.0)),
+                    "age": int(track.get("age", 0)),
+                }
+            )
+
+        active_tracks.sort(
+            key=lambda t: (float(t["score"]), float(t["points"])),
+            reverse=True,
+        )
+        return active_tracks[: self.max_tracked_objects]
+
+    def _stabilize_published_object(
+        self,
+        center_w: np.ndarray,
+        center_c: np.ndarray,
+        extent_w: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, bool, float]:
+        if self._last_published_center_w is None or self._last_published_center_c is None:
+            self._last_published_center_w = center_w.copy()
+            self._last_published_center_c = center_c.copy()
+            self._last_published_extent_w = extent_w.copy()
+            return center_w, center_c, extent_w, True, 0.0
+
+        last_center_c = self._last_published_center_c
+        last_center_w = self._last_published_center_w
+        last_extent_w = self._last_published_extent_w
+
+        if last_extent_w is None:
+            last_extent_w = extent_w.copy()
+
+        prev_range_m = float(np.linalg.norm(last_center_c))
+        new_range_m = float(np.linalg.norm(center_c))
+        closer_delta = prev_range_m - new_range_m
+
+        should_update = True
+        if self.centroid_update_closer_only:
+            should_update = closer_delta >= self.centroid_min_closer_m
+
+        if should_update:
+            alpha = self.centroid_smoothing_alpha
+            if alpha > 0.0:
+                center_w = (1.0 - alpha) * last_center_w + alpha * center_w
+                center_c = (1.0 - alpha) * last_center_c + alpha * center_c
+                extent_w = (1.0 - alpha) * last_extent_w + alpha * extent_w
+
+            self._last_published_center_w = center_w.copy()
+            self._last_published_center_c = center_c.copy()
+            self._last_published_extent_w = extent_w.copy()
+            return center_w, center_c, extent_w, True, closer_delta
+
+        return (
+            last_center_w.copy(),
+            last_center_c.copy(),
+            last_extent_w.copy(),
+            False,
+            closer_delta,
+        )
 
     def _publish_cloud(self, pub, points: np.ndarray, frame_id: str, stamp) -> None:
         cloud = PointCloud2()
@@ -1160,12 +1488,12 @@ class WorkspacePerceptionNode(Node):
         marker.id = 0
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
-        marker.pose.position.x = float((self.roi_x_min + self.roi_x_max) * 0.5)
-        marker.pose.position.y = float((self.roi_y_min + self.roi_y_max) * 0.5)
+        marker.pose.position.x = float((self._active_roi_x_min + self._active_roi_x_max) * 0.5)
+        marker.pose.position.y = float((self._active_roi_y_min + self._active_roi_y_max) * 0.5)
         marker.pose.position.z = 0.0
         marker.pose.orientation.w = 1.0
-        marker.scale.x = float(max(0.02, self.roi_x_max - self.roi_x_min))
-        marker.scale.y = float(max(0.02, self.roi_y_max - self.roi_y_min))
+        marker.scale.x = float(max(0.02, self._active_roi_x_max - self._active_roi_x_min))
+        marker.scale.y = float(max(0.02, self._active_roi_y_max - self._active_roi_y_min))
         marker.scale.z = float(max(0.001, self.plane_marker_thickness_m))
         marker.color.r = 0.2
         marker.color.g = 0.4
@@ -1254,61 +1582,106 @@ class WorkspacePerceptionNode(Node):
             marker.points = [p0, p1]
             self.axes_marker_pub.publish(marker)
 
-    def _publish_object_marker(
+    def _track_color(self, track_id: int) -> Tuple[float, float, float]:
+        palette = [
+            (1.0, 0.35, 0.2),
+            (0.20, 0.75, 1.0),
+            (0.25, 0.95, 0.35),
+            (1.0, 0.90, 0.20),
+            (0.90, 0.45, 1.0),
+            (0.20, 1.0, 0.90),
+        ]
+        return palette[(max(1, int(track_id)) - 1) % len(palette)]
+
+    def _publish_object_markers(
         self,
         frame_id: str,
         stamp,
-        center_c: np.ndarray,
-        extent_w: np.ndarray,
+        origin_c: np.ndarray,
         basis_c: np.ndarray,
+        tracked_objects: List[Dict[str, object]],
+        primary_track_id: int,
+        primary_center_w: np.ndarray,
+        primary_extent_w: np.ndarray,
     ) -> None:
-        marker = Marker()
-        marker.header.frame_id = frame_id
-        marker.header.stamp = stamp
-        marker.ns = "holoassist_object"
-        marker.id = 0
-        marker.type = Marker.CUBE
-        marker.action = Marker.ADD
-        marker.pose.position.x = float(center_c[0])
-        marker.pose.position.y = float(center_c[1])
-        marker.pose.position.z = float(center_c[2])
         qx, qy, qz, qw = _quat_from_rotation_matrix(basis_c)
-        marker.pose.orientation.x = qx
-        marker.pose.orientation.y = qy
-        marker.pose.orientation.z = qz
-        marker.pose.orientation.w = qw
-        marker.scale.x = float(
-            min(
-                self.object_marker_max_extent_m,
-                max(self.object_marker_min_extent_m, extent_w[0]),
+        current_marker_ids: set[int] = set()
+
+        for tracked in tracked_objects:
+            track_id = int(tracked["track_id"])
+            if track_id == primary_track_id:
+                center_w = primary_center_w
+                extent_w = primary_extent_w
+            else:
+                center_w = np.asarray(tracked["center_w"], dtype=np.float32)
+                extent_w = np.asarray(tracked["extent_w"], dtype=np.float32)
+
+            center_c = origin_c + basis_c @ center_w
+            color = self._track_color(track_id)
+
+            marker = Marker()
+            marker.header.frame_id = frame_id
+            marker.header.stamp = stamp
+            marker.ns = "holoassist_object"
+            marker.id = int(track_id)
+            marker.type = Marker.CUBE
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(center_c[0])
+            marker.pose.position.y = float(center_c[1])
+            marker.pose.position.z = float(center_c[2])
+            marker.pose.orientation.x = qx
+            marker.pose.orientation.y = qy
+            marker.pose.orientation.z = qz
+            marker.pose.orientation.w = qw
+            marker.scale.x = float(
+                min(
+                    self.object_marker_max_extent_m,
+                    max(self.object_marker_min_extent_m, extent_w[0]),
+                )
             )
-        )
-        marker.scale.y = float(
-            min(
-                self.object_marker_max_extent_m,
-                max(self.object_marker_min_extent_m, extent_w[1]),
+            marker.scale.y = float(
+                min(
+                    self.object_marker_max_extent_m,
+                    max(self.object_marker_min_extent_m, extent_w[1]),
+                )
             )
-        )
-        marker.scale.z = float(
-            min(
-                self.object_marker_max_extent_m,
-                max(self.object_marker_min_extent_m, extent_w[2]),
+            marker.scale.z = float(
+                min(
+                    self.object_marker_max_extent_m,
+                    max(self.object_marker_min_extent_m, extent_w[2]),
+                )
             )
-        )
-        marker.color.r = 1.0
-        marker.color.g = 0.35
-        marker.color.b = 0.2
-        marker.color.a = 0.55
-        self.object_marker_pub.publish(marker)
+            marker.color.r = float(color[0])
+            marker.color.g = float(color[1])
+            marker.color.b = float(color[2])
+            marker.color.a = 0.72 if track_id == primary_track_id else 0.50
+            self.object_marker_pub.publish(marker)
+            current_marker_ids.add(marker.id)
+
+        stale_ids = self._last_marker_ids - current_marker_ids
+        for marker_id in stale_ids:
+            delete_marker = Marker()
+            delete_marker.header.frame_id = frame_id
+            delete_marker.header.stamp = stamp
+            delete_marker.ns = "holoassist_object"
+            delete_marker.id = int(marker_id)
+            delete_marker.action = Marker.DELETE
+            self.object_marker_pub.publish(delete_marker)
+
+        self._last_marker_ids = current_marker_ids
 
     def _publish_object_delete(self, frame_id: str, stamp) -> None:
-        marker = Marker()
-        marker.header.frame_id = frame_id
-        marker.header.stamp = stamp
-        marker.ns = "holoassist_object"
-        marker.id = 0
-        marker.action = Marker.DELETE
-        self.object_marker_pub.publish(marker)
+        marker_ids = set(self._last_marker_ids)
+        marker_ids.add(0)
+        for marker_id in marker_ids:
+            marker = Marker()
+            marker.header.frame_id = frame_id
+            marker.header.stamp = stamp
+            marker.ns = "holoassist_object"
+            marker.id = int(marker_id)
+            marker.action = Marker.DELETE
+            self.object_marker_pub.publish(marker)
+        self._last_marker_ids.clear()
 
     def _publish_workspace_state(
         self,
