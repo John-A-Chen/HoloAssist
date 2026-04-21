@@ -4,7 +4,9 @@ holo_assist_depth_tracker:
     camera_info_topic: /camera/camera/depth/camera_info
 
     min_depth_m: 0.3
-    max_depth_m: 10.0
+    # Camera-space depth gate for raw depth tracker cloud.
+    # Tighten this to remove distant clutter; adjust per rig.
+    max_depth_m: 2.0
     min_area_px: 100
     morph_kernel: 3
 

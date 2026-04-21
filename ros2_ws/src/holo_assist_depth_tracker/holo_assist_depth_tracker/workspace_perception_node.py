@@ -202,6 +202,8 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("roi_y_max", 0.35)
         self.declare_parameter("roi_z_min", 0.005)
         self.declare_parameter("roi_z_max", 0.35)
+        self.declare_parameter("enforce_above_plane_cull", True)
+        self.declare_parameter("below_plane_tolerance_m", 0.0)
 
         self.declare_parameter("pedestal_exclusion_enabled", False)
         self.declare_parameter("pedestal_center_x", 0.0)
@@ -223,6 +225,10 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("min_foreground_points", 80)
         self.declare_parameter("min_cluster_points", 80)
         self.declare_parameter("max_cluster_points", 50000)
+        self.declare_parameter("object_candidate_max_extent_x_m", 0.18)
+        self.declare_parameter("object_candidate_max_extent_y_m", 0.18)
+        self.declare_parameter("object_candidate_max_extent_z_m", 0.18)
+        self.declare_parameter("object_candidate_max_volume_m3", 0.0035)
         self.declare_parameter("persistence_distance_m", 0.09)
         self.declare_parameter("persistence_gain", 0.25)
         self.declare_parameter("persistence_decay", 0.85)
@@ -284,6 +290,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("axes_marker_length_m", 0.12)
         self.declare_parameter("axes_marker_radius_m", 0.01)
         self.declare_parameter("object_marker_min_extent_m", 0.02)
+        self.declare_parameter("object_marker_max_extent_m", 0.18)
 
         self.declare_parameter("random_seed", 42)
 
@@ -330,6 +337,12 @@ class WorkspacePerceptionNode(Node):
         self.roi_y_max = float(self.get_parameter("roi_y_max").value)
         self.roi_z_min = float(self.get_parameter("roi_z_min").value)
         self.roi_z_max = float(self.get_parameter("roi_z_max").value)
+        self.enforce_above_plane_cull = bool(
+            self.get_parameter("enforce_above_plane_cull").value
+        )
+        self.below_plane_tolerance_m = float(
+            self.get_parameter("below_plane_tolerance_m").value
+        )
 
         self.pedestal_exclusion_enabled = bool(
             self.get_parameter("pedestal_exclusion_enabled").value
@@ -365,6 +378,18 @@ class WorkspacePerceptionNode(Node):
         )
         self.min_cluster_points = int(self.get_parameter("min_cluster_points").value)
         self.max_cluster_points = int(self.get_parameter("max_cluster_points").value)
+        self.object_candidate_max_extent_x_m = float(
+            self.get_parameter("object_candidate_max_extent_x_m").value
+        )
+        self.object_candidate_max_extent_y_m = float(
+            self.get_parameter("object_candidate_max_extent_y_m").value
+        )
+        self.object_candidate_max_extent_z_m = float(
+            self.get_parameter("object_candidate_max_extent_z_m").value
+        )
+        self.object_candidate_max_volume_m3 = float(
+            self.get_parameter("object_candidate_max_volume_m3").value
+        )
         self.persistence_distance_m = float(
             self.get_parameter("persistence_distance_m").value
         )
@@ -419,6 +444,9 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_min_extent_m = float(
             self.get_parameter("object_marker_min_extent_m").value
         )
+        self.object_marker_max_extent_m = float(
+            self.get_parameter("object_marker_max_extent_m").value
+        )
 
         self.random_seed = int(self.get_parameter("random_seed").value)
 
@@ -433,6 +461,7 @@ class WorkspacePerceptionNode(Node):
             self.roi_y_min, self.roi_y_max = -0.35, 0.35
         if self.roi_z_max <= self.roi_z_min:
             self.roi_z_min, self.roi_z_max = 0.005, 0.35
+        self.below_plane_tolerance_m = max(0.0, self.below_plane_tolerance_m)
 
         self.plane_fit_max_points = max(200, self.plane_fit_max_points)
         self.plane_ransac_iterations = max(20, self.plane_ransac_iterations)
@@ -452,6 +481,19 @@ class WorkspacePerceptionNode(Node):
         self.min_foreground_points = max(1, self.min_foreground_points)
         self.min_cluster_points = max(1, self.min_cluster_points)
         self.max_cluster_points = max(self.min_cluster_points, self.max_cluster_points)
+        self.object_candidate_max_extent_x_m = max(
+            self.object_marker_min_extent_m, self.object_candidate_max_extent_x_m
+        )
+        self.object_candidate_max_extent_y_m = max(
+            self.object_marker_min_extent_m, self.object_candidate_max_extent_y_m
+        )
+        self.object_candidate_max_extent_z_m = max(
+            self.object_marker_min_extent_m, self.object_candidate_max_extent_z_m
+        )
+        self.object_candidate_max_volume_m3 = max(1e-5, self.object_candidate_max_volume_m3)
+        self.object_marker_max_extent_m = max(
+            self.object_marker_min_extent_m, self.object_marker_max_extent_m
+        )
 
         self.max_points_per_frame = max(500, self.max_points_per_frame)
         self.tag_size_m = max(0.01, self.tag_size_m)
@@ -540,10 +582,12 @@ class WorkspacePerceptionNode(Node):
             self._publish_tag_markers(msg.header.stamp, tag_points_c, origin_c, basis_c)
 
         points_w = self._to_workspace(xyz, origin_c, basis_c)
-        roi_mask = self._workspace_roi_mask(points_w)
+        above_plane_mask = self._above_plane_mask(xyz, normal, d)
+        roi_mask = self._workspace_roi_mask(points_w) & above_plane_mask
 
         cropped_points_c = xyz[roi_mask]
         cropped_points_w = points_w[roi_mask]
+        culled_below_plane = int(np.count_nonzero(~above_plane_mask))
 
         self._publish_cloud(
             pub=self.cropped_cloud_pub,
@@ -591,6 +635,7 @@ class WorkspacePerceptionNode(Node):
                     "inlier_ratio": round(inlier_ratio, 3),
                     "cropped_points": int(cropped_points_c.shape[0]),
                     "foreground_points": int(fg_points_c.shape[0]),
+                    "culled_below_plane": culled_below_plane,
                     "tags_used": int(len(tag_points_c)),
                 },
             )
@@ -647,6 +692,7 @@ class WorkspacePerceptionNode(Node):
                 "foreground_points": int(fg_points_c.shape[0]),
                 "cluster_count": int(cluster_count),
                 "selected_points": int(selected_points),
+                "culled_below_plane": culled_below_plane,
                 "tags_used": int(len(tag_points_c)),
             },
         )
@@ -885,6 +931,14 @@ class WorkspacePerceptionNode(Node):
             return origin_c + basis_c @ points_w
         return origin_c + points_w @ basis_c.T
 
+    def _above_plane_mask(
+        self, points_c: np.ndarray, normal: np.ndarray, d: float
+    ) -> np.ndarray:
+        if not self.enforce_above_plane_cull:
+            return np.ones(points_c.shape[0], dtype=bool)
+        signed_dist = points_c @ normal + float(d)
+        return signed_dist >= -self.below_plane_tolerance_m
+
     def _workspace_roi_mask(self, points_w: np.ndarray) -> np.ndarray:
         mask = (
             (points_w[:, 0] >= self.roi_x_min)
@@ -1022,6 +1076,16 @@ class WorkspacePerceptionNode(Node):
             maxs = np.max(cluster_pts, axis=0)
             center = 0.5 * (mins + maxs)
             extent = np.maximum(maxs - mins, self.object_marker_min_extent_m)
+            volume = float(extent[0] * extent[1] * extent[2])
+
+            # Reject human/background-scale clusters so we keep gripper-sized objects.
+            if (
+                extent[0] > self.object_candidate_max_extent_x_m
+                or extent[1] > self.object_candidate_max_extent_y_m
+                or extent[2] > self.object_candidate_max_extent_z_m
+                or volume > self.object_candidate_max_volume_m3
+            ):
+                continue
 
             size_score = min(1.0, n_points / float(self.min_cluster_points * 4))
             height_score = np.clip(
@@ -1213,9 +1277,24 @@ class WorkspacePerceptionNode(Node):
         marker.pose.orientation.y = qy
         marker.pose.orientation.z = qz
         marker.pose.orientation.w = qw
-        marker.scale.x = float(max(self.object_marker_min_extent_m, extent_w[0]))
-        marker.scale.y = float(max(self.object_marker_min_extent_m, extent_w[1]))
-        marker.scale.z = float(max(self.object_marker_min_extent_m, extent_w[2]))
+        marker.scale.x = float(
+            min(
+                self.object_marker_max_extent_m,
+                max(self.object_marker_min_extent_m, extent_w[0]),
+            )
+        )
+        marker.scale.y = float(
+            min(
+                self.object_marker_max_extent_m,
+                max(self.object_marker_min_extent_m, extent_w[1]),
+            )
+        )
+        marker.scale.z = float(
+            min(
+                self.object_marker_max_extent_m,
+                max(self.object_marker_min_extent_m, extent_w[2]),
+            )
+        )
         marker.color.r = 1.0
         marker.color.g = 0.35
         marker.color.b = 0.2

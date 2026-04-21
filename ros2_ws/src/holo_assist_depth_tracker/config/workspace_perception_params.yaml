@@ -18,17 +18,31 @@ holoassist_workspace_perception:
     plane_min_inliers: 600
     plane_smoothing_alpha: 0.25
 
-    roi_x_min: -0.45
-    roi_x_max: 0.45
+    # Bench dimensions:
+    #   width (x): 0.720 m  -> [-0.360, +0.360]
+    #   depth (y): 0.700 m  -> [-0.350, +0.350]
+    roi_x_min: -0.36
+    roi_x_max: 0.36
     roi_y_min: -0.35
     roi_y_max: 0.35
     roi_z_min: 0.005
     roi_z_max: 0.35
+    # Hard reject anything under the fitted bench plane.
+    enforce_above_plane_cull: true
+    # Set >0.0 only if depth noise causes clipping at the plane boundary.
+    below_plane_tolerance_m: 0.0
 
-    pedestal_exclusion_enabled: false
+    # Robot pedestal exclusion (assumes workspace origin is bench center):
+    # - Base diameter: 0.128 m (radius 0.064 m), with safety margin => 0.090 m.
+    # - Robot centered in width: 0.300 m from either side edge => x ~= 0.0.
+    # - Robot 0.095 m from back edge to base perimeter:
+    #     center offset from back edge = 0.095 + 0.064 = 0.159 m
+    #     center y from bench center = 0.350 - 0.159 = +0.191 m
+    # If your y-axis points the opposite direction, flip pedestal_center_y sign.
+    pedestal_exclusion_enabled: true
     pedestal_center_x: 0.00
-    pedestal_center_y: 0.00
-    pedestal_radius: 0.08
+    pedestal_center_y: 0.191
+    pedestal_radius: 0.09
     pedestal_z_min: -0.05
     pedestal_z_max: 0.50
 
@@ -45,6 +59,10 @@ holoassist_workspace_perception:
     min_foreground_points: 80
     min_cluster_points: 80
     max_cluster_points: 50000
+    object_candidate_max_extent_x_m: 0.18
+    object_candidate_max_extent_y_m: 0.18
+    object_candidate_max_extent_z_m: 0.18
+    object_candidate_max_volume_m3: 0.0035
     persistence_distance_m: 0.09
     persistence_gain: 0.25
     persistence_decay: 0.85
@@ -76,5 +94,6 @@ holoassist_workspace_perception:
     axes_marker_length_m: 0.12
     axes_marker_radius_m: 0.01
     object_marker_min_extent_m: 0.02
+    object_marker_max_extent_m: 0.18
 
     random_seed: 42

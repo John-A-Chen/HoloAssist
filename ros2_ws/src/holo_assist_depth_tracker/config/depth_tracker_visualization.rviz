@@ -11,7 +11,7 @@ Visualization Manager:
   Class: ""
   Global Options:
     Background Color: 30; 30; 30
-    Fixed Frame: camera_depth_optical_frame
+    Fixed Frame: workspace_frame
     Frame Rate: 30
   Displays:
     - Class: rviz_default_plugins/Grid
@@ -78,8 +78,8 @@ Visualization Manager:
       Use Fixed Frame: true
     - Class: rviz_default_plugins/Marker
       Name: Obstacle Marker
-      Enabled: true
-      Marker Topic:
+      Enabled: false
+      Topic:
         Value: /holo_assist_depth_tracker/obstacle_marker
       Queue Size: 100
       Namespaces:
@@ -87,7 +87,7 @@ Visualization Manager:
     - Class: rviz_default_plugins/Marker
       Name: Bench Plane Marker
       Enabled: true
-      Marker Topic:
+      Topic:
         Value: /holoassist/perception/bench_plane_marker
       Queue Size: 100
       Namespaces:
@@ -95,7 +95,7 @@ Visualization Manager:
     - Class: rviz_default_plugins/Marker
       Name: Workspace Tag Markers
       Enabled: true
-      Marker Topic:
+      Topic:
         Value: /holoassist/perception/workspace_tag_markers
       Queue Size: 100
       Namespaces:
@@ -103,7 +103,7 @@ Visualization Manager:
     - Class: rviz_default_plugins/Marker
       Name: Workspace Axes Marker
       Enabled: true
-      Marker Topic:
+      Topic:
         Value: /holoassist/perception/workspace_axes_marker
       Queue Size: 100
       Namespaces:
@@ -111,7 +111,7 @@ Visualization Manager:
     - Class: rviz_default_plugins/Marker
       Name: Object Marker
       Enabled: true
-      Marker Topic:
+      Topic:
         Value: /holoassist/perception/object_marker
       Queue Size: 100
       Namespaces:
@@ -119,10 +119,10 @@ Visualization Manager:
     - Class: rviz_default_plugins/TF
       Name: TF
       Enabled: true
-      Marker Scale: 0.2
+      Marker Scale: 0.12
       Show Arrows: true
       Show Axes: true
-      Show Names: true
+      Show Names: false
     - Class: rviz_default_plugins/Image
       Name: Tracker Debug Image
       Enabled: true
