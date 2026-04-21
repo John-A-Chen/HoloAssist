@@ -178,13 +178,13 @@ class EstopWidget(QFrame):
     - Estopped state: pulsing red background + yellow HOLD TO RESUME button with progress
     """
 
-    RESUME_HOLD_MS = 5000  # 5 seconds
-    COOLDOWN_MS = 1000     # 1 second cooldown after resume before estop is clickable
+    RESUME_HOLD_MS = 3000  # 3 seconds
+    COOLDOWN_MS = 400     # 1 second cooldown after resume before estop is clickable
 
     def __init__(self, ros: RosInterface, parent=None):
         super().__init__(parent)
         self.ros = ros
-        self.setFixedWidth(120)
+        self.setFixedWidth(400)
         self._estopped = False
         self._resume_held = False
         self._resume_elapsed = 0
@@ -233,7 +233,7 @@ class EstopWidget(QFrame):
         self.stopped_label.setStyleSheet(f"color: {RED};")
         resume_layout.addWidget(self.stopped_label)
 
-        self.resume_btn = QPushButton("HOLD TO\nRESUME\n(5s)")
+        self.resume_btn = QPushButton("HOLD TO\nRESUME\n(3s)")
         self.resume_btn.setFont(QFont("monospace", 8, QFont.Bold))
         self.resume_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.resume_btn.setCursor(Qt.PointingHandCursor)

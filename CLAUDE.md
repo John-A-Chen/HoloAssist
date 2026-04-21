@@ -22,6 +22,26 @@ This branch (`nic`) is one of several personal branches in a shared research tea
 | Teleoperation & Interaction | Nic | XR teleop (RMRC, Direct Joint, Hand Guide), gripper control, e-stop dashboard, session logging |
 | XR Scene & Visualisation | Sebastian | Unity environment, virtual object overlays (real->XR mapping), bin visualisation |
 
+### Evaluation Criteria (Nic's Subsystem — from official contract)
+
+| Grade | Summary | Status |
+|---|---|---|
+| **P** | Stable digital twin on Quest 3 — JointStateSubscriber drives joints, purely kinematic, verified on device | DONE |
+| **C** | RMRC + Direct Joint + e-stop dashboard — Jacobian velocity control, 50Hz publish, dashboard with burst e-stop + resume | DONE |
+| **D** | Three modes + headset streaming dashboard — RMRC/Direct Joint/Hand Guide, translate/rotate sub-modes, HeadsetStreamPublisher at 15 FPS, 5 dashboard tabs, launch scripts | DONE |
+| **HD** | Hand Guide mode + session logging + gripper — Jacobian IK tracking (gain 2, 0.15 m/s cap), SessionLogger (2Hz + file), **OnRobot gripper open/close from XR controller** | Gripper TODO |
+
+Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsystem evaluations in `evaluation/`. Official contract: `RS2 Project Contract Renegotiated.pdf`.
+
+### System-Level Evaluation (shared team responsibility)
+
+| Grade | Criteria |
+|---|---|
+| **P** | XR headset displays stable robot model and EE pose. Operator can teleoperate via reactive velocity control. System stops safely on communication loss. Depth camera publishes to desktop UI. Operator can observe pose markers/transforms in XR. |
+| **C** | Autonomous mode operational — MoveIt 2 plans and executes basic pick-and-place. Teleop sorting achievable in repeated trials. Gripper open/close integrated from XR controller. |
+| **D** | XR virtual object mapping operational (e.g. tomato → bomb). Mode switching between teleop and autonomous validated. Demonstration task completed consistently under defined time threshold. Passthrough / spatial marker visualisation working. |
+| **HD** | Human vs CPU race mode overlay functional. Quantitative comparison between teleop and autonomous modes (sort time, accuracy). Mixed reality UI visualises and debugs depth camera feed. WiFi dropout auto e-stop implemented. |
+
 ### Progress Status (Nic's Subsystem)
 - ✅ Unity XR template (Mixed Reality / passthrough) working on Quest 3
 - ✅ Meta XR All-in-One SDK v85.0.0 installed and configured
@@ -60,8 +80,10 @@ This branch (`nic`) is one of several personal branches in a shared research tea
 - ✅ Dashboard LATENCY tab — live latency numbers + message age graph + command interval graph
 - ✅ Dashboard SESSION tab — text overview of control mode, durations, connection status, topic rates
 - ✅ Dashboard saves session log to `~/holoassist_sessions/` on shutdown
-- ⬜ **OnRobot gripper ROS driver** — install/configure driver, open/close commands via ROS
-- ⬜ **Gripper control from XR** — trigger or button to open/close gripper during teleoperation
+- ✅ OnRobot RG2 gripper URDF created — `ur3e_rg2.urdf` combines UR3e + RG2 gripper (attached to tool0), STL meshes in `Assets/URDF/onrobot_rg2/`
+- ✅ RG2 URDF imported in Unity — replaced old `ur` GameObject with `ur3e_rg2`, visual STLs renamed to `*_visual.stl` to work around URDF-Importer name-collision bug (collision/visual share filenames → `UsedTemplateFiles` skip)
+- ✅ New robot verified working — all 6 arm joints mirror correctly, velocity arrow enlarged (0.25m length, 0.008m thick) to clear gripper geometry
+- ⬜ **Gripper control from XR** — trigger or button to open/close gripper during teleoperation, update JointStateSubscriber with gripper joint mappings + mimic logic, ROS driver integration
 - ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
 
 ## Repository Layout
@@ -83,16 +105,23 @@ nic/
       Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
       Scripts/SessionLogger.cs           — session metrics: mode tracking, durations, events → ROS + file
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
-      URDF/                            — ur3e.urdf + meshes
+      URDF/ur3e.urdf                     — original UR3e URDF (no gripper)
+      URDF/ur3e_rg2.urdf                 — UR3e + OnRobot RG2 gripper combined URDF
+      URDF/onrobot_rg2/                  — RG2 gripper STL meshes (visual + collision)
+      URDF/ur_description/               — UR3e meshes (DAE visual + STL collision)
   dashboard/           — Python/PyQt5 e-stop & debug dashboard (streamed to Steam Deck)
     main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
     ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
   launch.py            — Python launcher: starts UR driver, controller switch, TCP endpoint
   launch.sh            — Shell wrapper for launch.py (sources ROS automatically)
   dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
+  urdf/                — OnRobot RG2 xacro source files (from UOsaka-Harada-Laboratory/onrobot)
+  meshes/              — OnRobot RG2 STL meshes (rg2/visual + rg2/collision)
   ROS-TCP-Connector/  — Unity package (local, referenced via file:// in manifest.json)
   URDF-Importer/      — Unity package (local, referenced via file:// in manifest.json)
+  evaluation/          — Individual subsystem evaluation criteria (P/C/D/HD for each member)
   PROJECT_PLAN.md    — Full project plan (all subsystems, architecture, milestones)
+  RS2 Project Contract Renegotiated.pdf — Official project contract with evaluation criteria
   SETUP.md            — Onboarding guide for new contributors
   subsystem3_renegotiation.md  — Nic's evaluation criteria renegotiation
   subsystem2_renegotiation_options.md — Options for Oliver's subsystem renegotiation
@@ -224,6 +253,17 @@ Depth Camera verifies correct bin placement
 - **Scene:** `Assets/Scenes/SampleScene.unity`
 - **ROS IP:** Set to laptop's WiFi IP for Quest builds (e.g., `172.19.115.245`), Port: 10000 (configured in Robotics → ROS Settings). Use `0.0.0.0` for ros_tcp_endpoint so it listens on all interfaces.
 
+### OnRobot RG2 Gripper (URDF)
+
+The combined `ur3e_rg2.urdf` adds the RG2 gripper to the UR3e, attached to `tool0` via a fixed joint. Gripper structure:
+
+- `onrobot_rg2_base_link` — gripper body (fixed to tool0)
+- `finger_joint` — **primary actuated joint** (revolute, left outer knuckle, limits: -0.558 to 0.785 rad)
+- 5 mimic joints mirror `finger_joint`: `left_inner_knuckle_joint`, `left_inner_finger_joint`, `right_outer_knuckle_joint`, `right_inner_knuckle_joint`, `right_inner_finger_joint`
+- Only `finger_joint` needs to be driven — all other gripper joints follow via mimic
+
+Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada-Laboratory/onrobot) (`onrobot_rg_description`). Raw xacro files stored in `nic/urdf/`, meshes in `nic/meshes/rg2/`.
+
 ### Key Scripts
 
 - `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary.
@@ -318,3 +358,4 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 - **MoveIt Servo not used for teleoperation** — RMRC replaces it. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
 - **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. Switch controllers after launching the UR driver.
 - **RobotHUD may not render on Quest 3** — `Camera.main` can return null in the MR template, `Shader.Find` may return null on Android (shader stripping), runtime TextMeshPro needs an explicit font asset. Partially patched, functional enough.
+- **URDF-Importer visual/collision STL name collision** — `LocateAssetHandler.cs:31` uses `Path.GetFileNameWithoutExtension` to check `UsedTemplateFiles`, so if visual and collision meshes share the same filename (e.g., both `base_link.stl`), the visual prefab creation is skipped. Fixed by renaming visual STLs to `*_visual.stl`.

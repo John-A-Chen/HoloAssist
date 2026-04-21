@@ -1,6 +1,6 @@
 # Subsystem 4 — XR Scene and Visualisation
 
-**Lead:** Sebastian
+**Lead:** Sebastian Baudille (24804940)
 
 ## Scope
 
@@ -8,35 +8,21 @@ Unity XR environment design, virtual object overlay system, and operator-facing 
 
 ---
 
-## Pass (P)
+## Pass (P) — XR Unity UI
 
-The Unity XR scene renders a stable mixed reality environment on the Quest 3 with passthrough enabled. The workspace area and robot are visible and correctly positioned in the operator's view.
-
-**Criteria:**
-- Mixed reality passthrough functional on Quest 3
-- Robot digital twin visible and correctly placed in the scene
-- Workspace area represented (floor plane, table, or boundary markers)
-- Scene runs at acceptable frame rate on Quest 3 (no major drops or visual artefacts)
+- XR user can observe pose markers and basic robot transforms information within the Unity XR UI
 
 ---
 
-## Credit (C)
+## Credit (C) — XR UI and Environment
 
-Virtual objects are rendered in the mixed reality scene at poses received from the perception pipeline. Objects appear at the correct real-world location in the operator's passthrough view.
-
-**Criteria:**
+- System visualisation supports repeated demonstration trials by clearly presenting robot state, task progress, and safety context to the operator
 - Subscribes to object pose data from ROS (via ros_tcp_endpoint)
-- Virtual object spawned/positioned at the detected real-world location
-- Object position is aligned with the physical workspace (coordinate frame calibration working)
-- Objects update or reposition as new detections arrive
 
 ---
 
-## Distinction (D)
+## Distinction (D) — Real-to-virtual mapping + bin visualisation
 
-The real-to-virtual object mapping system is implemented — physical objects are displayed as different virtual objects in XR (e.g., a tomato appears as a bomb). Sorting bins are visualised with labels or visual indicators showing which object type belongs where.
-
-**Criteria:**
 - Mapping system translates object type from perception (e.g., "tomato") to a virtual representation (e.g., bomb 3D model)
 - Virtual objects are visually distinct and clearly identifiable by the operator
 - Bin locations rendered in XR with labels, colours, or icons indicating target object type
@@ -44,13 +30,10 @@ The real-to-virtual object mapping system is implemented — physical objects ar
 
 ---
 
-## High Distinction (HD)
+## High Distinction (HD) — Polished UX with progress tracking and feedback
 
-The full XR operator experience is polished: sorting progress is tracked and displayed, visual feedback confirms correct/incorrect bin placement, and the scene provides clear task guidance. The environment is suitable for demonstration.
-
-**Criteria:**
 - Sorting progress UI: objects remaining, objects sorted, current score or tally
-- Visual feedback on sort outcome — success (e.g., green flash, checkmark) and failure (e.g., red flash, warning) when an object is placed in a bin
+- Visual feedback on sort outcome — success (green flash, checkmark) and failure (red flash, warning) on bin placement
 - Task guidance overlays: highlights on the next object to sort, directional indicators toward target bin
-- Scene is visually polished — consistent art style, readable UI at arm's length, no placeholder assets in the final build
+- Scene is visually polished — consistent art style, readable UI at arm's length, no placeholder assets in final build
 - Smooth performance on Quest 3 with all overlays active

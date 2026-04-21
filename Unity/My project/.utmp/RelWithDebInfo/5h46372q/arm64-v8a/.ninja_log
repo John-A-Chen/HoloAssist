@@ -1,19 +1,19 @@
 # ninja log v5
-6	894	1773273677237877706	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	b0de57bc1ed302e5
-7	593	1773273676937861209	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ebef68288285ffb
-7	881	1773273677225877046	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	feb4b5d5b5e83df4
-6	752	1773273677096869956	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	365a4adeb4c0add8
-7	546	1773273676890858620	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	840c6b33492d2c38
-7	785	1773273677128871715	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	740e937b56dcbe6c
-894	916	1773273677262879080	/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5h46372q/obj/arm64-v8a/libgame.so	8ce7fbd86da665cb
-7	532	1773273676876857848	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	779635973368633b
-7	588	1773273676932860933	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3dcbd91b2f01288b
-7	582	1774335479157048701	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	779635973368633b
-7	586	1774335479161049255	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	840c6b33492d2c38
-7	688	1774335479264063529	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ebef68288285ffb
-7	743	1774335479320071290	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	740e937b56dcbe6c
-6	968	1774335479543102194	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	365a4adeb4c0add8
 6	987	1774335479564105105	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	b0de57bc1ed302e5
+7	688	1774335479264063529	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ebef68288285ffb
 7	1073	1774335479649116884	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	feb4b5d5b5e83df4
-7	1083	1774335479660118409	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3dcbd91b2f01288b
+6	968	1774335479543102194	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	365a4adeb4c0add8
+7	586	1774335479161049255	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	840c6b33492d2c38
+7	743	1774335479320071290	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	740e937b56dcbe6c
 1083	1113	1774335479690122566	/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5h46372q/obj/arm64-v8a/libgame.so	8ce7fbd86da665cb
+7	582	1774335479157048701	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	779635973368633b
+7	1083	1774335479660118409	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3dcbd91b2f01288b
+11	789	1776304157445505856	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	840c6b33492d2c38
+11	798	1776304157456505947	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	779635973368633b
+11	880	1776304157535506599	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	740e937b56dcbe6c
+11	881	1776304157534506591	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	365a4adeb4c0add8
+11	1002	1776304157661507640	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ebef68288285ffb
+12	1057	1776304157716508094	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3dcbd91b2f01288b
+11	1162	1776304157819508945	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	b0de57bc1ed302e5
+11	1230	1776304157883509473	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	feb4b5d5b5e83df4
+1230	1367	1776304158024510640	/home/nic/git/RS2-HoloAssist/nic/Unity/My project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5h46372q/obj/arm64-v8a/libgame.so	8ce7fbd86da665cb

@@ -12,8 +12,8 @@ public class SpatialMarkers : MonoBehaviour
 
     [Header("Velocity Arrow")]
     public bool showVelocityArrow = true;
-    public float arrowMaxLength = 0.12f;
-    public float arrowThickness = 0.004f;
+    public float arrowMaxLength = 0.25f;
+    public float arrowThickness = 0.008f;
 
     private Transform toolTransform;
     private GameObject axesGroup;
