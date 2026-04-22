@@ -260,6 +260,99 @@ public static class UR3eKinematics
     }
 
     /// <summary>
+    /// Resolve desired linear + angular velocity simultaneously using the full 6x6 Jacobian.
+    /// This produces joint velocities that satisfy both position and orientation goals optimally,
+    /// unlike separate 3-DOF solves which can interfere with each other.
+    /// </summary>
+    public static void ResolveFullVelocity(double[] q, double[] vDesired, double[] wDesired, double[] qDot, double damping = 0.01)
+    {
+        var Jl = new double[3, 6];
+        var Jw = new double[3, 6];
+        JacobianLinear(q, Jl);
+        JacobianAngular(q, Jw);
+
+        var twist = new double[] { vDesired[0], vDesired[1], vDesired[2], wDesired[0], wDesired[1], wDesired[2] };
+
+        // A = J_full * J_full^T + λ²I  (6x6)
+        var A6 = new double[6, 6];
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                double s = 0;
+                for (int k = 0; k < 6; k++)
+                {
+                    double Jik = (i < 3) ? Jl[i, k] : Jw[i - 3, k];
+                    double Jjk = (j < 3) ? Jl[j, k] : Jw[j - 3, k];
+                    s += Jik * Jjk;
+                }
+                A6[i, j] = s;
+            }
+            A6[i, i] += damping * damping;
+        }
+
+        var y = new double[6];
+        Solve6x6(A6, twist, y);
+
+        // q̇ = J_full^T * y
+        for (int i = 0; i < 6; i++)
+        {
+            double s = 0;
+            for (int j = 0; j < 3; j++)
+                s += Jl[j, i] * y[j];
+            for (int j = 0; j < 3; j++)
+                s += Jw[j, i] * y[j + 3];
+            qDot[i] = s;
+        }
+    }
+
+    private static void Solve6x6(double[,] A, double[] b, double[] x)
+    {
+        const int n = 6;
+        var M = new double[n, n];
+        var bc = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            bc[i] = b[i];
+            for (int j = 0; j < n; j++)
+                M[i, j] = A[i, j];
+        }
+
+        for (int col = 0; col < n; col++)
+        {
+            int maxRow = col;
+            double maxVal = System.Math.Abs(M[col, col]);
+            for (int row = col + 1; row < n; row++)
+            {
+                double v = System.Math.Abs(M[row, col]);
+                if (v > maxVal) { maxVal = v; maxRow = row; }
+            }
+            if (maxRow != col)
+            {
+                for (int j = 0; j < n; j++)
+                { double tmp = M[col, j]; M[col, j] = M[maxRow, j]; M[maxRow, j] = tmp; }
+                double tmp2 = bc[col]; bc[col] = bc[maxRow]; bc[maxRow] = tmp2;
+            }
+            double pivot = M[col, col];
+            if (System.Math.Abs(pivot) < 1e-12) { x[col] = 0; continue; }
+            for (int row = col + 1; row < n; row++)
+            {
+                double factor = M[row, col] / pivot;
+                for (int j = col; j < n; j++)
+                    M[row, j] -= factor * M[col, j];
+                bc[row] -= factor * bc[col];
+            }
+        }
+        for (int i = n - 1; i >= 0; i--)
+        {
+            double s = bc[i];
+            for (int j = i + 1; j < n; j++)
+                s -= M[i, j] * x[j];
+            x[i] = System.Math.Abs(M[i, i]) > 1e-12 ? s / M[i, i] : 0;
+        }
+    }
+
+    /// <summary>
     /// Get the end-effector position as a Vector3.
     /// </summary>
     public static Vector3 GetEndEffectorPosition(double[] q)
@@ -267,6 +360,45 @@ public static class UR3eKinematics
         var pos = new double[3];
         GetPosition(q, pos);
         return new Vector3((float)pos[0], (float)pos[1], (float)pos[2]);
+    }
+
+    /// <summary>
+    /// Compute positions of all link origins (base + 6 links = 7 points).
+    /// Output is a flat array of 21 doubles: [base_x, base_y, base_z, link1_x, link1_y, link1_z, ...].
+    /// </summary>
+    public static void GetLinkPositions(double[] q, double[] positions)
+    {
+        positions[0] = 0; positions[1] = 0; positions[2] = 0;
+
+        var T = new double[4, 4];
+        var Ti = new double[4, 4];
+        var temp = new double[4, 4];
+
+        T[0, 0] = 1; T[1, 1] = 1; T[2, 2] = 1; T[3, 3] = 1;
+
+        for (int i = 0; i < 6; i++)
+        {
+            DHMatrix(q[i], D[i], A[i], Alpha[i], Ti);
+            Mul4x4(T, Ti, temp);
+            System.Array.Copy(temp, T, 16);
+
+            int idx = (i + 1) * 3;
+            positions[idx]     = T[0, 3];
+            positions[idx + 1] = T[1, 3];
+            positions[idx + 2] = T[2, 3];
+        }
+    }
+
+    /// <summary>
+    /// Get the tool Z axis direction in base frame (3rd column of rotation matrix from FK).
+    /// </summary>
+    public static void GetToolZAxis(double[] q, double[] toolZ)
+    {
+        var T = new double[4, 4];
+        FK(q, T);
+        toolZ[0] = T[0, 2];
+        toolZ[1] = T[1, 2];
+        toolZ[2] = T[2, 2];
     }
 
     /// <summary>

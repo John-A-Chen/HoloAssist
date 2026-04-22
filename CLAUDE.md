@@ -29,7 +29,7 @@ This branch (`nic`) is one of several personal branches in a shared research tea
 | **P** | Stable digital twin on Quest 3 — JointStateSubscriber drives joints, purely kinematic, verified on device | DONE |
 | **C** | RMRC + Direct Joint + e-stop dashboard — Jacobian velocity control, 50Hz publish, dashboard with burst e-stop + resume | DONE |
 | **D** | Three modes + headset streaming dashboard — RMRC/Direct Joint/Hand Guide, translate/rotate sub-modes, HeadsetStreamPublisher at 15 FPS, 5 dashboard tabs, launch scripts | DONE |
-| **HD** | Hand Guide mode + session logging + gripper — Jacobian IK tracking (gain 2, 0.15 m/s cap), SessionLogger (2Hz + file), **OnRobot gripper open/close from XR controller** | Gripper TODO |
+| **HD** | Hand Guide mode + session logging + gripper — Jacobian IK tracking (gain 2, 0.15 m/s cap), SessionLogger (2Hz + file), **OnRobot gripper open/close from XR controller** | DONE |
 
 Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsystem evaluations in `evaluation/`. Official contract: `RS2 Project Contract Renegotiated.pdf`.
 
@@ -83,7 +83,14 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ✅ OnRobot RG2 gripper URDF created — `ur3e_rg2.urdf` combines UR3e + RG2 gripper (attached to tool0), STL meshes in `Assets/URDF/onrobot_rg2/`
 - ✅ RG2 URDF imported in Unity — replaced old `ur` GameObject with `ur3e_rg2`, visual STLs renamed to `*_visual.stl` to work around URDF-Importer name-collision bug (collision/visual share filenames → `UsedTemplateFiles` skip)
 - ✅ New robot verified working — all 6 arm joints mirror correctly, velocity arrow enlarged (0.25m length, 0.008m thick) to clear gripper geometry
-- ⬜ **Gripper control from XR** — trigger or button to open/close gripper during teleoperation, update JointStateSubscriber with gripper joint mappings + mimic logic, ROS driver integration
+- ✅ Gripper control from XR — right index trigger (analog 0–100%) maps to gripper open/close, publishes Float32 to `/gripper/command`, digital twin animates all 6 gripper joints (finger_joint + 5 mimic joints) via JointStateSubscriber
+- ✅ `gripper_node.py` created — ROS 2 node subscribes to `/gripper/command`, sends `rg_grip(width, force)` URScript to `/urscript_interface/script_command` for real RG2 hardware
+- ⚠️ **Collision protection — NOT WORKING** — code exists (table collision via FK link positions + gripper tip, self-collision via link distance checks, soft boundary with `collisionSoftZone`) but joints still pass through the table in testing. Likely cause: FK link positions in DH frame don't correspond to actual collision geometry (DH frame Z=0 may not align with table surface), or `tableHeight` default (0.0) is wrong for the physical setup. Needs debugging — check what `GetLinkPositions` actually returns vs where the table is, possibly visualise the collision points in Unity. The soft boundary approach (gradual slowdown + directional filtering allowing escape) is correct in principle but the parameters/coordinates need calibrating.
+- ✅ EE lock-down mode — Y button toggles; uses combined 6x6 Jacobian solve (`ResolveFullVelocity`) so linear + angular goals are resolved simultaneously (no jitter from competing solves). Works immediately without grip. 1° dead zone, gain 2.0, max 1.5 rad/s. Works in RMRC Translate + Hand Guide modes. HUD shows "LOCK ▼" when active.
+- ✅ Output velocity smoothing (60ms exponential low-pass) on all joint velocities before publishing. Resets on mode switch.
+- ✅ Dashboard shows gripper status (bar + percentage) on STATUS tab
+- ✅ RobotHUD shows gripper bar + EE lock indicator in all modes
+- ⚠️ **Performance/lag on Quest 3** — noticeable lag during teleoperation testing. Possibly WiFi latency (Quest ↔ laptop ↔ ROS), or GC pressure from FK array allocations at 50Hz. Needs profiling — check WiFi signal strength, try reducing `publishRate`, or pre-allocate arrays in UR3eKinematics to reduce GC.
 - ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
 
 ## Repository Layout
@@ -112,6 +119,7 @@ nic/
   dashboard/           — Python/PyQt5 e-stop & debug dashboard (streamed to Steam Deck)
     main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
     ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
+  gripper_node.py      — ROS 2 node: /gripper/command → URScript rg_grip() for OnRobot RG2
   launch.py            — Python launcher: starts UR driver, controller switch, TCP endpoint
   launch.sh            — Shell wrapper for launch.py (sources ROS automatically)
   dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
@@ -150,6 +158,12 @@ nic/
 
 # Dashboard without ROS (UI testing only)
 ./dashboard.sh --no-ros --fullscreen
+
+# Gripper node (real RG2 hardware — requires OnRobot URCap on teach pendant)
+python3 gripper_node.py
+
+# Gripper node (dry-run — logs URScript commands without sending)
+python3 gripper_node.py --dry-run
 ```
 
 `launch.sh` and `dashboard.sh` source ROS automatically. `launch.py` accepts `--robot-ip`, `--ros-ip`, and `--no-rviz` flags. No `--robot-ip` = fake hardware mode.
@@ -243,7 +257,9 @@ Depth Camera verifies correct bin placement
 - **RMRC**: Jacobian-based Cartesian velocity control (translate + rotate sub-modes)
 - **Direct Joint**: Individual joint jogging
 - **Hand Guide**: Controller position tracking with Jacobian IK
-- **Gripper**: Open/close from XR controller (to be implemented)
+- **Gripper**: Analog control via right index trigger (0–100%), publishes to `/gripper/command`
+- **EE Lock-Down**: Y button toggle — locks tool pointing straight down via angular Jacobian correction
+- **Collision Protection**: Table + self-collision prevention via predictive FK link position checks
 
 ## Unity Project
 
@@ -266,9 +282,9 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
 
 ### Key Scripts
 
-- `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary.
+- `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary. Also animates gripper joints (finger_joint + 5 mimic joints) based on `RobotController.GripperValue` — auto-finds RobotController if not assigned in Inspector.
 - `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR controller grip button — hold grip near rig to grab and drag. Supports Y-axis rotation while grabbed (keeps robot upright). Pure transform movement, no physics.
-- `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK), geometric angular Jacobian (3x6, joint z-axes). DLS pseudoinverse for both linear and angular velocity resolution. Manipulability measure for adaptive damping.
+- `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK), geometric angular Jacobian (3x6, joint z-axes). DLS pseudoinverse for both linear and angular velocity resolution. Manipulability measure for adaptive damping. `GetLinkPositions()` returns all 7 link origins (used for collision protection). `GetToolZAxis()` returns EE Z-axis direction (used for EE lock-down).
 - `Assets/Scripts/SpatialMarkers.cs` — attach to robot root GameObject (must contain `tool0` in hierarchy). RGB axis cylinders on end-effector + yellow velocity arrow showing commanded Cartesian velocity direction/magnitude.
 - `Assets/Scripts/RobotController.cs` — attach to any GameObject; uses **Unity Input System** (not OVRInput). Requires `RobotControlActions.inputactions` dragged into the Inspector's **Input Actions** field. Three control modes cycled via Menu button (RMRC → Direct Joint → Hand Guide → RMRC):
   - **RMRC mode** (default): Resolved Motion Rate Control with two sub-modes toggled by X button (left controller):
@@ -276,7 +292,11 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
     - **Rotate**: directly drives wrist joints — right stick Y = wrist_1 (pitch/tilt), right stick X = wrist_2 (roll), left stick X = wrist_3 (yaw/spin). Uses `jointJogSpeed` for responsive 1:1 control.
     - Both use `UR3eKinematics` DLS pseudoinverse. Adaptive damping near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
   - **Direct Joint mode**: A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`.
-  - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop. Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s). Joint bias weights (`[0.3, 0.3, 0.5, 1.0, 1.0, 1.0]`) favour wrist movement over base/shoulder.
+  - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop (EE lock-down still applies if active). Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s). Joint bias weights (`[0.5, 0.5, 0.7, 1.0, 1.0, 1.0]`) softly favour wrist movement over base/shoulder.
+  - **Gripper**: Right index trigger (analog 0–1) controls gripper width. Dead zone (0.05) so resting finger = fully open. Smoothed, publishes `Float32` to `/gripper/command` at 50Hz. Works in all modes simultaneously.
+  - **EE Lock-Down**: Y button (left controller) toggles. When active, angular Jacobian drives tool Z-axis to [0,0,-1] (pointing straight down). Works immediately on toggle — no grip required. 2° dead zone prevents jitter when nearly aligned. Gain 1.5, max 1.0 rad/s, 2× damping on angular solve. Works in RMRC Translate and Hand Guide modes (including when grip is released).
+  - **Collision Protection**: Runs after all velocity computation, before publishing. Table collision: predicts all link positions + gripper tip/mid-gripper (configurable `gripperLength`, default 0.17m) one timestep ahead, scales velocity proportionally if any point would go below `tableHeight + collisionMargin`. Self-collision: checks distances between EE/wrist links (4,5,6) and base/shoulder links (0,1), scales velocity if below `selfCollisionDistance` (default 0.08m).
+  - **Output Smoothing**: All joint velocities pass through an exponential low-pass filter (`outputSmoothTime` default 0.06s) before publishing. Prevents jitter in lock-down mode and smooths Hand Guide/RMRC output. Resets on mode switch to avoid sluggish transitions.
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
   - Publish rate: 50Hz.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
@@ -290,14 +310,15 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
 |---|---|---|---|---|
 | **Menu button** (left) | → Hand Guide | → Direct Joint | → Direct Joint | → RMRC |
 | **X button** (left) | — | Toggle to Rotate | Toggle to Translate | — |
+| **Y button** (left) | Toggle EE lock-down | Toggle EE lock-down | Toggle EE lock-down | Toggle EE lock-down |
 | **A button** (right) | Next joint | — | — | — |
 | **B button** (right) | Previous joint | — | — | — |
 | **Right grip** (right) | — | — | — | Hold to track hand |
+| **Right trigger** (index) | Gripper 0–100% | Gripper 0–100% | Gripper 0–100% | Gripper 0–100% |
 | **Right stick Y** | Jog selected joint | EE forward/back (X) | Wrist 1 (pitch/tilt) | — |
 | **Right stick X** | — | EE left/right (Y) | Wrist 2 (roll) | — |
 | **Left stick Y** | — | EE up/down (Z) | — | — |
 | **Left stick X** | — | EE yaw | Wrist 3 (yaw/spin) | — |
-| **Gripper button** (TBD) | Open/close gripper | Open/close gripper | Open/close gripper | Open/close gripper |
 
 ## Dashboard (E-Stop & Debug Console)
 

@@ -11,10 +11,11 @@ public class RobotHUD : MonoBehaviour
     public Vector3 offset = new Vector3(0.3f, -0.2f, 0f);
     public float followSpeed = 3f;
     public float panelWidth = 2.5f;
-    public float panelHeight = 0.25f;
+    public float panelHeight = 0.32f;
 
     private TextMeshPro titleLabel;
     private TextMeshPro controlsLabel;
+    private TextMeshPro gripperLabel;
     private Transform cam;
     private TMP_FontAsset cachedFont;
 
@@ -62,6 +63,9 @@ public class RobotHUD : MonoBehaviour
         // Controls label (below title)
         controlsLabel = CreateLabel("HUDControls", new Vector3(0f, -0.03f, -0.001f), 0.22f);
         controlsLabel.color = new Color(0.85f, 0.88f, 0.92f);
+
+        // Gripper label (bottom line)
+        gripperLabel = CreateLabel("HUDGripper", new Vector3(0f, -0.09f, -0.001f), 0.2f);
 
         UpdatePosition(true);
     }
@@ -210,5 +214,16 @@ public class RobotHUD : MonoBehaviour
 
             controlsLabel.text = "R-Stick Y: Pitch  |  R-Stick X: Roll  |  L-Stick X: Yaw  |  X: Translate  |  Menu: Joint";
         }
+
+        // Gripper + lock status — shown in all modes
+        float g = controller.GripperValue;
+        int pct = Mathf.RoundToInt(g * 100f);
+        string bar = new string('|', Mathf.RoundToInt(g * 10f)).PadRight(10, '.');
+        string lockIcon = controller.IsEELockedDown ? "  |  LOCK ▼" : "";
+        gripperLabel.text = $"Gripper [{bar}] {pct}%{lockIcon}";
+        Color gripColor = (g < 0.05f) ? new Color(0.5f, 0.8f, 0.5f)
+                         : (g > 0.9f)  ? new Color(1f, 0.4f, 0.3f)
+                         : new Color(1f, 0.85f, 0.4f);
+        gripperLabel.color = controller.IsEELockedDown ? new Color(0.4f, 0.8f, 1f) : gripColor;
     }
 }

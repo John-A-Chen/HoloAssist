@@ -21,7 +21,7 @@ try:
     import rclpy
     from rclpy.node import Node
     from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, qos_profile_sensor_data
-    from std_msgs.msg import Float64MultiArray, Float32MultiArray, Bool, String
+    from std_msgs.msg import Float64MultiArray, Float32MultiArray, Float32, Bool, String
     from sensor_msgs.msg import JointState, Image, CompressedImage, PointCloud2
     from geometry_msgs.msg import PoseStamped, TwistStamped, PointStamped
     from visualization_msgs.msg import Marker
@@ -78,6 +78,8 @@ class DashboardStatus:
     unity_map_loaded: Optional[bool] = None
     # Session metrics from Unity SessionLogger
     session_info: dict = field(default_factory=dict)
+    # Gripper
+    gripper_value: float = 0.0  # 0.0=open, 1.0=closed
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -97,6 +99,7 @@ TOPIC_DEFAULTS = {
     "clicked_point": "/clicked_point",
     "unity_map_loaded": "/unity/map_loaded",
     "velocity_cmd": "/forward_velocity_controller/commands",
+    "gripper_cmd": "/gripper/command",
 }
 
 
@@ -243,6 +246,12 @@ class RosInterface:
             self._session_event_cb, 10,
         )
 
+        # Gripper command (from Unity RobotController)
+        self._node.create_subscription(
+            Float32, TOPIC_DEFAULTS["gripper_cmd"],
+            self._gripper_cmd_cb, qos_profile_sensor_data,
+        )
+
         # Sampling timers for rolling graph data
         self._node.create_timer(0.1, self._sample_velocities)   # 10Hz
         self._node.create_timer(0.5, self._sample_rates)        # 2Hz
@@ -372,6 +381,11 @@ class RosInterface:
             self._add_event(f"[Unity] {evt.get('type', '?')}: {evt.get('detail', '')}")
         except (json.JSONDecodeError, Exception):
             pass
+
+    def _gripper_cmd_cb(self, msg):
+        self._tick_rate("gripper_cmd")
+        with self._lock:
+            self._status.gripper_value = msg.data
 
     def _sample_velocities(self):
         """Downsample joint velocities + latency to 10Hz for rolling graphs."""

@@ -377,6 +377,17 @@ class StatusScreen(QWidget):
             lbl.setStyleSheet(f"color: {TEXT};")
             left.addWidget(lbl)
             self.joint_labels.append(lbl)
+
+        # Gripper status
+        grip_sep = QLabel("─" * 28)
+        grip_sep.setFont(QFont("monospace", 8))
+        grip_sep.setStyleSheet(f"color: {BORDER};")
+        left.addWidget(grip_sep)
+        self.gripper_label = QLabel("Gripper: ---")
+        self.gripper_label.setFont(QFont("monospace", 8))
+        self.gripper_label.setStyleSheet(f"color: {TEXT};")
+        left.addWidget(self.gripper_label)
+
         left.addStretch()
         layout.addLayout(left, 1)
 
@@ -407,6 +418,14 @@ class StatusScreen(QWidget):
                 lbl.setText(f"{name}: {pos_deg:+7.1f}°  v:{vel:+.2f}")
             else:
                 lbl.setText(f"joint_{i}: waiting...")
+
+        # Gripper
+        g = status.gripper_value
+        pct = int(g * 100)
+        bar = "|" * int(g * 10) + "." * (10 - int(g * 10))
+        grip_color = GREEN if g < 0.05 else (RED if g > 0.9 else TEXT)
+        self.gripper_label.setText(f"Gripper [{bar}] {pct}%")
+        self.gripper_label.setStyleSheet(f"color: {grip_color};")
 
         lines = []
         for ts, msg in status.events:

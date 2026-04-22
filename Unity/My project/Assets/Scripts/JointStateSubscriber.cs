@@ -5,6 +5,10 @@ using RosMessageTypes.Sensor;
 
 public class JointStateSubscriber : MonoBehaviour
 {
+    [Header("Gripper")]
+    [Tooltip("RobotController reference for reading gripper trigger value.")]
+    public RobotController controller;
+
     private Dictionary<string, Transform> jointMap = new Dictionary<string, Transform>();
     private Dictionary<string, Quaternion> initialRotations = new Dictionary<string, Quaternion>();
     private Dictionary<string, Vector3> jointAxes = new Dictionary<string, Vector3>();
@@ -19,6 +23,21 @@ public class JointStateSubscriber : MonoBehaviour
         { "wrist_2_joint",       "wrist_2_link" },
         { "wrist_3_joint",       "wrist_3_link" },
     };
+
+    // Gripper joints: Unity name → (axis, mimic multiplier relative to finger_joint)
+    // finger_joint range: -0.558505 (closed) to 0.785398 (open)
+    private static readonly string[] gripperJointNames =
+    {
+        "left_outer_knuckle",   // finger_joint (primary)
+        "left_inner_knuckle",   // mimic × -1
+        "left_inner_finger",    // mimic × 1
+        "right_outer_knuckle",  // mimic × -1
+        "right_inner_knuckle",  // mimic × -1
+        "right_inner_finger",   // mimic × 1
+    };
+    private static readonly float[] gripperMimicMultipliers = { 1f, -1f, 1f, -1f, -1f, 1f };
+    private const float FINGER_JOINT_OPEN = -0.558505f;
+    private const float FINGER_JOINT_CLOSED = 0.785398f;
 
     // Joint limits from URDF (radians)
     private static readonly Dictionary<string, (float lower, float upper)> jointLimits = new Dictionary<string, (float, float)>
@@ -52,6 +71,9 @@ public class JointStateSubscriber : MonoBehaviour
         }
 
         ROSConnection.GetOrCreateInstance().Subscribe<JointStateMsg>("/joint_states", OnJointState);
+
+        if (controller == null)
+            controller = FindObjectOfType<RobotController>();
     }
 
     void OnJointState(JointStateMsg msg)
@@ -76,6 +98,24 @@ public class JointStateSubscriber : MonoBehaviour
                 // Negate angle for ROS (right-hand) -> Unity (left-hand) conversion
                 joint.localRotation = initialRotations[unityName] * Quaternion.AngleAxis(angleDeg, jointAxes[unityName]);
             }
+        }
+    }
+
+    void Update()
+    {
+        if (controller == null) return;
+
+        float gripperValue = controller.GripperValue;
+        float fingerAngle = Mathf.Lerp(FINGER_JOINT_OPEN, FINGER_JOINT_CLOSED, gripperValue);
+
+        for (int i = 0; i < gripperJointNames.Length; i++)
+        {
+            string unityName = gripperJointNames[i];
+            if (!jointMap.TryGetValue(unityName, out Transform joint)) continue;
+
+            float angle = fingerAngle * gripperMimicMultipliers[i];
+            float angleDeg = angle * Mathf.Rad2Deg;
+            joint.localRotation = initialRotations[unityName] * Quaternion.AngleAxis(angleDeg, jointAxes[unityName]);
         }
     }
 }

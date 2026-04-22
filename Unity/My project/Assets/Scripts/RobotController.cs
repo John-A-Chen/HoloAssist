@@ -27,9 +27,37 @@ public class RobotController : MonoBehaviour
     [Tooltip("Maximum Cartesian speed in Hand Guide mode (m/s).")]
     public float maxTrackingSpeed = 0.15f;
 
+    [Header("Gripper")]
+    [Tooltip("Dead zone at trigger rest position. Below this value = fully open.")]
+    public float gripperDeadZone = 0.05f;
+    [Tooltip("Smoothing time for gripper input (seconds).")]
+    public float gripperSmoothTime = 0.08f;
+
+    [Header("Collision Protection")]
+    [Tooltip("Table surface Z height in robot DH frame (Z-up). Default 0 = robot base level.")]
+    public float tableHeight = 0.0f;
+    [Tooltip("Buffer above table height (m). Links are stopped this far above the table.")]
+    public float collisionMargin = 0.02f;
+    [Tooltip("Minimum distance (m) between non-adjacent links for self-collision protection.")]
+    public float selfCollisionDistance = 0.08f;
+    [Tooltip("Gripper length from tool0 to fingertip (m). Used for collision checking.")]
+    public float gripperLength = 0.17f;
+    [Tooltip("Soft zone (m) above the hard boundary where velocity is gradually reduced.")]
+    public float collisionSoftZone = 0.05f;
+
+    [Header("EE Lock-Down")]
+    [Tooltip("Gain for orientation correction when EE lock is active. Higher = snappier.")]
+    public float lockOrientationGain = 2f;
+    [Tooltip("Maximum angular speed (rad/s) for orientation correction.")]
+    public float maxOrientationSpeed = 1.5f;
+    [Tooltip("Orientation error below this angle (deg) is ignored to prevent jitter.")]
+    public float lockDeadZoneDeg = 1f;
+
     [Header("Smoothing")]
     [Tooltip("Input smoothing time constant (seconds). Lower = more responsive, higher = smoother.")]
     public float inputSmoothTime = 0.12f;
+    [Tooltip("Output velocity smoothing time constant (seconds). Smooths final joint velocities before publishing.")]
+    public float outputSmoothTime = 0.06f;
 
     [Header("RMRC")]
     [Tooltip("Damping factor for singularity robustness. Higher = safer near singularities but less precise.")]
@@ -51,6 +79,8 @@ public class RobotController : MonoBehaviour
     public double[] VDesired => vDesired;
     public RMRCSubMode CurrentRMRCSubMode => rmrcSubMode;
     public bool IsHandGuideActive => isGripping;
+    public float GripperValue => smoothedGripper;
+    public bool IsEELockedDown => eeLockedDown;
 
     private ROSConnection ros;
     private int selectedJoint = 0;
@@ -61,6 +91,23 @@ public class RobotController : MonoBehaviour
     private Vector2 smoothedLeft = Vector2.zero;
     private Vector2 smoothedRight = Vector2.zero;
 
+    // Gripper state
+    private float smoothedGripper = 0f;
+
+    // EE Lock-Down state
+    private bool eeLockedDown = false;
+
+    // Collision protection — pre-allocated arrays to avoid GC
+    private double[] linkPositions = new double[21]; // 7 links × 3
+    private double[] predictedPositions = new double[21];
+    private double[] qPredicted = new double[6];
+    private double[] toolZ = new double[3];
+    private double[] predictedToolZ = new double[3];
+    private double[] wDesiredLock = new double[3];
+
+    // Output smoothing
+    private double[] smoothedQDot = new double[6];
+
     // Hand Guide state
     private bool isGripping = false;
     private Vector3 gripStartControllerLocal; // controller pos in robot base local frame at grip start
@@ -68,7 +115,7 @@ public class RobotController : MonoBehaviour
 
     // Joint bias weights for Hand Guide — lower = less movement for that joint
     // Biases toward wrist joints so base/shoulder stay relatively still
-    private static readonly double[] jointBias = { 0.3, 0.3, 0.5, 1.0, 1.0, 1.0 };
+    private static readonly double[] jointBias = { 0.5, 0.5, 0.7, 1.0, 1.0, 1.0 };
 
     // Input actions
     private InputAction leftStickAction;
@@ -79,6 +126,8 @@ public class RobotController : MonoBehaviour
     private InputAction toggleSubModeAction;
     private InputAction gripAction;
     private InputAction controllerPosAction;
+    private InputAction gripperTriggerAction;
+    private InputAction lockDownAction;
 
     // Reusable arrays to avoid GC
     private double[] vDesired = new double[3];
@@ -100,11 +149,13 @@ public class RobotController : MonoBehaviour
     private static readonly double[] jointLimitsUpper = {  6.2832,  6.2832,  3.1416,  6.2832,  6.2832,  6.2832 };
 
     private const string VELOCITY_TOPIC = "/forward_velocity_controller/commands";
+    private const string GRIPPER_TOPIC = "/gripper/command";
 
     void Start()
     {
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Float64MultiArrayMsg>(VELOCITY_TOPIC);
+        ros.RegisterPublisher<Float32Msg>(GRIPPER_TOPIC);
         ros.Subscribe<JointStateMsg>("/joint_states", OnJointState);
 
         SetupInputActions();
@@ -140,6 +191,14 @@ public class RobotController : MonoBehaviour
         // Right controller position in world space
         controllerPosAction = new InputAction("ControllerPos", InputActionType.Value, "<XRController>{RightHand}/devicePosition");
         controllerPosAction.Enable();
+
+        // Right index trigger — analog gripper control
+        gripperTriggerAction = new InputAction("GripperTrigger", InputActionType.Value, "<XRController>{RightHand}/trigger");
+        gripperTriggerAction.Enable();
+
+        // Y button (left controller) — toggle EE lock-down
+        lockDownAction = new InputAction("LockDown", InputActionType.Button, "<XRController>{LeftHand}/secondaryButton");
+        lockDownAction.Enable();
     }
 
     void DisableConflictingXRIActions()
@@ -211,6 +270,8 @@ public class RobotController : MonoBehaviour
         if (publishTimer < 1f / publishRate) return;
         publishTimer = 0f;
 
+        UpdateGripper();
+
         if (mode == ControlMode.RMRC)
             UpdateRMRC();
         else if (mode == ControlMode.DirectJoint)
@@ -236,6 +297,7 @@ public class RobotController : MonoBehaviour
             smoothedLeft = Vector2.zero;
             smoothedRight = Vector2.zero;
             isGripping = false;
+            for (int i = 0; i < 6; i++) smoothedQDot[i] = 0;
             Debug.Log($"[RobotController] Mode: {mode}");
         }
 
@@ -245,6 +307,12 @@ public class RobotController : MonoBehaviour
             smoothedLeft = Vector2.zero;
             smoothedRight = Vector2.zero;
             Debug.Log($"[RobotController] RMRC sub-mode: {rmrcSubMode}");
+        }
+
+        if (lockDownAction != null && lockDownAction.WasPressedThisFrame())
+        {
+            eeLockedDown = !eeLockedDown;
+            Debug.Log($"[RobotController] EE Lock-Down: {(eeLockedDown ? "ON" : "OFF")}");
         }
 
         if (mode == ControlMode.DirectJoint)
@@ -302,27 +370,23 @@ public class RobotController : MonoBehaviour
 
         if (rmrcSubMode == RMRCSubMode.Translate)
         {
-            // Build desired linear velocity in robot base frame
-            // Right stick: X (forward/back), Y (left/right)
-            // Left stick Y: Z (up/down)
             vDesired[0] = smoothedRight.y * linearSpeed;   // vx - forward/back
             vDesired[1] = smoothedRight.x * linearSpeed;   // vy - left/right
             vDesired[2] = smoothedLeft.y * linearSpeed;    // vz - up/down
 
-            // Resolve linear velocity to joint velocities via 3x6 Jacobian pseudoinverse
-            UR3eKinematics.ResolveLinearVelocity(currentPositions, vDesired, qDot, effectiveDamping);
-
-            // Add yaw (rotation about base Z) directly to joint 0 (shoulder_pan)
-            qDot[0] += smoothedLeft.x * angularSpeed;
+            if (eeLockedDown)
+            {
+                ComputeLockAngularVelocity();
+                UR3eKinematics.ResolveFullVelocity(currentPositions, vDesired, wDesiredLock, qDot, effectiveDamping);
+            }
+            else
+            {
+                UR3eKinematics.ResolveLinearVelocity(currentPositions, vDesired, qDot, effectiveDamping);
+                qDot[0] += smoothedLeft.x * angularSpeed;
+            }
         }
         else
         {
-            // Rotate sub-mode: directly drive wrist joints for responsive orientation control
-            // Right stick Y = wrist_1 (joint 3) — pitch/tilt
-            // Right stick X = wrist_2 (joint 4) — roll
-            // Left stick X  = wrist_3 (joint 5) — yaw/spin
-
-            // Clear linear velocity display
             vDesired[0] = 0; vDesired[1] = 0; vDesired[2] = 0;
 
             for (int i = 0; i < 6; i++) qDot[i] = 0;
@@ -332,6 +396,8 @@ public class RobotController : MonoBehaviour
         }
 
         ApplyJointSafety();
+        ApplyCollisionProtection();
+        ApplyOutputSmoothing();
 
         // Publish
         var msg = new Float64MultiArrayMsg();
@@ -352,10 +418,15 @@ public class RobotController : MonoBehaviour
         if (Mathf.Abs(smoothedJointInput) < 0.01f && Mathf.Abs(rightStick.y) < 0.01f)
             smoothedJointInput = 0f;
 
+        for (int i = 0; i < 6; i++) qDot[i] = 0;
+        qDot[selectedJoint] = smoothedJointInput * jointJogSpeed;
+
+        ApplyCollisionProtection();
+        ApplyOutputSmoothing();
+
         var msg = new Float64MultiArrayMsg();
         msg.data = new double[6];
-        msg.data[selectedJoint] = smoothedJointInput * jointJogSpeed;
-
+        Array.Copy(qDot, msg.data, 6);
         ros.Publish(VELOCITY_TOPIC, msg);
     }
 
@@ -392,57 +463,67 @@ public class RobotController : MonoBehaviour
             Debug.Log("[RobotController] HandGuide: RELEASED");
         }
 
-        if (!isGripping)
+        if (isGripping)
+        {
+            Vector3 localDelta = controllerLocalPos - gripStartControllerLocal;
+
+            double targetX = gripStartEEPos[0] - localDelta.z;
+            double targetY = gripStartEEPos[1] + localDelta.x;
+            double targetZ = gripStartEEPos[2] + localDelta.y;
+
+            var currentEE = new double[3];
+            UR3eKinematics.GetPosition(currentPositions, currentEE);
+
+            vDesired[0] = (targetX - currentEE[0]) * positionGain;
+            vDesired[1] = (targetY - currentEE[1]) * positionGain;
+            vDesired[2] = (targetZ - currentEE[2]) * positionGain;
+
+            double speed = System.Math.Sqrt(vDesired[0] * vDesired[0] + vDesired[1] * vDesired[1] + vDesired[2] * vDesired[2]);
+            if (speed > maxTrackingSpeed)
+            {
+                double s = maxTrackingSpeed / speed;
+                vDesired[0] *= s;
+                vDesired[1] *= s;
+                vDesired[2] *= s;
+            }
+
+            double manip = UR3eKinematics.Manipulability(currentPositions);
+            float effectiveDamping = damping;
+            if (manip < singularityThreshold && singularityThreshold > 0)
+            {
+                float ratio = 1f - (float)(manip / singularityThreshold);
+                effectiveDamping = Mathf.Lerp(damping, maxDamping, ratio);
+            }
+
+            if (eeLockedDown)
+            {
+                ComputeLockAngularVelocity();
+                UR3eKinematics.ResolveFullVelocity(currentPositions, vDesired, wDesiredLock, qDot, effectiveDamping);
+            }
+            else
+            {
+                UR3eKinematics.ResolveLinearVelocity(currentPositions, vDesired, qDot, effectiveDamping);
+            }
+
+            for (int i = 0; i < 6; i++)
+                qDot[i] *= jointBias[i];
+        }
+        else if (eeLockedDown)
+        {
+            // Not gripping but locked — hold orientation with zero linear velocity
+            vDesired[0] = 0; vDesired[1] = 0; vDesired[2] = 0;
+            ComputeLockAngularVelocity();
+            UR3eKinematics.ResolveFullVelocity(currentPositions, vDesired, wDesiredLock, qDot, damping);
+        }
+        else
         {
             PublishZero();
             return;
         }
 
-        // Controller delta in robot base local frame (Unity convention: X-right, Y-up, Z-forward)
-        Vector3 localDelta = controllerLocalPos - gripStartControllerLocal;
-
-        // Convert Unity local frame → DH frame (Z-up, X-forward)
-        // Axis mapping verified on Quest 3: up/down correct, forward/back and left/right were inverted
-        double targetX = gripStartEEPos[0] - localDelta.z;
-        double targetY = gripStartEEPos[1] + localDelta.x;
-        double targetZ = gripStartEEPos[2] + localDelta.y;
-
-        // Current EE position from FK
-        var currentEE = new double[3];
-        UR3eKinematics.GetPosition(currentPositions, currentEE);
-
-        // Proportional position control → desired Cartesian velocity
-        vDesired[0] = (targetX - currentEE[0]) * positionGain;
-        vDesired[1] = (targetY - currentEE[1]) * positionGain;
-        vDesired[2] = (targetZ - currentEE[2]) * positionGain;
-
-        // Clamp Cartesian speed
-        double speed = System.Math.Sqrt(vDesired[0] * vDesired[0] + vDesired[1] * vDesired[1] + vDesired[2] * vDesired[2]);
-        if (speed > maxTrackingSpeed)
-        {
-            double s = maxTrackingSpeed / speed;
-            vDesired[0] *= s;
-            vDesired[1] *= s;
-            vDesired[2] *= s;
-        }
-
-        // Adaptive damping near singularities
-        double manip = UR3eKinematics.Manipulability(currentPositions);
-        float effectiveDamping = damping;
-        if (manip < singularityThreshold && singularityThreshold > 0)
-        {
-            float ratio = 1f - (float)(manip / singularityThreshold);
-            effectiveDamping = Mathf.Lerp(damping, maxDamping, ratio);
-        }
-
-        // Resolve to joint velocities via Jacobian pseudoinverse
-        UR3eKinematics.ResolveLinearVelocity(currentPositions, vDesired, qDot, effectiveDamping);
-
-        // Bias toward wrist joints — scale down base/shoulder velocities
-        for (int i = 0; i < 6; i++)
-            qDot[i] *= jointBias[i];
-
         ApplyJointSafety();
+        ApplyCollisionProtection();
+        ApplyOutputSmoothing();
 
         var msg = new Float64MultiArrayMsg();
         msg.data = new double[6];
@@ -450,8 +531,23 @@ public class RobotController : MonoBehaviour
         ros.Publish(VELOCITY_TOPIC, msg);
     }
 
+    void UpdateGripper()
+    {
+        float raw = gripperTriggerAction != null ? gripperTriggerAction.ReadValue<float>() : 0f;
+
+        // Apply dead zone — resting finger = fully open
+        float mapped = (raw <= gripperDeadZone) ? 0f : (raw - gripperDeadZone) / (1f - gripperDeadZone);
+
+        float dt = 1f / publishRate;
+        smoothedGripper = SmoothExp(smoothedGripper, mapped, gripperSmoothTime, dt);
+        if (smoothedGripper < 0.005f && mapped < 0.01f) smoothedGripper = 0f;
+
+        ros.Publish(GRIPPER_TOPIC, new Float32Msg(smoothedGripper));
+    }
+
     void PublishZero()
     {
+        for (int i = 0; i < 6; i++) smoothedQDot[i] = 0;
         var msg = new Float64MultiArrayMsg();
         msg.data = new double[6];
         ros.Publish(VELOCITY_TOPIC, msg);
@@ -478,6 +574,161 @@ public class RobotController : MonoBehaviour
             for (int i = 0; i < 6; i++)
                 qDot[i] *= scale;
         }
+    }
+
+    void ComputeLockAngularVelocity()
+    {
+        UR3eKinematics.GetToolZAxis(currentPositions, toolZ);
+
+        double dot = -toolZ[2]; // dot(toolZ, [0,0,-1])
+        dot = System.Math.Max(-1.0, System.Math.Min(1.0, dot));
+        double angle = System.Math.Acos(dot);
+
+        if (angle < lockDeadZoneDeg * Mathf.Deg2Rad)
+        {
+            wDesiredLock[0] = 0; wDesiredLock[1] = 0; wDesiredLock[2] = 0;
+            return;
+        }
+
+        double cx = -toolZ[1];
+        double cy = toolZ[0];
+        double crossMag = System.Math.Sqrt(cx * cx + cy * cy);
+
+        if (crossMag < 1e-6)
+        {
+            wDesiredLock[0] = 0; wDesiredLock[1] = 0; wDesiredLock[2] = 0;
+            return;
+        }
+
+        cx /= crossMag;
+        cy /= crossMag;
+
+        double errorAboveDeadZone = angle - lockDeadZoneDeg * Mathf.Deg2Rad;
+        double speed = System.Math.Min(errorAboveDeadZone * lockOrientationGain, maxOrientationSpeed);
+
+        wDesiredLock[0] = cx * speed;
+        wDesiredLock[1] = cy * speed;
+        wDesiredLock[2] = 0;
+    }
+
+    void ApplyCollisionProtection()
+    {
+        if (!hasReceivedJointState) return;
+
+        double dt = 1.0 / publishRate;
+        float limit = tableHeight + collisionMargin;
+
+        // Predict next joint positions
+        for (int i = 0; i < 6; i++)
+            qPredicted[i] = currentPositions[i] + qDot[i] * dt;
+
+        // Get current and predicted link positions
+        UR3eKinematics.GetLinkPositions(currentPositions, linkPositions);
+        UR3eKinematics.GetLinkPositions(qPredicted, predictedPositions);
+
+        // Get tool Z axis for gripper tip
+        UR3eKinematics.GetToolZAxis(currentPositions, toolZ);
+        UR3eKinematics.GetToolZAxis(qPredicted, predictedToolZ);
+
+        // --- Table collision: all link Z + gripper tip/mid ---
+        double currentMinZ = double.MaxValue;
+        double predictedMinZ = double.MaxValue;
+        for (int link = 1; link < 7; link++)
+        {
+            double cz = linkPositions[link * 3 + 2];
+            double pz = predictedPositions[link * 3 + 2];
+            if (cz < currentMinZ) currentMinZ = cz;
+            if (pz < predictedMinZ) predictedMinZ = pz;
+        }
+        // Gripper tip and mid-gripper
+        double currentTipZ = linkPositions[20] + toolZ[2] * gripperLength;
+        double predictedTipZ = predictedPositions[20] + predictedToolZ[2] * gripperLength;
+        double currentMidZ = linkPositions[20] + toolZ[2] * gripperLength * 0.5;
+        double predictedMidZ = predictedPositions[20] + predictedToolZ[2] * gripperLength * 0.5;
+        if (currentTipZ < currentMinZ) currentMinZ = currentTipZ;
+        if (predictedTipZ < predictedMinZ) predictedMinZ = predictedTipZ;
+        if (currentMidZ < currentMinZ) currentMinZ = currentMidZ;
+        if (predictedMidZ < predictedMinZ) predictedMinZ = predictedMidZ;
+
+        double distToLimit = currentMinZ - limit;
+
+        if (distToLimit < collisionSoftZone)
+        {
+            // Check if motion is moving toward boundary (getting worse)
+            bool movingToward = predictedMinZ < currentMinZ;
+
+            if (distToLimit <= 0)
+            {
+                // AT or PAST boundary — only allow motion that moves away
+                if (movingToward)
+                    for (int i = 0; i < 6; i++) qDot[i] = 0;
+                // else: moving away, allow it (escape)
+            }
+            else if (movingToward)
+            {
+                // In soft zone, moving toward boundary — gradual slowdown
+                double scale = distToLimit / collisionSoftZone;
+                for (int i = 0; i < 6; i++) qDot[i] *= scale;
+            }
+            // Moving away in soft zone — no intervention
+        }
+
+        // --- Self-collision: EE/wrist vs base/shoulder ---
+        // Recompute predicted after any table scaling
+        for (int i = 0; i < 6; i++)
+            qPredicted[i] = currentPositions[i] + qDot[i] * dt;
+        UR3eKinematics.GetLinkPositions(qPredicted, predictedPositions);
+
+        int[] nearLinks = { 0, 0, 0, 1, 1, 1 };
+        int[] farLinks  = { 4, 5, 6, 4, 5, 6 };
+        double minDist = double.MaxValue;
+        double predictedMinDist = double.MaxValue;
+
+        for (int p = 0; p < nearLinks.Length; p++)
+        {
+            int a = nearLinks[p], b = farLinks[p];
+            double cdist = LinkDistance(linkPositions, a, b);
+            double pdist = LinkDistance(predictedPositions, a, b);
+            if (cdist < minDist) minDist = cdist;
+            if (pdist < predictedMinDist) predictedMinDist = pdist;
+        }
+
+        double selfDistToLimit = minDist - selfCollisionDistance;
+        if (selfDistToLimit < collisionSoftZone)
+        {
+            bool movingCloser = predictedMinDist < minDist;
+
+            if (selfDistToLimit <= 0)
+            {
+                if (movingCloser)
+                    for (int i = 0; i < 6; i++) qDot[i] = 0;
+            }
+            else if (movingCloser)
+            {
+                double scale = selfDistToLimit / collisionSoftZone;
+                for (int i = 0; i < 6; i++) qDot[i] *= scale;
+            }
+        }
+    }
+
+    void ApplyOutputSmoothing()
+    {
+        float dt = 1f / publishRate;
+        float alpha = 1f - Mathf.Exp(-dt / outputSmoothTime);
+        for (int i = 0; i < 6; i++)
+        {
+            smoothedQDot[i] += (qDot[i] - smoothedQDot[i]) * alpha;
+            qDot[i] = smoothedQDot[i];
+        }
+    }
+
+    static double LinkDistance(double[] positions, int linkA, int linkB)
+    {
+        int a = linkA * 3, b = linkB * 3;
+        double dx = positions[a] - positions[b];
+        double dy = positions[a + 1] - positions[b + 1];
+        double dz = positions[a + 2] - positions[b + 2];
+        return System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     void OnDestroy()
@@ -511,6 +762,18 @@ public class RobotController : MonoBehaviour
         {
             controllerPosAction.Disable();
             controllerPosAction.Dispose();
+        }
+
+        if (gripperTriggerAction != null)
+        {
+            gripperTriggerAction.Disable();
+            gripperTriggerAction.Dispose();
+        }
+
+        if (lockDownAction != null)
+        {
+            lockDownAction.Disable();
+            lockDownAction.Dispose();
         }
     }
 }
