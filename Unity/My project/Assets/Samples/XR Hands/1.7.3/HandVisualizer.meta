@@ -1,12 +1,8 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:Unity/My project/Assets/Samples/XR Hands/1.7.3/HandVisualizer.meta
 guid: 91b3d43086a50db15a8b9526eee06765
-========
-guid: adef406e33db67a36a09caabde55c54c
->>>>>>>> origin/nic:Unity/My project/Assets/trolley model.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  userData:
+  assetBundleName:
+  assetBundleVariant:

@@ -1,14 +1,8 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:Unity/My project/Assets/Samples/XR Hands/1.7.3/HandVisualizer/Materials/AxisMesh.asset.meta
 guid: 3f1527385cef24f9ab581b9e266924ba
 NativeFormatImporter:
-========
-guid: 4292b86ddb878171da5c860894f5ff2b
-folderAsset: yes
-DefaultImporter:
->>>>>>>> origin/nic:Unity/My project/Assets/Samples/XR Interaction Toolkit/3.3.0/AR Starter Assets/Prefabs/Temp.meta
   externalObjects: {}
   mainObjectFileID: 0
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  userData:
+  assetBundleName:
+  assetBundleVariant:

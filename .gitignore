@@ -12,8 +12,21 @@ Unity/My project/obj/
 Unity/My project/Builds/
 Unity/My project/UserSettings/
 Unity/My project/.utmp/
+Unity/My project/.plastic/
 Unity/My project/*.sln
 Unity/My project/*.csproj
+Unity/My project/HoloAssist_BackUpThisFolder_ButDontShipItWithYourGame/
+Unity/My project/My project_BurstDebugInformation_DoNotShip/
+
+# Build APK in project root (Unity puts it here on Build And Run)
+Unity/My project/*.apk
+Unity/My project/*.aab
+
+# Unity scene recovery backups
+Unity/My project/Assets/_Recovery/
+
+# Unity XR/Temp duplicate (must be deleted before each Android build)
+Unity/My project/Assets/XR/Temp/
 
 # colcon / ROS
 build/

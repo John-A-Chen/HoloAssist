@@ -8,6 +8,8 @@ Panels:
         - /Marker1
         - /MarkerArray1
         - /TF1
+        - /TF1/Frames1
+        - /TF1/Tree1
       Splitter Ratio: 0.5
     Tree Height: 778
   - Class: rviz_common/Selection
@@ -163,7 +165,7 @@ Visualization Manager:
         Value: /unity_markers
       Value: true
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: MarkerArray
       Namespaces:
         {}
@@ -173,7 +175,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: visualization_marker_array
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
@@ -279,7 +281,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 4.187653064727783
+      Distance: 6.7456955909729
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -294,10 +296,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.03039846196770668
+      Pitch: 0.17039822041988373
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.803544759750366
+      Yaw: 4.503556728363037
     Saved: ~
 Window Geometry:
   Displays:

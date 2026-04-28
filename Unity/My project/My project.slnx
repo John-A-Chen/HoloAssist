@@ -2,6 +2,7 @@
   <Project Path="Unity.Robotics.ROSTCPConnector.Messages.csproj" />
   <Project Path="Unity.Robotics.ROSTCPConnector.csproj" />
   <Project Path="Unity.Robotics.UrdfImporter.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Robotics.UrdfImporter.csproj" />
   <Project Path="Unity.Robotics.ROSTCPConnector.Editor.csproj" />
   <Project Path="Unity.XR.Hands.Samples.VisualizerSample.csproj" />
@@ -14,5 +15,4 @@
   <Project Path="vhacd.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.ARStarterAssets.Editor.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.StarterAssets.Editor.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
 </Solution>

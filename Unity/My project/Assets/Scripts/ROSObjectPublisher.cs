@@ -51,6 +51,7 @@ public class ROSObjectPublisher : MonoBehaviour
 
     private ROSConnection ros;
     private float timer;
+    private GameObject[] axisObjects;
 
     private const string TF_TOPIC = "/tf";
     private const string MARKER_TOPIC = "/unity_markers";
@@ -86,12 +87,28 @@ public class ROSObjectPublisher : MonoBehaviour
         float localLen = axisLength / transform.lossyScale.x;
         float localThick = axisThickness / transform.lossyScale.x;
 
-        CreateAxisCylinder("X_Axis", xMaterial, Vector3.right, localLen, localThick);
-        CreateAxisCylinder("Y_Axis", yMaterial, Vector3.up, localLen, localThick);
-        CreateAxisCylinder("Z_Axis", zMaterial, Vector3.forward, localLen, localThick);
+        axisObjects = new GameObject[3];
+        axisObjects[0] = CreateAxisCylinder("X_Axis", xMaterial, Vector3.right, localLen, localThick);
+        axisObjects[1] = CreateAxisCylinder("Y_Axis", yMaterial, Vector3.up, localLen, localThick);
+        axisObjects[2] = CreateAxisCylinder("Z_Axis", zMaterial, Vector3.forward, localLen, localThick);
     }
 
-    void CreateAxisCylinder(string name, Material mat, Vector3 dir, float len, float thick)
+    public void SetAxesVisible(bool visible)
+    {
+        showPoseAxes = visible;
+        if (axisObjects == null && visible)
+            CreatePoseAxes();
+        if (axisObjects == null) return;
+        foreach (var obj in axisObjects)
+            if (obj != null) obj.SetActive(visible);
+    }
+
+    public void ToggleAxes()
+    {
+        SetAxesVisible(!showPoseAxes);
+    }
+
+    GameObject CreateAxisCylinder(string name, Material mat, Vector3 dir, float len, float thick)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         go.name = name;
@@ -112,6 +129,8 @@ public class ROSObjectPublisher : MonoBehaviour
 
         if (mat != null)
             go.GetComponent<Renderer>().material = mat;
+
+        return go;
     }
 
     void Update()

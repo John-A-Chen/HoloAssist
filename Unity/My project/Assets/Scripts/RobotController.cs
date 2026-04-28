@@ -34,11 +34,17 @@ public class RobotController : MonoBehaviour
     private ROSConnection ros;
     private int selectedJoint = 0;
     private double[] currentPositions = new double[6];
+    public double[] CurrentPositions => currentPositions;
+    public string[] JointNames => jointNames;
     private float publishTimer = 0f;
     private bool hasReceivedJointState = false;
     private float smoothedJointInput = 0f;
     private Vector2 smoothedServoLeft = Vector2.zero;
     private Vector2 smoothedServoRight = Vector2.zero;
+
+    [Header("Visualization")]
+    [Tooltip("Drag JointTFVisualizer to allow toggling TF axes with X button")]
+    public JointTFVisualizer tfVisualizer;
 
     // Input actions
     private InputAction leftStickAction;
@@ -46,6 +52,7 @@ public class RobotController : MonoBehaviour
     private InputAction nextJointAction;
     private InputAction prevJointAction;
     private InputAction toggleModeAction;
+    private InputAction toggleTFAction;
 
     private static readonly string[] jointNames =
     {
@@ -86,6 +93,15 @@ public class RobotController : MonoBehaviour
         nextJointAction = robotMap.FindAction("NextJoint", true);
         prevJointAction = robotMap.FindAction("PrevJoint", true);
         toggleModeAction = robotMap.FindAction("ToggleMode", true);
+
+        // ToggleTF may not exist in the asset — create dynamically bound to X button
+        toggleTFAction = robotMap.FindAction("ToggleTF");
+        if (toggleTFAction == null)
+        {
+            toggleTFAction = new InputAction("ToggleTF", InputActionType.Button,
+                "<XRController>{LeftHand}/primaryButton");
+            toggleTFAction.Enable();
+        }
 
         robotMap.Enable();
     }
@@ -176,6 +192,12 @@ public class RobotController : MonoBehaviour
             Debug.Log($"[RobotController] Mode: {mode}");
         }
 
+        if (toggleTFAction != null && toggleTFAction.WasPressedThisFrame() && tfVisualizer != null)
+        {
+            tfVisualizer.Toggle();
+            Debug.Log($"[RobotController] TF Axes: {(tfVisualizer.showAxes ? "ON" : "OFF")}");
+        }
+
         if (mode == ControlMode.DirectJoint)
         {
             if (nextJointAction != null && nextJointAction.WasPressedThisFrame())
@@ -262,5 +284,8 @@ public class RobotController : MonoBehaviour
             var robotMap = inputActions.FindActionMap("Robot");
             if (robotMap != null) robotMap.Disable();
         }
+
+        if (toggleTFAction != null)
+            toggleTFAction.Disable();
     }
 }

@@ -1,12 +1,8 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:Unity/My project/Assets/Samples/XR Hands/1.7.3.meta
 guid: 92374218cf402a806a129f0b129a251a
-========
-guid: 74feb3a227a1e0fcea9c841aa27a5d46
->>>>>>>> origin/nic:Unity/My project/Assets/_Recovery.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  userData:
+  assetBundleName:
+  assetBundleVariant:
