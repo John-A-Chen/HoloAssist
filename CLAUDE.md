@@ -90,7 +90,8 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ✅ Output velocity smoothing (60ms exponential low-pass) on all joint velocities before publishing. Resets on mode switch.
 - ✅ Dashboard shows gripper status (bar + percentage) on STATUS tab
 - ✅ RobotHUD shows gripper bar + EE lock indicator in all modes
-- ⚠️ **Performance/lag on Quest 3** — noticeable lag during teleoperation testing. Possibly WiFi latency (Quest ↔ laptop ↔ ROS), or GC pressure from FK array allocations at 50Hz. Needs profiling — check WiFi signal strength, try reducing `publishRate`, or pre-allocate arrays in UR3eKinematics to reduce GC.
+- ⚠️ **Performance/lag** — noticeable lag during teleoperation, even on fake hardware (not just Quest 3 WiFi). Gripper lag is partly the ROS round-trip (Unity → ros_tcp_endpoint → controller → `/joint_states` → Unity). Possible fixes: (1) add local gripper preview in `JointStateSubscriber` using `RobotController.GripperValue` for instant visual while still publishing to ROS; (2) reduce GC pressure — pre-allocate arrays in UR3eKinematics; (3) check if ros_tcp_endpoint is the bottleneck.
+- ⬜ **Collision protection calibration** — `ApplyCollisionProtection()` in RobotController.cs already implements table, object, and self-collision checks using Unity transforms (preventive, zero latency). Needs real-hardware calibration: set `tableWorldY` or assign `tableTransform`, tune `collisionMargin`/`collisionSoftZone`, verify self-collision distances. Self-collision already checks distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm) with soft-zone scaling.
 - ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
 
 ## Repository Layout
@@ -190,7 +191,7 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 
 # Terminal 3 — switch to velocity + gripper controllers
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller
+ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller finger_width_trajectory_controller
 ```
 
 Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.100`).
@@ -207,7 +208,7 @@ ros2 launch ur_onrobot_control start_robot.launch.py ur_type:=ur3e onrobot_type:
 
 # Terminal 2 — switch to velocity + gripper controllers (wait for Terminal 1 to finish loading)
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller
+ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller finger_width_trajectory_controller
 
 # Terminal 3 — ROS-TCP bridge
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash

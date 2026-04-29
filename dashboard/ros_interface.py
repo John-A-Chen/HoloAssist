@@ -473,7 +473,7 @@ class RosInterface:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
                  "--activate", "forward_velocity_controller", "finger_width_controller",
-                 "--deactivate", "scaled_joint_trajectory_controller"],
+                 "--deactivate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:

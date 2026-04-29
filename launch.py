@@ -116,7 +116,7 @@ def main():
     switch_cmd = (
         "ros2 control switch_controllers"
         " --activate forward_velocity_controller finger_width_controller"
-        " --deactivate scaled_joint_trajectory_controller"
+        " --deactivate scaled_joint_trajectory_controller finger_width_trajectory_controller"
     )
     switch_proc = subprocess.run(
         ["bash", "-c", f"{SOURCE_CMD} && {switch_cmd}"],
