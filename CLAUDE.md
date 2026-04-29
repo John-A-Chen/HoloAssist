@@ -91,6 +91,7 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ✅ Dashboard shows gripper status (bar + percentage) on STATUS tab
 - ✅ RobotHUD shows gripper bar + EE lock indicator in all modes
 - ⚠️ **Performance/lag** — noticeable lag during teleoperation, even on fake hardware (not just Quest 3 WiFi). Gripper lag is partly the ROS round-trip (Unity → ros_tcp_endpoint → controller → `/joint_states` → Unity). Possible fixes: (1) add local gripper preview in `JointStateSubscriber` using `RobotController.GripperValue` for instant visual while still publishing to ROS; (2) reduce GC pressure — pre-allocate arrays in UR3eKinematics; (3) check if ros_tcp_endpoint is the bottleneck.
+- ⬜ **Tuning needed** — linear movement too fast, wrist rotation (RMRC Rotate sub-mode) too slow. Adjust `linearSpeed` (currently 0.25 m/s — reduce) and `jointJogSpeed` (currently 0.5 rad/s — increase for wrist joints in Rotate mode).
 - ⬜ **Collision protection calibration** — `ApplyCollisionProtection()` in RobotController.cs already implements table, object, and self-collision checks using Unity transforms (preventive, zero latency). Needs real-hardware calibration: set `tableWorldY` or assign `tableTransform`, tune `collisionMargin`/`collisionSoftZone`, verify self-collision distances. Self-collision already checks distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm) with soft-zone scaling.
 - ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
 
