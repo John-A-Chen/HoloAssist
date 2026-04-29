@@ -5,36 +5,66 @@ holoassist_workspace_perception:
 
     use_tag_refinement: true
     tag_family: 36h11
-    tag_ids: [0, 1]
-    tag_frame_names: ["tag36h11:0", "tag36h11:1"]
-    tag_size_m: 0.035
-    tag_timeout_s: 0.5
-    tag_min_separation_m: 0.08
+    # Physical placement:
+    # - tag id 1 = left front corner
+    # - tag id 0 = right front corner
+    # +X in workspace will follow tag1 -> tag0 (left to right on the 700 mm edge).
+    # Tag size includes white border: 150 mm x 150 mm.
+    # Front-edge layout: [150 mm tag] + [400 mm gap] + [150 mm tag] = 700 mm.
+    tag_ids: [1, 0]
+    tag_frame_names: ["tag36h11:1", "tag36h11:0"]
+    tag_size_m: 0.15
+    # Hold last valid tag transform longer to avoid mode flapping/jitter
+    # when detections momentarily drop.
+    tag_timeout_s: 1.5
+    # Tag center-to-center is expected near 0.55 m in this layout.
+    tag_min_separation_m: 0.45
+    # Tags are mounted on the board; snap tag centers onto fitted plane.
+    project_tags_to_plane: true
+    # 0.0 means always project tags onto fitted plane (no distance cap).
+    tag_plane_projection_max_distance_m: 0.0
+    # Single-tag fallback:
+    # - Use in-plane tag local X axis for workspace +X estimate.
+    # - Sign per side keeps +X consistent as left->right (tag1 -> tag0).
+    single_tag_axis_preference: x
+    single_tag_left_axis_sign: 1.0
+    single_tag_right_axis_sign: 1.0
 
-    plane_fit_max_points: 18000
-    # Lower iterations for faster runtime while keeping robust fit.
-    plane_ransac_iterations: 90
+    # Increase sampled points and RANSAC iterations for a steadier plane estimate.
+    plane_fit_max_points: 30000
+    plane_ransac_iterations: 140
     plane_inlier_threshold_m: 0.015
     plane_min_inlier_ratio: 0.35
     plane_min_inliers: 600
-    plane_smoothing_alpha: 0.25
+    # Lower alpha = stronger temporal smoothing (less jiggle, more lag).
+    plane_smoothing_alpha: 0.05
+    # Periodically drop smoothed plane/ROI state so cropping can follow
+    # large bench/camera pose changes without restarting the node.
+    resnap_interval_s: 30.0
+    # Background reset is optional; keep false so object foreground model
+    # remains stable while only the plane/ROI frame re-locks.
+    resnap_clear_background: false
+    resnap_clear_tracks: true
 
-    # Bench dimensions:
-    #   width (x): 0.720 m  -> [-0.360, +0.360]
-    #   depth (y): 0.700 m  -> [-0.350, +0.350]
-    roi_x_min: -0.36
-    roi_x_max: 0.36
-    roi_y_min: -0.35
-    roi_y_max: 0.35
+    # Bench dimensions (board):
+    #   width (x): 0.700 m  -> [-0.350, +0.350]
+    #   depth (y): 0.500 m  -> [-0.250, +0.250]
+    # Front edge is the tagged wide side; +X aligns tag1->tag0.
+    roi_x_min: -0.35
+    roi_x_max: 0.35
+    roi_y_min: -0.25
+    roi_y_max: 0.25
     roi_z_min: 0.005
     roi_z_max: 0.35
-    # When 2 tags are visible, derive active ROI from the tag corner pair.
-    # This lets you place tags on arbitrary bench corners and resize/re-anchor
-    # the culling box without editing fixed ROI values each run.
+    # Dynamic ROI from detected tags; board span stays 700x500.
     roi_from_tags_enabled: true
-    roi_from_tags_margin_m: 0.03
-    roi_from_tags_min_span_m: 0.12
-    roi_from_tags_smoothing_alpha: 0.35
+    # Keep margin small so visible plane tracks real board size closely.
+    roi_from_tags_margin_m: 0.005
+    # If detected tag span collapses, fall back to configured board span.
+    roi_from_tags_min_span_m: 0.50
+    roi_from_tags_smoothing_alpha: 0.45
+    # Treat tag line as front edge of board and extend crop inward.
+    roi_from_tags_use_front_edge: true
     # Hard reject anything under the fitted bench plane.
     enforce_above_plane_cull: true
     # Set >0.0 only if depth noise causes clipping at the plane boundary.
@@ -45,17 +75,17 @@ holoassist_workspace_perception:
     # - Robot centered in width: 0.300 m from either side edge => x ~= 0.0.
     # - Robot 0.095 m from back edge to base perimeter:
     #     center offset from back edge = 0.095 + 0.064 = 0.159 m
-    #     center y from bench center = 0.350 - 0.159 = +0.191 m
+    #     center y from bench center = 0.250 - 0.159 = +0.091 m
     # If your y-axis points the opposite direction, flip pedestal_center_y sign.
-    pedestal_exclusion_enabled: true
+    pedestal_exclusion_enabled: false
     pedestal_center_x: 0.00
-    pedestal_center_y: 0.191
+    pedestal_center_y: 0.091
     pedestal_radius: 0.09
     pedestal_z_min: -0.05
     pedestal_z_max: 0.50
 
-    # Reduce point budget for faster clustering and RViz interactivity.
-    max_points_per_frame: 22000
+    # Slightly higher point budget for steadier geometry while keeping interactivity.
+    max_points_per_frame: 30000
 
     background_voxel_size: 0.015
     background_increment: 0.04
@@ -72,6 +102,9 @@ holoassist_workspace_perception:
     object_candidate_max_extent_y_m: 0.18
     object_candidate_max_extent_z_m: 0.18
     object_candidate_max_volume_m3: 0.0035
+    # Do not mark clusters that stay too close to the bench plane.
+    # Points still remain visible in cropped/foreground clouds.
+    object_candidate_min_top_height_m: 0.025
     persistence_distance_m: 0.09
     persistence_gain: 0.25
     persistence_decay: 0.85
@@ -109,6 +142,7 @@ holoassist_workspace_perception:
     publish_tf: true
 
     marker_alpha: 0.35
+    marker_lifetime_s: 0.8
     plane_marker_thickness_m: 0.006
     axes_marker_length_m: 0.12
     axes_marker_radius_m: 0.01

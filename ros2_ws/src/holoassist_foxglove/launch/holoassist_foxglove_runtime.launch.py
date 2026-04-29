@@ -42,12 +42,17 @@ def generate_launch_description() -> LaunchDescription:
     enable_depth_tracker_arg = DeclareLaunchArgument(
         "enable_depth_tracker",
         default_value="false",
-        description="Start depth tracker node (without RViz by default).",
+        description="Start depth tracker node.",
     )
     enable_depth_camera_arg = DeclareLaunchArgument(
         "enable_depth_camera",
         default_value="false",
         description="Start RealSense camera launch along with depth tracker.",
+    )
+    enable_depth_rviz_arg = DeclareLaunchArgument(
+        "enable_depth_rviz",
+        default_value="true",
+        description="Start RViz2 alongside depth tracker visualization launch.",
     )
     enable_workspace_perception_arg = DeclareLaunchArgument(
         "enable_workspace_perception",
@@ -185,7 +190,7 @@ def generate_launch_description() -> LaunchDescription:
             "start_tracker": "true",
             "start_workspace_perception": LaunchConfiguration("enable_workspace_perception"),
             "workspace_params_file": LaunchConfiguration("workspace_perception_params_file"),
-            "start_rviz": "false",
+            "start_rviz": LaunchConfiguration("enable_depth_rviz"),
         }.items(),
     )
 
@@ -240,6 +245,7 @@ def generate_launch_description() -> LaunchDescription:
             eef_frame_arg,
             enable_depth_tracker_arg,
             enable_depth_camera_arg,
+            enable_depth_rviz_arg,
             enable_workspace_perception_arg,
             workspace_perception_params_file_arg,
             enable_pointcloud_obstacle_arg,

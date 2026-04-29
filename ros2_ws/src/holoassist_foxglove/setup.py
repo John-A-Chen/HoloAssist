@@ -28,6 +28,7 @@ setup(
         "console_scripts": [
             "runtime_observability_node = holoassist_foxglove.runtime_observability_node:main",
             "obstacle_to_object_pose_adapter = holoassist_foxglove.obstacle_to_object_pose_adapter:main",
+            "apriltag_image_overlay_node = holoassist_foxglove.apriltag_image_overlay_node:main",
         ],
     },
 )

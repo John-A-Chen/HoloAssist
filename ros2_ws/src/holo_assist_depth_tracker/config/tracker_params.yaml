@@ -6,9 +6,9 @@ holo_assist_depth_tracker:
     min_depth_m: 0.3
     # Camera-space depth gate for raw depth tracker cloud.
     # Tighten this to remove distant clutter; adjust per rig.
-    max_depth_m: 2.0
-    min_area_px: 100
-    morph_kernel: 3
+    max_depth_m: 1.4
+    min_area_px: 350
+    morph_kernel: 5
 
     publish_pointcloud: true
     pointcloud_topic: /holo_assist_depth_tracker/pointcloud
@@ -40,5 +40,25 @@ holo_assist_depth_tracker:
     centroid_smoothing_alpha: 0.25
     centroid_force_update_px: 80.0
     centroid_reset_after_missed_frames: 8
-    max_debug_boxes: 6
-    max_component_area_ratio: 0.30
+    max_debug_boxes: 2
+    max_component_area_ratio: 0.18
+
+    enable_apriltag_overlay: true
+    apriltag_topic: /detections
+    apriltag_timeout_s: 1.0
+
+    # Workspace overlay on RGB debug image, inferred from two front-corner tags.
+    enable_workspace_overlay: true
+    workspace_left_tag_id: 1
+    workspace_right_tag_id: 0
+    workspace_width_m: 0.70
+    workspace_depth_m: 0.50
+    workspace_tag_size_m: 0.15
+    # If outline appears twisted, tune per-tag corner mapping:
+    #  - index_offset: 0..3
+    #  - reverse: true/false
+    workspace_left_corner_index_offset: 0
+    workspace_right_corner_index_offset: 0
+    workspace_left_corner_reverse: false
+    workspace_right_corner_reverse: false
+    workspace_outline_max_reproj_error_px: 24.0

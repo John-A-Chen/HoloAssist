@@ -69,6 +69,29 @@ def _quat_from_rotation_matrix(rotation: np.ndarray) -> Tuple[float, float, floa
     return qx / norm, qy / norm, qz / norm, qw / norm
 
 
+def _rotation_matrix_from_quaternion(
+    x: float, y: float, z: float, w: float
+) -> np.ndarray:
+    """Return 3x3 rotation matrix from quaternion (x,y,z,w)."""
+    xx = x * x
+    yy = y * y
+    zz = z * z
+    xy = x * y
+    xz = x * z
+    yz = y * z
+    wx = w * x
+    wy = w * y
+    wz = w * z
+    return np.array(
+        [
+            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
+            [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
+            [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
+        ],
+        dtype=np.float32,
+    )
+
+
 class WorkspacePerceptionNode(Node):
     """Bench-plane workspace reasoning adapter from depth pointcloud to object pose topics."""
 
@@ -161,6 +184,11 @@ class WorkspacePerceptionNode(Node):
         self._last_origin_c: Optional[np.ndarray] = None
         self._last_basis_c: Optional[np.ndarray] = None  # columns=[x,y,z] in cloud frame
         self._last_plane: Optional[Tuple[float, float, float, float]] = None
+        self._last_pair_x_axis_c: Optional[np.ndarray] = None
+        self._last_pair_front_center_x: Optional[float] = None
+        self._last_pair_front_edge_y: Optional[float] = None
+        self._last_pair_interior_sign: Optional[float] = None
+        self._last_pair_tag_points_w: Dict[str, np.ndarray] = {}
 
         self._background_scores: Dict[Tuple[int, int, int], float] = {}
         self._last_object_center_w: Optional[np.ndarray] = None
@@ -176,6 +204,11 @@ class WorkspacePerceptionNode(Node):
         self._active_roi_x_max = self.roi_x_max
         self._active_roi_y_min = self.roi_y_min
         self._active_roi_y_max = self.roi_y_max
+        self._background_warmup_until_frame = self.background_warmup_frames
+        self._last_resnap_time = self.get_clock().now()
+        self._last_resnap_frame = 0
+        self._resnap_count = 0
+        self._last_resnap_reason = "startup"
 
         self.get_logger().info(
             "Workspace perception started. input=%s workspace_frame=%s tags=%s"
@@ -183,6 +216,16 @@ class WorkspacePerceptionNode(Node):
                 self.input_pointcloud_topic,
                 self.workspace_frame,
                 self.tag_frames,
+            )
+        )
+        self.get_logger().info(
+            "workspace roi dynamic=%s front_edge_anchor=%s resnap_interval_s=%.1f clear_background=%s clear_tracks=%s"
+            % (
+                self.roi_from_tags_enabled,
+                self.roi_from_tags_use_front_edge,
+                self.resnap_interval_s,
+                self.resnap_clear_background,
+                self.resnap_clear_tracks,
             )
         )
 
@@ -199,6 +242,11 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("tag_size_m", 0.035)
         self.declare_parameter("tag_timeout_s", 0.5)
         self.declare_parameter("tag_min_separation_m", 0.08)
+        self.declare_parameter("project_tags_to_plane", True)
+        self.declare_parameter("tag_plane_projection_max_distance_m", 0.30)
+        self.declare_parameter("single_tag_axis_preference", "x")
+        self.declare_parameter("single_tag_left_axis_sign", 1.0)
+        self.declare_parameter("single_tag_right_axis_sign", 1.0)
 
         self.declare_parameter("plane_fit_max_points", 18000)
         self.declare_parameter("plane_ransac_iterations", 140)
@@ -206,6 +254,9 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("plane_min_inlier_ratio", 0.35)
         self.declare_parameter("plane_min_inliers", 600)
         self.declare_parameter("plane_smoothing_alpha", 0.25)
+        self.declare_parameter("resnap_interval_s", 30.0)
+        self.declare_parameter("resnap_clear_background", False)
+        self.declare_parameter("resnap_clear_tracks", True)
 
         self.declare_parameter("roi_x_min", -0.45)
         self.declare_parameter("roi_x_max", 0.45)
@@ -217,6 +268,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("roi_from_tags_margin_m", 0.03)
         self.declare_parameter("roi_from_tags_min_span_m", 0.12)
         self.declare_parameter("roi_from_tags_smoothing_alpha", 0.35)
+        self.declare_parameter("roi_from_tags_use_front_edge", False)
         self.declare_parameter("enforce_above_plane_cull", True)
         self.declare_parameter("below_plane_tolerance_m", 0.0)
 
@@ -244,6 +296,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("object_candidate_max_extent_y_m", 0.18)
         self.declare_parameter("object_candidate_max_extent_z_m", 0.18)
         self.declare_parameter("object_candidate_max_volume_m3", 0.0035)
+        self.declare_parameter("object_candidate_min_top_height_m", 0.025)
         self.declare_parameter("persistence_distance_m", 0.09)
         self.declare_parameter("persistence_gain", 0.25)
         self.declare_parameter("persistence_decay", 0.85)
@@ -309,6 +362,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("publish_tf", True)
 
         self.declare_parameter("marker_alpha", 0.35)
+        self.declare_parameter("marker_lifetime_s", 0.8)
         self.declare_parameter("plane_marker_thickness_m", 0.006)
         self.declare_parameter("axes_marker_length_m", 0.12)
         self.declare_parameter("axes_marker_radius_m", 0.01)
@@ -336,6 +390,21 @@ class WorkspacePerceptionNode(Node):
         self.tag_min_separation_m = float(
             self.get_parameter("tag_min_separation_m").value
         )
+        self.project_tags_to_plane = bool(
+            self.get_parameter("project_tags_to_plane").value
+        )
+        self.tag_plane_projection_max_distance_m = float(
+            self.get_parameter("tag_plane_projection_max_distance_m").value
+        )
+        self.single_tag_axis_preference = str(
+            self.get_parameter("single_tag_axis_preference").value
+        ).strip().lower()
+        self.single_tag_left_axis_sign = float(
+            self.get_parameter("single_tag_left_axis_sign").value
+        )
+        self.single_tag_right_axis_sign = float(
+            self.get_parameter("single_tag_right_axis_sign").value
+        )
 
         self.plane_fit_max_points = int(
             self.get_parameter("plane_fit_max_points").value
@@ -353,6 +422,11 @@ class WorkspacePerceptionNode(Node):
         self.plane_smoothing_alpha = float(
             self.get_parameter("plane_smoothing_alpha").value
         )
+        self.resnap_interval_s = float(self.get_parameter("resnap_interval_s").value)
+        self.resnap_clear_background = bool(
+            self.get_parameter("resnap_clear_background").value
+        )
+        self.resnap_clear_tracks = bool(self.get_parameter("resnap_clear_tracks").value)
 
         self.roi_x_min = float(self.get_parameter("roi_x_min").value)
         self.roi_x_max = float(self.get_parameter("roi_x_max").value)
@@ -371,6 +445,9 @@ class WorkspacePerceptionNode(Node):
         )
         self.roi_from_tags_smoothing_alpha = float(
             self.get_parameter("roi_from_tags_smoothing_alpha").value
+        )
+        self.roi_from_tags_use_front_edge = bool(
+            self.get_parameter("roi_from_tags_use_front_edge").value
         )
         self.enforce_above_plane_cull = bool(
             self.get_parameter("enforce_above_plane_cull").value
@@ -424,6 +501,9 @@ class WorkspacePerceptionNode(Node):
         )
         self.object_candidate_max_volume_m3 = float(
             self.get_parameter("object_candidate_max_volume_m3").value
+        )
+        self.object_candidate_min_top_height_m = float(
+            self.get_parameter("object_candidate_min_top_height_m").value
         )
         self.persistence_distance_m = float(
             self.get_parameter("persistence_distance_m").value
@@ -489,6 +569,7 @@ class WorkspacePerceptionNode(Node):
         self.publish_tf = bool(self.get_parameter("publish_tf").value)
 
         self.marker_alpha = float(self.get_parameter("marker_alpha").value)
+        self.marker_lifetime_s = float(self.get_parameter("marker_lifetime_s").value)
         self.plane_marker_thickness_m = float(
             self.get_parameter("plane_marker_thickness_m").value
         )
@@ -531,6 +612,7 @@ class WorkspacePerceptionNode(Node):
         self.plane_min_inlier_ratio = min(max(self.plane_min_inlier_ratio, 0.05), 0.99)
         self.plane_min_inliers = max(100, self.plane_min_inliers)
         self.plane_smoothing_alpha = min(max(self.plane_smoothing_alpha, 0.0), 1.0)
+        self.resnap_interval_s = max(0.0, self.resnap_interval_s)
 
         self.background_voxel_size = max(0.005, self.background_voxel_size)
         self.background_increment = min(max(self.background_increment, 0.001), 1.0)
@@ -553,9 +635,13 @@ class WorkspacePerceptionNode(Node):
             self.object_marker_min_extent_m, self.object_candidate_max_extent_z_m
         )
         self.object_candidate_max_volume_m3 = max(1e-5, self.object_candidate_max_volume_m3)
+        self.object_candidate_min_top_height_m = max(
+            0.0, self.object_candidate_min_top_height_m
+        )
         self.object_marker_max_extent_m = max(
             self.object_marker_min_extent_m, self.object_marker_max_extent_m
         )
+        self.marker_lifetime_s = min(max(self.marker_lifetime_s, 0.0), 30.0)
         self.centroid_min_closer_m = max(0.0, self.centroid_min_closer_m)
         self.centroid_smoothing_alpha = min(max(self.centroid_smoothing_alpha, 0.0), 1.0)
         self.max_tracked_objects = max(1, self.max_tracked_objects)
@@ -566,14 +652,28 @@ class WorkspacePerceptionNode(Node):
 
         self.max_points_per_frame = max(500, self.max_points_per_frame)
         self.tag_size_m = max(0.01, self.tag_size_m)
+        self.tag_plane_projection_max_distance_m = max(
+            0.0, self.tag_plane_projection_max_distance_m
+        )
+        if self.single_tag_axis_preference not in ("x", "y"):
+            self.single_tag_axis_preference = "x"
+        self.single_tag_left_axis_sign = (
+            1.0 if self.single_tag_left_axis_sign >= 0.0 else -1.0
+        )
+        self.single_tag_right_axis_sign = (
+            1.0 if self.single_tag_right_axis_sign >= 0.0 else -1.0
+        )
 
     def _on_pointcloud(self, msg: PointCloud2) -> None:
         self._frame_count += 1
+        self._maybe_periodic_resnap(msg.header.frame_id, msg.header.stamp)
 
         xyz_all = self._extract_xyz(msg)
         if xyz_all is None or xyz_all.shape[0] < self.plane_min_inliers:
             self._tracks.clear()
             self._last_primary_track_id = None
+            if self.publish_debug_markers:
+                self._publish_workspace_markers_delete(msg.header.stamp)
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
@@ -593,6 +693,8 @@ class WorkspacePerceptionNode(Node):
         if plane_fit is None:
             self._tracks.clear()
             self._last_primary_track_id = None
+            if self.publish_debug_markers:
+                self._publish_workspace_markers_delete(msg.header.stamp)
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
@@ -604,20 +706,41 @@ class WorkspacePerceptionNode(Node):
 
         normal, d, inlier_mask, inlier_ratio, inlier_count, plane_origin = plane_fit
 
-        tag_points_c = self._lookup_tag_points(msg.header.frame_id)
+        tag_observations = self._lookup_tag_observations(msg.header.frame_id)
+        tag_points_c_raw = {frame: value[0] for frame, value in tag_observations.items()}
+        tag_points_c, tag_plane_projection_error_m, tag_projected_count = (
+            self._project_tag_points_to_plane(
+                tag_points_c=tag_points_c_raw,
+                plane_normal=normal,
+                plane_d=d,
+            )
+        )
+        projected_tag_observations: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+        for frame, (raw_point, rotation_c_t) in tag_observations.items():
+            projected_point = tag_points_c.get(frame, raw_point)
+            projected_tag_observations[frame] = (projected_point, rotation_c_t)
         basis = self._compute_workspace_basis(
             plane_normal=normal,
             plane_origin=plane_origin,
             tag_points_c=tag_points_c,
+            tag_observations=projected_tag_observations,
         )
         if basis is None:
             self._tracks.clear()
             self._last_primary_track_id = None
+            if self.publish_debug_markers:
+                self._publish_workspace_markers_delete(msg.header.stamp)
             self._publish_workspace_state(
                 mode="invalid",
                 level=DiagnosticStatus.ERROR,
                 message="could not derive workspace basis",
-                extra={"inliers": inlier_count, "inlier_ratio": round(inlier_ratio, 3)},
+                extra={
+                    "inliers": inlier_count,
+                    "inlier_ratio": round(inlier_ratio, 3),
+                    "tags_used": int(len(tag_points_c)),
+                    "tags_projected": int(tag_projected_count),
+                    "tag_plane_proj_err_m": round(tag_plane_projection_error_m, 4),
+                },
             )
             self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
             return
@@ -707,11 +830,7 @@ class WorkspacePerceptionNode(Node):
             self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
             self._publish_workspace_state(
                 mode=mode,
-                level=(
-                    DiagnosticStatus.OK
-                    if mode == "plane_plus_tags"
-                    else DiagnosticStatus.WARN
-                ),
+                level=self._workspace_mode_level(mode),
                 message="workspace updated; no object cluster selected",
                 extra={
                     "inliers": inlier_count,
@@ -726,6 +845,8 @@ class WorkspacePerceptionNode(Node):
                     "roi_y_max": round(self._active_roi_y_max, 3),
                     "culled_below_plane": culled_below_plane,
                     "tags_used": int(len(tag_points_c)),
+                    "tags_projected": int(tag_projected_count),
+                    "tag_plane_proj_err_m": round(tag_plane_projection_error_m, 4),
                 },
             )
             self._publish_object_metrics(
@@ -791,11 +912,7 @@ class WorkspacePerceptionNode(Node):
 
         self._publish_workspace_state(
             mode=mode,
-            level=(
-                DiagnosticStatus.OK
-                if mode == "plane_plus_tags"
-                else DiagnosticStatus.WARN
-            ),
+            level=self._workspace_mode_level(mode),
             message="workspace and object updated",
             extra={
                 "inliers": inlier_count,
@@ -815,6 +932,8 @@ class WorkspacePerceptionNode(Node):
                 "centroid_updated": centroid_updated,
                 "centroid_closer_delta_m": round(closer_delta, 4),
                 "tags_used": int(len(tag_points_c)),
+                "tags_projected": int(tag_projected_count),
+                "tag_plane_proj_err_m": round(tag_plane_projection_error_m, 4),
             },
         )
         self._publish_object_metrics(
@@ -823,6 +942,57 @@ class WorkspacePerceptionNode(Node):
             selected_points=int(selected_points),
             center_w=center_w,
             persistence=self._object_persistence_score,
+        )
+
+    def _maybe_periodic_resnap(self, frame_id: str, stamp) -> None:
+        if self.resnap_interval_s <= 0.0:
+            return
+
+        now = self.get_clock().now()
+        elapsed_s = (now - self._last_resnap_time).nanoseconds / 1e9
+        if elapsed_s < self.resnap_interval_s:
+            return
+
+        self._reset_workspace_state(frame_id, stamp, reason="periodic_timer")
+        self._last_resnap_time = now
+
+    def _reset_workspace_state(self, frame_id: str, stamp, reason: str) -> None:
+        self._last_origin_c = None
+        self._last_basis_c = None
+        self._last_plane = None
+
+        self._active_roi_x_min = self.roi_x_min
+        self._active_roi_x_max = self.roi_x_max
+        self._active_roi_y_min = self.roi_y_min
+        self._active_roi_y_max = self.roi_y_max
+
+        if self.resnap_clear_background:
+            self._background_scores.clear()
+            self._background_warmup_until_frame = (
+                self._frame_count + self.background_warmup_frames
+            )
+
+        if self.resnap_clear_tracks:
+            self._tracks.clear()
+            self._last_primary_track_id = None
+            self._last_published_center_w = None
+            self._last_published_center_c = None
+            self._last_published_extent_w = None
+            self._object_persistence_score = 0.0
+            if self._last_marker_ids:
+                self._publish_object_delete(frame_id, stamp)
+
+        self._resnap_count += 1
+        self._last_resnap_frame = self._frame_count
+        self._last_resnap_reason = reason
+        self.get_logger().info(
+            "workspace re-snap #%d reason=%s clear_background=%s clear_tracks=%s"
+            % (
+                self._resnap_count,
+                reason,
+                self.resnap_clear_background,
+                self.resnap_clear_tracks,
+            )
         )
 
     def _extract_xyz(self, msg: PointCloud2) -> Optional[np.ndarray]:
@@ -942,10 +1112,12 @@ class WorkspacePerceptionNode(Node):
 
         return normal, d, full_inlier_mask, full_ratio, full_inliers, plane_origin
 
-    def _lookup_tag_points(self, cloud_frame: str) -> Dict[str, np.ndarray]:
-        tag_points: Dict[str, np.ndarray] = {}
-        if not self.use_tag_refinement or len(self.tag_frames) < 2:
-            return tag_points
+    def _lookup_tag_observations(
+        self, cloud_frame: str
+    ) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        observations: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+        if not self.use_tag_refinement or len(self.tag_frames) < 1:
+            return observations
 
         now = self.get_clock().now()
         for frame in self.tag_frames:
@@ -955,24 +1127,69 @@ class WorkspacePerceptionNode(Node):
                 continue
 
             stamp = rclpy.time.Time.from_msg(tf_msg.header.stamp)
-            age_s = (now - stamp).nanoseconds / 1e9
-            if age_s < 0.0:
-                age_s = abs(age_s)
-            if age_s > self.tag_timeout_s:
-                continue
+            # Some TF publishers can emit tag transforms with a zero stamp
+            # (timeless/static semantics). Accept those instead of rejecting
+            # them as infinitely stale.
+            if stamp.nanoseconds != 0:
+                age_s = (now - stamp).nanoseconds / 1e9
+                if age_s < 0.0:
+                    age_s = abs(age_s)
+                if age_s > self.tag_timeout_s:
+                    continue
 
             translation = tf_msg.transform.translation
-            tag_points[frame] = np.array(
+            rotation = tf_msg.transform.rotation
+            point_c = np.array(
                 [translation.x, translation.y, translation.z], dtype=np.float32
             )
+            rot_c_t = _rotation_matrix_from_quaternion(
+                float(rotation.x),
+                float(rotation.y),
+                float(rotation.z),
+                float(rotation.w),
+            )
+            observations[frame] = (point_c, rot_c_t)
 
-        return tag_points
+        return observations
+
+    def _project_tag_points_to_plane(
+        self,
+        tag_points_c: Dict[str, np.ndarray],
+        plane_normal: np.ndarray,
+        plane_d: float,
+    ) -> Tuple[Dict[str, np.ndarray], float, int]:
+        if not tag_points_c:
+            return {}, 0.0, 0
+        if not self.project_tags_to_plane:
+            return tag_points_c, 0.0, 0
+
+        projected: Dict[str, np.ndarray] = {}
+        sum_abs_distance = 0.0
+        projected_count = 0
+        max_distance = self.tag_plane_projection_max_distance_m
+
+        for frame, point in tag_points_c.items():
+            signed_distance = float(np.dot(point, plane_normal) + plane_d)
+            if max_distance > 0.0 and abs(signed_distance) > max_distance:
+                projected[frame] = point
+                continue
+            projected[frame] = (point - signed_distance * plane_normal).astype(
+                np.float32
+            )
+            projected_count += 1
+            sum_abs_distance += abs(signed_distance)
+
+        mean_abs_distance = (
+            sum_abs_distance / float(projected_count) if projected_count > 0 else 0.0
+        )
+        return projected, mean_abs_distance, projected_count
 
     def _compute_workspace_basis(
         self,
         plane_normal: np.ndarray,
         plane_origin: np.ndarray,
         tag_points_c: Dict[str, np.ndarray],
+        tag_observations: Dict[str, Tuple[np.ndarray, np.ndarray]],
     ) -> Optional[Tuple[np.ndarray, str]]:
         z_axis = _normalize(plane_normal)
         if z_axis is None:
@@ -990,6 +1207,52 @@ class WorkspacePerceptionNode(Node):
                     x_axis = _normalize(tag_vec_proj)
                     if x_axis is not None:
                         mode = "plane_plus_tags"
+                        self._last_pair_x_axis_c = x_axis.copy()
+
+        if x_axis is None and tag_observations:
+            if self._last_pair_x_axis_c is not None:
+                x_from_pair = _normalize(
+                    self._last_pair_x_axis_c
+                    - np.dot(self._last_pair_x_axis_c, z_axis) * z_axis
+                )
+                if x_from_pair is not None:
+                    x_axis = x_from_pair
+                    mode = "plane_plus_single_tag_locked"
+
+            observed_frames = [frame for frame in self.tag_frames if frame in tag_observations]
+            if observed_frames and x_axis is None:
+                frame = observed_frames[0]
+                _, rot_c_t = tag_observations[frame]
+
+                axis_x = rot_c_t[:, 0]
+                axis_y = rot_c_t[:, 1]
+                axis_x_proj = _normalize(axis_x - np.dot(axis_x, z_axis) * z_axis)
+                axis_y_proj = _normalize(axis_y - np.dot(axis_y, z_axis) * z_axis)
+
+                preferred = (
+                    axis_x_proj
+                    if self.single_tag_axis_preference == "x"
+                    else axis_y_proj
+                )
+                fallback = axis_y_proj if preferred is axis_x_proj else axis_x_proj
+                x_axis = preferred if preferred is not None else fallback
+
+                if x_axis is not None:
+                    if frame == self.tag_frames[0]:
+                        side_sign = self.single_tag_left_axis_sign
+                    elif len(self.tag_frames) >= 2 and frame == self.tag_frames[1]:
+                        side_sign = self.single_tag_right_axis_sign
+                    else:
+                        side_sign = 1.0
+                    if side_sign < 0.0:
+                        x_axis = -x_axis
+
+                    if self._last_basis_c is not None:
+                        prev_x = self._last_basis_c[:, 0]
+                        if float(np.dot(x_axis, prev_x)) < 0.0:
+                            x_axis = -x_axis
+
+                    mode = "plane_plus_single_tag"
 
         if x_axis is None:
             camera_x = np.array([1.0, 0.0, 0.0], dtype=np.float32)
@@ -1072,46 +1335,100 @@ class WorkspacePerceptionNode(Node):
         target_y_max = self.roi_y_max
         roi_source = "configured"
 
-        if self.roi_from_tags_enabled and len(tag_points_c) >= 2:
-            tag_points_w: List[np.ndarray] = []
+        if self.roi_from_tags_enabled and len(tag_points_c) >= 1:
+            ordered_points_w: List[Tuple[str, np.ndarray]] = []
             for frame in self.tag_frames:
                 if frame not in tag_points_c:
                     continue
                 point_w = self._to_workspace(
                     tag_points_c[frame].reshape(1, 3), origin_c, basis_c
                 )[0]
-                tag_points_w.append(point_w)
+                ordered_points_w.append((frame, point_w))
 
-            if len(tag_points_w) >= 2:
-                tag_arr = np.asarray(tag_points_w, dtype=np.float32)
-                tx_min = float(np.min(tag_arr[:, 0])) - self.roi_from_tags_margin_m
-                tx_max = float(np.max(tag_arr[:, 0])) + self.roi_from_tags_margin_m
-                ty_min = float(np.min(tag_arr[:, 1])) - self.roi_from_tags_margin_m
-                ty_max = float(np.max(tag_arr[:, 1])) + self.roi_from_tags_margin_m
-
+            if ordered_points_w:
+                tag_arr = np.asarray([item[1] for item in ordered_points_w], dtype=np.float32)
                 cfg_span_x = max(0.02, self.roi_x_max - self.roi_x_min)
                 cfg_span_y = max(0.02, self.roi_y_max - self.roi_y_min)
-                span_x = tx_max - tx_min
-                span_y = ty_max - ty_min
+                half_tag = 0.5 * max(0.01, self.tag_size_m)
+                half_x = 0.5 * cfg_span_x
 
-                cx = 0.5 * (tx_min + tx_max)
-                cy = 0.5 * (ty_min + ty_max)
-                if span_x < self.roi_from_tags_min_span_m:
-                    half_x = 0.5 * cfg_span_x
-                    tx_min = cx - half_x
-                    tx_max = cx + half_x
-                if span_y < self.roi_from_tags_min_span_m:
+                if len(ordered_points_w) >= 2:
+                    front_min_x = float(np.min(tag_arr[:, 0])) - half_tag
+                    front_max_x = float(np.max(tag_arr[:, 0])) + half_tag
+                    front_center_x = 0.5 * (front_min_x + front_max_x)
+                    roi_source = "tag_front_pair"
+                    self._last_pair_front_center_x = front_center_x
+                    self._last_pair_tag_points_w = {
+                        frame: point.copy() for frame, point in ordered_points_w
+                    }
+                else:
+                    frame, only_point = ordered_points_w[0]
+                    if (
+                        frame in self._last_pair_tag_points_w
+                        and self._last_pair_front_center_x is not None
+                    ):
+                        prev_tag = self._last_pair_tag_points_w[frame]
+                        delta = only_point - prev_tag
+                        front_center_x = self._last_pair_front_center_x + float(delta[0])
+                        roi_source = "tag_single_locked"
+                    else:
+                        center_offset_x = max(0.0, half_x - half_tag)
+                        if frame == self.tag_frames[0]:
+                            front_center_x = float(only_point[0]) + center_offset_x
+                            roi_source = "tag_single_left"
+                        elif len(self.tag_frames) >= 2 and frame == self.tag_frames[1]:
+                            front_center_x = float(only_point[0]) - center_offset_x
+                            roi_source = "tag_single_right"
+                        else:
+                            front_center_x = float(only_point[0])
+                            roi_source = "tag_single_unknown"
+
+                tx_min = front_center_x - half_x
+                tx_max = front_center_x + half_x
+
+                if self.roi_from_tags_use_front_edge:
+                    tag_mid_y = float(np.mean(tag_arr[:, 1]))
+                    if (
+                        len(ordered_points_w) == 1
+                        and frame in self._last_pair_tag_points_w
+                        and self._last_pair_front_edge_y is not None
+                        and self._last_pair_interior_sign is not None
+                    ):
+                        prev_tag = self._last_pair_tag_points_w[frame]
+                        delta = only_point - prev_tag
+                        interior_sign = self._last_pair_interior_sign
+                        front_edge_y = self._last_pair_front_edge_y + float(delta[1])
+                        back_edge_y = front_edge_y + interior_sign * cfg_span_y
+                        roi_source = "tag_single_locked_front_edge"
+                    else:
+                        camera_w = self._to_workspace(
+                            np.zeros((1, 3), dtype=np.float32), origin_c, basis_c
+                        )[0]
+                        # Camera-side of the tag line is treated as workspace front.
+                        interior_sign = -1.0 if camera_w[1] >= tag_mid_y else 1.0
+                        front_edge_y = tag_mid_y - interior_sign * half_tag
+                        back_edge_y = front_edge_y + interior_sign * cfg_span_y
+
+                    if len(ordered_points_w) >= 2:
+                        self._last_pair_front_edge_y = float(front_edge_y)
+                        self._last_pair_interior_sign = float(interior_sign)
+
+                    ty_min = min(front_edge_y, back_edge_y) - self.roi_from_tags_margin_m
+                    ty_max = max(front_edge_y, back_edge_y) + self.roi_from_tags_margin_m
+                    roi_source = f"{roi_source}_front_edge"
+                else:
+                    tag_center_y = float(np.mean(tag_arr[:, 1]))
                     half_y = 0.5 * cfg_span_y
-                    ty_min = cy - half_y
-                    ty_max = cy + half_y
+                    ty_min = tag_center_y - half_y - self.roi_from_tags_margin_m
+                    ty_max = tag_center_y + half_y + self.roi_from_tags_margin_m
+                    roi_source = f"{roi_source}_centered"
 
                 target_x_min = tx_min
                 target_x_max = tx_max
                 target_y_min = ty_min
                 target_y_max = ty_max
-                roi_source = "tag_corners"
 
-        alpha = self.roi_from_tags_smoothing_alpha if roi_source == "tag_corners" else 1.0
+        alpha = self.roi_from_tags_smoothing_alpha if roi_source.startswith("tag_") else 1.0
         if alpha > 0.0:
             self._active_roi_x_min = (1.0 - alpha) * self._active_roi_x_min + alpha * target_x_min
             self._active_roi_x_max = (1.0 - alpha) * self._active_roi_x_max + alpha * target_x_max
@@ -1126,6 +1443,11 @@ class WorkspacePerceptionNode(Node):
             self._active_roi_y_max = self.roi_y_max
 
         return roi_source
+
+    def _workspace_mode_level(self, mode: str) -> int:
+        if mode == "plane_plus_tags" or mode.startswith("plane_plus_single_tag"):
+            return DiagnosticStatus.OK
+        return DiagnosticStatus.WARN
 
     def _workspace_roi_mask(self, points_w: np.ndarray) -> np.ndarray:
         mask = (
@@ -1185,7 +1507,7 @@ class WorkspacePerceptionNode(Node):
                 else:
                     self._background_scores[key] = decayed
 
-        if self._frame_count <= self.background_warmup_frames:
+        if self._frame_count <= self._background_warmup_until_frame:
             return (
                 np.empty((0, 3), dtype=np.float32),
                 np.empty((0, 3), dtype=np.float32),
@@ -1258,6 +1580,12 @@ class WorkspacePerceptionNode(Node):
             center = 0.5 * (mins + maxs)
             extent = np.maximum(maxs - mins, self.object_marker_min_extent_m)
             volume = float(extent[0] * extent[1] * extent[2])
+
+            # Keep near-plane speckle in clouds, but do not let it qualify as an
+            # object marker candidate unless the cluster rises above threshold.
+            top_height_m = float(maxs[2])
+            if top_height_m < self.object_candidate_min_top_height_m:
+                continue
 
             # Reject human/background-scale clusters so we keep gripper-sized objects.
             if (
@@ -1480,6 +1808,41 @@ class WorkspacePerceptionNode(Node):
             cloud.data = points.astype(np.float32, copy=False).tobytes()
         pub.publish(cloud)
 
+    def _apply_marker_lifetime(self, marker: Marker) -> None:
+        if self.marker_lifetime_s <= 0.0:
+            return
+        sec = int(self.marker_lifetime_s)
+        nanosec = int((self.marker_lifetime_s - float(sec)) * 1e9)
+        marker.lifetime.sec = max(0, sec)
+        marker.lifetime.nanosec = max(0, min(999999999, nanosec))
+
+    def _publish_workspace_markers_delete(self, stamp) -> None:
+        plane = Marker()
+        plane.header.frame_id = self.workspace_frame
+        plane.header.stamp = stamp
+        plane.ns = "holoassist_bench_plane"
+        plane.id = 0
+        plane.action = Marker.DELETE
+        self.plane_marker_pub.publish(plane)
+
+        for marker_id in (0, 1):
+            tags = Marker()
+            tags.header.frame_id = self.workspace_frame
+            tags.header.stamp = stamp
+            tags.ns = "holoassist_workspace_tags"
+            tags.id = marker_id
+            tags.action = Marker.DELETE
+            self.tag_marker_pub.publish(tags)
+
+        for idx in range(3):
+            axis = Marker()
+            axis.header.frame_id = self.workspace_frame
+            axis.header.stamp = stamp
+            axis.ns = "holoassist_workspace_axes"
+            axis.id = idx
+            axis.action = Marker.DELETE
+            self.axes_marker_pub.publish(axis)
+
     def _publish_plane_marker(self, stamp) -> None:
         marker = Marker()
         marker.header.frame_id = self.workspace_frame
@@ -1499,6 +1862,7 @@ class WorkspacePerceptionNode(Node):
         marker.color.g = 0.4
         marker.color.b = 1.0
         marker.color.a = float(np.clip(self.marker_alpha, 0.05, 1.0))
+        self._apply_marker_lifetime(marker)
         self.plane_marker_pub.publish(marker)
 
     def _publish_tag_markers(
@@ -1513,26 +1877,32 @@ class WorkspacePerceptionNode(Node):
         marker.header.stamp = stamp
         marker.ns = "holoassist_workspace_tags"
         marker.id = 0
-        marker.type = Marker.SPHERE_LIST
+        marker.type = Marker.CUBE_LIST
         marker.action = Marker.ADD
         marker.pose.orientation.w = 1.0
-        marker.scale.x = 0.03
-        marker.scale.y = 0.03
-        marker.scale.z = 0.03
         nominal_tag_size = max(0.01, self.tag_size_m)
         marker.scale.x = nominal_tag_size
         marker.scale.y = nominal_tag_size
-        marker.scale.z = nominal_tag_size
+        marker.scale.z = max(0.002, 0.05 * nominal_tag_size)
         marker.color.r = 1.0
         marker.color.g = 0.9
         marker.color.b = 0.2
         marker.color.a = 0.9
+        self._apply_marker_lifetime(marker)
+        ordered_tag_points_w: List[np.ndarray] = []
+        # Keep tag visuals slightly above the bench plane for readability.
+        tag_visual_lift_m = max(
+            0.001,
+            float(self.plane_marker_thickness_m) + 0.5 * float(marker.scale.z),
+        )
 
         if tag_points_c:
             for frame in self.tag_frames:
                 if frame not in tag_points_c:
                     continue
                 point_w = self._to_workspace(tag_points_c[frame].reshape(1, 3), origin_c, basis_c)[0]
+                point_w[2] = tag_visual_lift_m
+                ordered_tag_points_w.append(point_w)
                 pt = Point()
                 pt.x = float(point_w[0])
                 pt.y = float(point_w[1])
@@ -1542,6 +1912,36 @@ class WorkspacePerceptionNode(Node):
             marker.action = Marker.DELETE
 
         self.tag_marker_pub.publish(marker)
+
+        front_edge = Marker()
+        front_edge.header.frame_id = self.workspace_frame
+        front_edge.header.stamp = stamp
+        front_edge.ns = "holoassist_workspace_tags"
+        front_edge.id = 1
+        front_edge.type = Marker.LINE_STRIP
+        front_edge.action = Marker.ADD
+        front_edge.pose.orientation.w = 1.0
+        front_edge.scale.x = max(0.002, 0.10 * nominal_tag_size)
+        front_edge.color.r = 1.0
+        front_edge.color.g = 0.6
+        front_edge.color.b = 0.1
+        front_edge.color.a = 0.95
+        self._apply_marker_lifetime(front_edge)
+
+        if len(ordered_tag_points_w) >= 2:
+            p0 = Point()
+            p0.x = float(ordered_tag_points_w[0][0])
+            p0.y = float(ordered_tag_points_w[0][1])
+            p0.z = float(ordered_tag_points_w[0][2])
+            p1 = Point()
+            p1.x = float(ordered_tag_points_w[1][0])
+            p1.y = float(ordered_tag_points_w[1][1])
+            p1.z = float(ordered_tag_points_w[1][2])
+            front_edge.points = [p0, p1]
+        else:
+            front_edge.action = Marker.DELETE
+
+        self.tag_marker_pub.publish(front_edge)
 
     def _publish_axes_markers(self, stamp) -> None:
         colors = [
@@ -1571,6 +1971,7 @@ class WorkspacePerceptionNode(Node):
             marker.color.g = color[1]
             marker.color.b = color[2]
             marker.color.a = 0.95
+            self._apply_marker_lifetime(marker)
             p0 = Point()
             p0.x = 0.0
             p0.y = 0.0
@@ -1711,6 +2112,16 @@ class WorkspacePerceptionNode(Node):
             KeyValue(key="mode", value=mode),
             KeyValue(key="workspace_frame", value=self.workspace_frame),
             KeyValue(key="tag_frames", value=",".join(self.tag_frames)),
+            KeyValue(key="resnap_count", value=str(int(self._resnap_count))),
+            KeyValue(
+                key="resnap_interval_s",
+                value=str(float(self.resnap_interval_s)),
+            ),
+            KeyValue(
+                key="frames_since_resnap",
+                value=str(int(max(0, self._frame_count - self._last_resnap_frame))),
+            ),
+            KeyValue(key="last_resnap_reason", value=self._last_resnap_reason),
         ]
         if extra:
             for k, v in extra.items():

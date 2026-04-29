@@ -17,6 +17,7 @@
   <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>cv_bridge</depend>
+  <depend>apriltag_msgs</depend>
 
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

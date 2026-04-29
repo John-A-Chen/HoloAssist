@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -46,10 +46,15 @@ def generate_launch_description() -> LaunchDescription:
                 [FindPackageShare("realsense2_camera"), "launch", "rs_launch.py"]
             )
         ),
-        launch_arguments={
+    )
+
+    scoped_rs_launch = GroupAction(
+        scoped=True,
+        forwarding=False,
+        launch_configurations={
             "camera_name": LaunchConfiguration("camera_name"),
-            "enable_depth": "true",
             "enable_color": LaunchConfiguration("enable_color"),
+            "enable_depth": "true",
             "enable_infra": "false",
             "enable_infra1": "false",
             "enable_infra2": "false",
@@ -59,7 +64,8 @@ def generate_launch_description() -> LaunchDescription:
             "align_depth.enable": LaunchConfiguration("align_depth"),
             "depth_module.depth_profile": LaunchConfiguration("depth_profile"),
             "rgb_camera.color_profile": LaunchConfiguration("color_profile"),
-        }.items(),
+        },
+        actions=[rs_launch],
     )
 
     return LaunchDescription([
@@ -68,5 +74,5 @@ def generate_launch_description() -> LaunchDescription:
         color_profile_arg,
         enable_color_arg,
         align_depth_arg,
-        rs_launch,
+        scoped_rs_launch,
     ])

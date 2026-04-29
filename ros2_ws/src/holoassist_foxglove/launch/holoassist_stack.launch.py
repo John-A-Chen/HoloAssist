@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Dict
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -36,6 +41,7 @@ def _profile_defaults(profile: str) -> Dict[str, bool]:
             "enable_workspace_perception": True,
             "enable_depth_tracker": True,
             "enable_depth_camera": True,
+            "enable_depth_rviz": True,
             "enable_pointcloud_obstacle": True,
             "enable_unity_endpoint": True,
             "enable_unity_bringup": True,
@@ -56,6 +62,7 @@ def _profile_defaults(profile: str) -> Dict[str, bool]:
         "enable_workspace_perception": False,
         "enable_depth_tracker": False,
         "enable_depth_camera": False,
+        "enable_depth_rviz": True,
         "enable_pointcloud_obstacle": False,
         "enable_unity_endpoint": False,
         "enable_unity_bringup": False,
@@ -114,6 +121,7 @@ def _setup(context):
             "eef_frame": eef_frame,
             "enable_depth_tracker": str(resolved["enable_depth_tracker"]).lower(),
             "enable_depth_camera": str(resolved["enable_depth_camera"]).lower(),
+            "enable_depth_rviz": str(resolved["enable_depth_rviz"]).lower(),
             "enable_workspace_perception": str(resolved["enable_workspace_perception"]).lower(),
             "workspace_perception_params_file": workspace_perception_params_file,
             "enable_pointcloud_obstacle": str(resolved["enable_pointcloud_obstacle"]).lower(),
@@ -134,7 +142,7 @@ def _setup(context):
             msg=(
                 "[holoassist_stack] profile=%s observability=%s unity_bringup=%s "
                 "unity_endpoint=%s depth_tracker=%s depth_camera=%s pointcloud_obstacle=%s "
-                "apriltag_tracking=%s workspace_perception=%s object_pose_adapter=%s"
+                "depth_rviz=%s apriltag_tracking=%s workspace_perception=%s object_pose_adapter=%s"
             )
             % (
                 profile,
@@ -144,6 +152,7 @@ def _setup(context):
                 resolved["enable_depth_tracker"],
                 resolved["enable_depth_camera"],
                 resolved["enable_pointcloud_obstacle"],
+                resolved["enable_depth_rviz"],
                 resolved["enable_apriltag_tracking"],
                 resolved["enable_workspace_perception"],
                 resolved["enable_object_pose_adapter"],
@@ -213,6 +222,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("enable_workspace_perception", default_value="auto"),
             DeclareLaunchArgument("enable_depth_tracker", default_value="auto"),
             DeclareLaunchArgument("enable_depth_camera", default_value="auto"),
+            DeclareLaunchArgument("enable_depth_rviz", default_value="auto"),
             DeclareLaunchArgument("enable_pointcloud_obstacle", default_value="auto"),
             DeclareLaunchArgument("enable_unity_endpoint", default_value="auto"),
             DeclareLaunchArgument("enable_unity_bringup", default_value="auto"),

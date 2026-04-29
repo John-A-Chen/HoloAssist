@@ -16,7 +16,16 @@ from rclpy.qos import (
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import CameraInfo, Image, PointCloud2, PointField
 from std_msgs.msg import Float32MultiArray
+from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker
+
+try:
+    from apriltag_msgs.msg import AprilTagDetectionArray
+
+    HAVE_APRILTAG_MSGS = True
+except Exception:
+    AprilTagDetectionArray = None
+    HAVE_APRILTAG_MSGS = False
 
 SENTINEL_BBOX = [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
 
@@ -49,6 +58,7 @@ class DepthTrackerNode(Node):
         self.declare_parameter("use_rgb_debug_image", True)
         self.declare_parameter("rgb_topic", "/camera/camera/color/image_raw")
         self.declare_parameter("rgb_topic_fallback", "/camera/color/image_raw")
+        self.declare_parameter("rgb_camera_info_topic", "/camera/camera/color/camera_info")
         self.declare_parameter("rgb_timeout_s", 0.6)
         self.declare_parameter("object_pose_topic", "/holoassist/perception/object_pose")
         self.declare_parameter("object_pose_timeout_s", 0.8)
@@ -59,6 +69,25 @@ class DepthTrackerNode(Node):
         self.declare_parameter("centroid_reset_after_missed_frames", 8)
         self.declare_parameter("max_debug_boxes", 6)
         self.declare_parameter("max_component_area_ratio", 0.30)
+        self.declare_parameter("enable_apriltag_overlay", True)
+        self.declare_parameter("apriltag_topic", "/detections")
+        self.declare_parameter("apriltag_timeout_s", 1.0)
+        self.declare_parameter("enable_workspace_overlay", True)
+        self.declare_parameter("workspace_frame", "workspace_frame")
+        self.declare_parameter("workspace_roi_x_min", -0.35)
+        self.declare_parameter("workspace_roi_x_max", 0.35)
+        self.declare_parameter("workspace_roi_y_min", -0.25)
+        self.declare_parameter("workspace_roi_y_max", 0.25)
+        self.declare_parameter("workspace_left_tag_id", 1)
+        self.declare_parameter("workspace_right_tag_id", 0)
+        self.declare_parameter("workspace_width_m", 0.70)
+        self.declare_parameter("workspace_depth_m", 0.50)
+        self.declare_parameter("workspace_tag_size_m", 0.15)
+        self.declare_parameter("workspace_left_corner_index_offset", 0)
+        self.declare_parameter("workspace_right_corner_index_offset", 0)
+        self.declare_parameter("workspace_left_corner_reverse", False)
+        self.declare_parameter("workspace_right_corner_reverse", False)
+        self.declare_parameter("workspace_outline_max_reproj_error_px", 24.0)
 
         self.depth_topic = str(self.get_parameter("depth_topic").value)
         self.camera_info_topic = str(self.get_parameter("camera_info_topic").value)
@@ -86,6 +115,9 @@ class DepthTrackerNode(Node):
         self.rgb_topic_fallback = str(
             self.get_parameter("rgb_topic_fallback").value
         )
+        self.rgb_camera_info_topic = str(
+            self.get_parameter("rgb_camera_info_topic").value
+        )
         self.rgb_timeout_s = float(self.get_parameter("rgb_timeout_s").value)
         self.object_pose_topic = str(self.get_parameter("object_pose_topic").value)
         self.object_pose_timeout_s = float(
@@ -109,6 +141,55 @@ class DepthTrackerNode(Node):
         self.max_debug_boxes = int(self.get_parameter("max_debug_boxes").value)
         self.max_component_area_ratio = float(
             self.get_parameter("max_component_area_ratio").value
+        )
+        self.enable_apriltag_overlay = bool(
+            self.get_parameter("enable_apriltag_overlay").value
+        )
+        self.apriltag_topic = str(self.get_parameter("apriltag_topic").value)
+        self.apriltag_timeout_s = float(
+            self.get_parameter("apriltag_timeout_s").value
+        )
+        self.enable_workspace_overlay = bool(
+            self.get_parameter("enable_workspace_overlay").value
+        )
+        self.workspace_frame = str(self.get_parameter("workspace_frame").value)
+        self.workspace_roi_x_min = float(
+            self.get_parameter("workspace_roi_x_min").value
+        )
+        self.workspace_roi_x_max = float(
+            self.get_parameter("workspace_roi_x_max").value
+        )
+        self.workspace_roi_y_min = float(
+            self.get_parameter("workspace_roi_y_min").value
+        )
+        self.workspace_roi_y_max = float(
+            self.get_parameter("workspace_roi_y_max").value
+        )
+        self.workspace_left_tag_id = int(
+            self.get_parameter("workspace_left_tag_id").value
+        )
+        self.workspace_right_tag_id = int(
+            self.get_parameter("workspace_right_tag_id").value
+        )
+        self.workspace_width_m = float(self.get_parameter("workspace_width_m").value)
+        self.workspace_depth_m = float(self.get_parameter("workspace_depth_m").value)
+        self.workspace_tag_size_m = float(
+            self.get_parameter("workspace_tag_size_m").value
+        )
+        self.workspace_left_corner_index_offset = int(
+            self.get_parameter("workspace_left_corner_index_offset").value
+        )
+        self.workspace_right_corner_index_offset = int(
+            self.get_parameter("workspace_right_corner_index_offset").value
+        )
+        self.workspace_left_corner_reverse = bool(
+            self.get_parameter("workspace_left_corner_reverse").value
+        )
+        self.workspace_right_corner_reverse = bool(
+            self.get_parameter("workspace_right_corner_reverse").value
+        )
+        self.workspace_outline_max_reproj_error_px = float(
+            self.get_parameter("workspace_outline_max_reproj_error_px").value
         )
 
         if self.max_depth_m <= self.min_depth_m:
@@ -178,17 +259,46 @@ class DepthTrackerNode(Node):
         if self.max_debug_boxes < 1:
             self.get_logger().warn("max_debug_boxes must be >= 1. Using 6.")
             self.max_debug_boxes = 6
+        if self.apriltag_timeout_s <= 0.0:
+            self.get_logger().warn(
+                "apriltag_timeout_s must be > 0. Using apriltag_timeout_s=1.0."
+            )
+            self.apriltag_timeout_s = 1.0
+        if self.workspace_roi_x_max <= self.workspace_roi_x_min:
+            self.get_logger().warn(
+                "workspace_roi_x_max must be > workspace_roi_x_min. Using [-0.35, 0.35]."
+            )
+            self.workspace_roi_x_min = -0.35
+            self.workspace_roi_x_max = 0.35
+        if self.workspace_roi_y_max <= self.workspace_roi_y_min:
+            self.get_logger().warn(
+                "workspace_roi_y_max must be > workspace_roi_y_min. Using [-0.25, 0.25]."
+            )
+            self.workspace_roi_y_min = -0.25
+            self.workspace_roi_y_max = 0.25
+        self.workspace_width_m = max(0.10, self.workspace_width_m)
+        self.workspace_depth_m = max(0.10, self.workspace_depth_m)
+        self.workspace_tag_size_m = max(0.02, self.workspace_tag_size_m)
+        self.workspace_outline_max_reproj_error_px = max(
+            1.0, self.workspace_outline_max_reproj_error_px
+        )
         self.max_component_area_ratio = min(
             max(self.max_component_area_ratio, 0.02), 1.0
         )
 
         self.bridge = CvBridge()
         self.latest_camera_info: Optional[CameraInfo] = None
+        self.latest_rgb_camera_info: Optional[CameraInfo] = None
         self.latest_rgb_bgr: Optional[np.ndarray] = None
         self.latest_rgb_stamp: Optional[rclpy.time.Time] = None
         self.latest_rgb_source_topic = ""
         self.latest_object_pose: Optional[PoseStamped] = None
         self.latest_object_pose_stamp: Optional[rclpy.time.Time] = None
+        self.latest_apriltag_detections = []
+        self.latest_apriltag_stamp: Optional[rclpy.time.Time] = None
+        self.latest_apriltag_image_size: Optional[tuple[int, int]] = None
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         self._last_debug_image_is_rgb = False
         self.depth_ema: Optional[np.ndarray] = None
         self.frame_count = 0
@@ -236,21 +346,35 @@ class DepthTrackerNode(Node):
             self.object_pose_callback,
             qos_profile_sensor_data,
         )
+        self.apriltag_sub = None
+        if self.enable_apriltag_overlay:
+            if HAVE_APRILTAG_MSGS and AprilTagDetectionArray is not None:
+                self.apriltag_sub = self.create_subscription(
+                    AprilTagDetectionArray,
+                    self.apriltag_topic,
+                    self.apriltag_callback,
+                    10,
+                )
+            else:
+                self.get_logger().warn(
+                    "enable_apriltag_overlay=true but apriltag_msgs is unavailable. "
+                    "Install apriltag_ros/apriltag_msgs or disable overlay."
+                )
 
+        reliable_pub_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
         self.debug_image_pub = self.create_publisher(
             Image,
             "/holo_assist_depth_tracker/debug_image",
-            qos_profile_sensor_data,
+            reliable_pub_qos,
         )
         self.bbox_pub = self.create_publisher(
             Float32MultiArray,
             "/holo_assist_depth_tracker/bbox",
             10,
-        )
-        reliable_pub_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=10,
         )
         self.pointcloud_pub = None
         if self.publish_pointcloud:
@@ -301,6 +425,10 @@ class DepthTrackerNode(Node):
             f"object_pose_topic={self.object_pose_topic}"
         )
         self.get_logger().info(
+            f"AprilTag overlay={'on' if self.enable_apriltag_overlay else 'off'} "
+            f"topic={self.apriltag_topic} timeout={self.apriltag_timeout_s:.2f}s"
+        )
+        self.get_logger().info(
             f"Centroid stabilization closer_only={self.centroid_update_closer_only} "
             f"min_closer={self.centroid_min_closer_m:.3f}m alpha={self.centroid_smoothing_alpha:.2f} "
             f"force_px={self.centroid_force_update_px:.1f}"
@@ -339,6 +467,20 @@ class DepthTrackerNode(Node):
         except Exception:
             stamp = self.get_clock().now()
         self.latest_object_pose_stamp = stamp
+
+    def apriltag_callback(self, msg) -> None:
+        self.latest_apriltag_detections = list(msg.detections)
+        try:
+            stamp = rclpy.time.Time.from_msg(msg.header.stamp)
+            if stamp.nanoseconds == 0:
+                stamp = self.get_clock().now()
+        except Exception:
+            stamp = self.get_clock().now()
+        self.latest_apriltag_stamp = stamp
+
+        if self.latest_rgb_bgr is not None:
+            h, w = self.latest_rgb_bgr.shape[:2]
+            self.latest_apriltag_image_size = (int(w), int(h))
 
     def depth_callback(self, msg: Image) -> None:
         self.frame_count += 1
@@ -567,6 +709,8 @@ class DepthTrackerNode(Node):
                 2,
                 cv2.LINE_AA,
             )
+
+        self._draw_apriltag_overlay(debug_bgr)
 
         debug_msg = self.bridge.cv2_to_imgmsg(debug_bgr, encoding="bgr8")
         debug_msg.header = msg.header
@@ -900,6 +1044,211 @@ class DepthTrackerNode(Node):
         if image.shape[0] != height or image.shape[1] != width:
             image = cv2.resize(image, (width, height), interpolation=cv2.INTER_LINEAR)
         return image.copy()
+
+    def _draw_apriltag_overlay(self, image_bgr: np.ndarray) -> None:
+        if not self.enable_apriltag_overlay:
+            return
+        if self.latest_apriltag_stamp is None:
+            return
+        if not self.latest_apriltag_detections:
+            return
+
+        age_s = (self.get_clock().now() - self.latest_apriltag_stamp).nanoseconds / 1e9
+        if age_s > self.apriltag_timeout_s:
+            return
+
+        out_h, out_w = image_bgr.shape[:2]
+        src_w, src_h = out_w, out_h
+        if self.latest_apriltag_image_size is not None:
+            src_w = max(1, int(self.latest_apriltag_image_size[0]))
+            src_h = max(1, int(self.latest_apriltag_image_size[1]))
+        sx = float(out_w) / float(src_w)
+        sy = float(out_h) / float(src_h)
+
+        line_color = (0, 255, 255)
+        arrow_color = (255, 255, 0)
+        line_thickness = 2
+
+        for det in self.latest_apriltag_detections:
+            corners = []
+            for p in det.corners:
+                x = int(round(float(p.x) * sx))
+                y = int(round(float(p.y) * sy))
+                corners.append((x, y))
+
+            if len(corners) == 4:
+                for i in range(4):
+                    cv2.line(
+                        image_bgr,
+                        corners[i],
+                        corners[(i + 1) % 4],
+                        line_color,
+                        line_thickness,
+                        cv2.LINE_AA,
+                    )
+                cv2.arrowedLine(
+                    image_bgr,
+                    corners[0],
+                    corners[1],
+                    arrow_color,
+                    line_thickness,
+                    cv2.LINE_AA,
+                    tipLength=0.25,
+                )
+
+            cx = int(round(float(det.centre.x) * sx))
+            cy = int(round(float(det.centre.y) * sy))
+            cv2.circle(image_bgr, (cx, cy), 4, line_color, -1, cv2.LINE_AA)
+            cv2.putText(
+                image_bgr,
+                f"id={int(det.id)}",
+                (cx + 6, max(18, cy - 6)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.50,
+                line_color,
+                2,
+                cv2.LINE_AA,
+            )
+
+        self._draw_workspace_outline_from_tags(
+            image_bgr=image_bgr,
+            sx=sx,
+            sy=sy,
+            base_line_thickness=line_thickness,
+        )
+
+        cv2.putText(
+            image_bgr,
+            f"tags={len(self.latest_apriltag_detections)} age={age_s:.2f}s",
+            (12, out_h - 14),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.50,
+            line_color,
+            2,
+            cv2.LINE_AA,
+        )
+
+    def _find_tag_detection(self, tag_id: int):
+        for det in self.latest_apriltag_detections:
+            if int(det.id) == int(tag_id):
+                return det
+        return None
+
+    def _scaled_tag_corners(
+        self, det, sx: float, sy: float
+    ) -> Optional[np.ndarray]:
+        if len(det.corners) != 4:
+            return None
+        corners = np.array(
+            [[float(p.x) * sx, float(p.y) * sy] for p in det.corners],
+            dtype=np.float32,
+        )
+        if not np.isfinite(corners).all():
+            return None
+        return corners
+
+    def _mapped_tag_corners(
+        self, corners: np.ndarray, index_offset: int, reverse: bool
+    ) -> np.ndarray:
+        mapped = corners[::-1].copy() if reverse else corners.copy()
+        shift = int(index_offset) % 4
+        if shift:
+            mapped = np.roll(mapped, -shift, axis=0)
+        return mapped
+
+    def _draw_workspace_outline_from_tags(
+        self,
+        image_bgr: np.ndarray,
+        sx: float,
+        sy: float,
+        base_line_thickness: int,
+    ) -> None:
+        if not self.enable_workspace_overlay:
+            return
+        left_det = self._find_tag_detection(self.workspace_left_tag_id)
+        right_det = self._find_tag_detection(self.workspace_right_tag_id)
+        if left_det is None and right_det is None:
+            return
+
+        w = float(self.workspace_width_m)
+        d = float(self.workspace_depth_m)
+        s = float(self.workspace_tag_size_m)
+        right_x0 = w - s
+
+        board_points = []
+        image_points = []
+        if left_det is not None:
+            left_raw = self._scaled_tag_corners(left_det, sx, sy)
+            if left_raw is not None:
+                left = self._mapped_tag_corners(
+                    left_raw,
+                    self.workspace_left_corner_index_offset,
+                    self.workspace_left_corner_reverse,
+                )
+                board_points.extend(
+                    [[0.0, 0.0], [s, 0.0], [s, s], [0.0, s]]
+                )
+                image_points.extend(left.tolist())
+
+        if right_det is not None:
+            right_raw = self._scaled_tag_corners(right_det, sx, sy)
+            if right_raw is not None:
+                right = self._mapped_tag_corners(
+                    right_raw,
+                    self.workspace_right_corner_index_offset,
+                    self.workspace_right_corner_reverse,
+                )
+                board_points.extend(
+                    [[right_x0, 0.0], [w, 0.0], [w, s], [right_x0, s]]
+                )
+                image_points.extend(right.tolist())
+
+        if len(board_points) < 4 or len(image_points) < 4:
+            return
+
+        board_tag_points = np.asarray(board_points, dtype=np.float32)
+        image_tag_points = np.asarray(image_points, dtype=np.float32)
+        homography, _ = cv2.findHomography(board_tag_points, image_tag_points, 0)
+        if homography is None:
+            return
+
+        projected = cv2.perspectiveTransform(
+            board_tag_points.reshape(1, -1, 2), homography
+        ).reshape(-1, 2)
+        reproj_err = float(np.mean(np.linalg.norm(projected - image_tag_points, axis=1)))
+        if reproj_err > self.workspace_outline_max_reproj_error_px:
+            return
+
+        board_outline = np.array(
+            [[[0.0, 0.0], [w, 0.0], [w, d], [0.0, d]]], dtype=np.float32
+        )
+        front_edge = np.array([[[0.0, 0.0], [w, 0.0]]], dtype=np.float32)
+        outline_px = cv2.perspectiveTransform(board_outline, homography).reshape(-1, 2)
+        front_px = cv2.perspectiveTransform(front_edge, homography).reshape(-1, 2)
+        if not np.isfinite(outline_px).all() or not np.isfinite(front_px).all():
+            return
+
+        outline_int = np.round(outline_px).astype(np.int32).reshape((-1, 1, 2))
+        front_int = np.round(front_px).astype(np.int32)
+        outline_thickness = max(2, base_line_thickness + 1)
+        front_thickness = max(3, base_line_thickness + 2)
+
+        cv2.polylines(
+            image_bgr,
+            [outline_int],
+            True,
+            (255, 0, 255),
+            outline_thickness,
+            cv2.LINE_AA,
+        )
+        cv2.line(
+            image_bgr,
+            (int(front_int[0][0]), int(front_int[0][1])),
+            (int(front_int[1][0]), int(front_int[1][1])),
+            (0, 140, 255),
+            front_thickness,
+            cv2.LINE_AA,
+        )
 
 
 def main(args=None):
