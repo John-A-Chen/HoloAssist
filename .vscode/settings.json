@@ -1,0 +1,18 @@
+{
+    "ros.distro": "humble",
+    "ROS2.distro": "humble",
+    "python.autoComplete.extraPaths": [
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages",
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_unity_bridge/lib/python3.10/site-packages",
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_servo_tools/lib/python3.10/site-packages",
+        "/home/ollie/git/1HoloAssist/ollie/install/holoassist_movement/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
