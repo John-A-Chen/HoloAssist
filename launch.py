@@ -96,24 +96,26 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    # 1. UR driver
+    # 1. UR + OnRobot driver (combined)
     rviz = "false" if args.no_rviz else "true"
     driver_cmd = (
-        f"ros2 launch ur_robot_driver ur_control.launch.py"
-        f" ur_type:=ur3e robot_ip:={robot_ip} launch_rviz:={rviz}"
+        f"ros2 launch ur_onrobot_control start_robot.launch.py"
+        f" ur_type:=ur3e onrobot_type:=rg2 launch_rviz:={rviz}"
     )
     if fake:
-        driver_cmd += " use_fake_hardware:=true fake_sensor_commands:=true"
-    run("UR Driver", driver_cmd)
+        driver_cmd += " use_fake_hardware:=true"
+    else:
+        driver_cmd += f" robot_ip:={robot_ip}"
+    run("UR + OnRobot Driver", driver_cmd)
 
     # Wait for driver to initialize before switching controllers
     print("\n>>> Waiting 8s for UR driver to start...")
     time.sleep(8)
 
-    # 2. Switch controllers
+    # 2. Switch controllers (activate velocity + gripper, deactivate trajectory)
     switch_cmd = (
         "ros2 control switch_controllers"
-        " --activate forward_velocity_controller"
+        " --activate forward_velocity_controller finger_width_controller"
         " --deactivate scaled_joint_trajectory_controller"
     )
     switch_proc = subprocess.run(
@@ -122,7 +124,7 @@ def main():
         text=True,
     )
     if switch_proc.returncode == 0:
-        print(">>> Controllers switched (forward_velocity_controller active)")
+        print(">>> Controllers switched (forward_velocity_controller + finger_width_controller active)")
     else:
         print(f">>> Controller switch failed: {switch_proc.stderr.strip()}")
         print("    Retrying in 5s...")

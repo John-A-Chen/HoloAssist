@@ -83,10 +83,10 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ✅ OnRobot RG2 gripper URDF created — `ur3e_rg2.urdf` combines UR3e + RG2 gripper (attached to tool0), STL meshes in `Assets/URDF/onrobot_rg2/`
 - ✅ RG2 URDF imported in Unity — replaced old `ur` GameObject with `ur3e_rg2`, visual STLs renamed to `*_visual.stl` to work around URDF-Importer name-collision bug (collision/visual share filenames → `UsedTemplateFiles` skip)
 - ✅ New robot verified working — all 6 arm joints mirror correctly, velocity arrow enlarged (0.25m length, 0.008m thick) to clear gripper geometry
-- ✅ Gripper control from XR — right index trigger (analog 0–100%) maps to gripper open/close, publishes Float32 to `/gripper/command`, digital twin animates all 6 gripper joints (finger_joint + 5 mimic joints) via JointStateSubscriber
-- ✅ `gripper_node.py` created — ROS 2 node subscribes to `/gripper/command`, sends `rg_grip(width, force)` URScript to `/urscript_interface/script_command` for real RG2 hardware
-- ⚠️ **Collision protection — NOT WORKING** — code exists (table collision via FK link positions + gripper tip, self-collision via link distance checks, soft boundary with `collisionSoftZone`) but joints still pass through the table in testing. Likely cause: FK link positions in DH frame don't correspond to actual collision geometry (DH frame Z=0 may not align with table surface), or `tableHeight` default (0.0) is wrong for the physical setup. Needs debugging — check what `GetLinkPositions` actually returns vs where the table is, possibly visualise the collision points in Unity. The soft boundary approach (gradual slowdown + directional filtering allowing escape) is correct in principle but the parameters/coordinates need calibrating.
-- ✅ EE lock-down mode — Y button toggles; uses combined 6x6 Jacobian solve (`ResolveFullVelocity`) so linear + angular goals are resolved simultaneously (no jitter from competing solves). Works immediately without grip. 1° dead zone, gain 2.0, max 1.5 rad/s. Works in RMRC Translate + Hand Guide modes. HUD shows "LOCK ▼" when active.
+- ✅ Gripper control from XR — right index trigger (analog 0–100%) maps to gripper width, publishes Float64MultiArray (metres) to `/finger_width_controller/commands` via `ur_onrobot` driver. Digital twin animates all 6 gripper joints (finger_joint + 5 mimic joints) from `finger_width` in `/joint_states`.
+- ✅ **Switched to `UR_OnRobot_ROS2` driver** (by Tony Le) — replaces separate UR driver + custom `gripper_node.py`. Combined launch (`ur_onrobot_control start_robot.launch.py`) handles UR3e + RG2 gripper natively via C++ Modbus (no more socat/pymodbus hack). Old `gripper_node.py` is now obsolete.
+- ✅ **Collision protection rewritten** — replaced broken DH-frame FK approach with Unity world-space Transform checks. Auto-discovers joint transforms (`shoulder_link` through `wrist_3_link` + `tool0`) at Start via `FindCollisionTransforms()`. Three collision layers: (1) **Table** — checks world Y of all joints, link midpoints (upper arm, forearm), tool0, gripper tip/mid against `tableTransform.position.y` or `tableWorldY`; (2) **Objects** — layer-based obstacle detection via `Physics.OverlapSphereNonAlloc` + `ClosestPoint` on configurable `obstacleLayer`; (3) **Self-collision** — distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm). All use soft-zone scaling: full speed outside zone, linear slowdown inside, full stop at margin. `CollisionDebugVisualizer.cs` draws colored spheres (green/orange/red) at all check points + table grid + skeleton + drop lines. Needs calibration with real hardware (set `tableWorldY` or assign `tableTransform`, tune `collisionMargin`/`collisionSoftZone`).
+- ✅ EE lock-down mode — Y button toggles; uses combined 6x6 Jacobian solve (`ResolveFullVelocity`) so linear + angular goals are resolved simultaneously (no jitter from competing solves). Works immediately without grip. 1° dead zone, gain 0.5, max 0.3 rad/s (slow gentle transition). Works in RMRC Translate + Hand Guide modes. HUD shows "LOCK ▼" when active.
 - ✅ Output velocity smoothing (60ms exponential low-pass) on all joint velocities before publishing. Resets on mode switch.
 - ✅ Dashboard shows gripper status (bar + percentage) on STATUS tab
 - ✅ RobotHUD shows gripper bar + EE lock indicator in all modes
@@ -100,7 +100,10 @@ nic/
   ros2_ws/          — ROS 2 workspace
     src/
       ROS-TCP-Endpoint/              — Unity-ROS TCP bridge (cloned from source)
-      Universal_Robots_ROS2_Driver/  — UR driver (cloned from source, fixes apt segfault)
+      Universal_Robots_ROS2_Driver/  — UR driver (dependency of ur_onrobot)
+      ur_onrobot/                    — Combined UR + OnRobot driver (launch, controllers, URDF)
+      onrobot_driver/                — OnRobot hardware interface (C++ Modbus)
+      onrobot_description/           — OnRobot gripper URDF/meshes
   Unity/My project/ — Unity 6.3 project
     Assets/
       Scripts/JointStateSubscriber.cs  — subscribes to /joint_states, drives robot joints
@@ -119,8 +122,8 @@ nic/
   dashboard/           — Python/PyQt5 e-stop & debug dashboard (streamed to Steam Deck)
     main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
     ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
-  gripper_node.py      — ROS 2 node: /gripper/command → URScript rg_grip() for OnRobot RG2
-  launch.py            — Python launcher: starts UR driver, controller switch, TCP endpoint
+  gripper_node.py      — OBSOLETE: old custom Modbus gripper node (replaced by ur_onrobot driver)
+  launch.py            — Python launcher: starts ur_onrobot driver, controller switch, TCP endpoint
   launch.sh            — Shell wrapper for launch.py (sources ROS automatically)
   dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
   urdf/                — OnRobot RG2 xacro source files (from UOsaka-Harada-Laboratory/onrobot)
@@ -139,7 +142,7 @@ nic/
 
 **Prerequisites:** ROS 2 Humble on Ubuntu 22.04, Unity 6.3 LTS.
 
-**Do not use Docker** — the apt-installed UR driver has a segfault bug on Ubuntu 22.04; build from source instead (already done in this workspace).
+**Do not use Docker** — workspace is built from source using `UR_OnRobot_ROS2` (combined UR + OnRobot driver). All dependencies already in `ros2_ws/src/`.
 
 ### Quick Start (launcher scripts)
 
@@ -158,12 +161,6 @@ nic/
 
 # Dashboard without ROS (UI testing only)
 ./dashboard.sh --no-ros --fullscreen
-
-# Gripper node (real RG2 hardware — requires OnRobot URCap on teach pendant)
-python3 gripper_node.py
-
-# Gripper node (dry-run — logs URScript commands without sending)
-python3 gripper_node.py --dry-run
 ```
 
 `launch.sh` and `dashboard.sh` source ROS automatically. `launch.py` accepts `--robot-ip`, `--ros-ip`, and `--no-rviz` flags. No `--robot-ip` = fake hardware mode.
@@ -183,51 +180,51 @@ source install/setup.bash
 # Check laptop IPs first (Ethernet for robot, WiFi for Quest)
 hostname -I
 
-# Terminal 1
+# Terminal 1 — UR + OnRobot combined driver
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=192.168.0.194 launch_rviz:=true
+ros2 launch ur_onrobot_control start_robot.launch.py ur_type:=ur3e onrobot_type:=rg2 robot_ip:=192.168.0.194 launch_rviz:=true
 
-# Terminal 2
+# Terminal 2 — ROS-TCP bridge
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 
-# Terminal 3 (activate forward_velocity_controller for RMRC / Direct Joint)
+# Terminal 3 — switch to velocity + gripper controllers
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller
+ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller
 ```
 
-Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.121`).
+Then on the teach pendant: load and run External Control program (Host IP: `192.168.0.100`).
 Then hit Play in Unity.
 
-**Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. The `forward_velocity_controller` must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
+**Note:** Both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. Gripper publishes to `/finger_width_controller/commands` (Float64MultiArray, position in metres). Both controllers must be active — check with `ros2 control list_controllers`. MoveIt Servo is no longer used for teleoperation. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
 
 ### Simulated Hardware (no real robot)
 
 ```bash
-# Terminal 1 — fake UR3e hardware
+# Terminal 1 — fake UR3e + RG2 hardware
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=0.0.0.0 use_fake_hardware:=true fake_sensor_commands:=true launch_rviz:=true
+ros2 launch ur_onrobot_control start_robot.launch.py ur_type:=ur3e onrobot_type:=rg2 use_fake_hardware:=true launch_rviz:=true
 
-# Terminal 2 — switch to velocity controller (wait for Terminal 1 to finish loading)
+# Terminal 2 — switch to velocity + gripper controllers (wait for Terminal 1 to finish loading)
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
-ros2 control switch_controllers --activate forward_velocity_controller --deactivate scaled_joint_trajectory_controller
+ros2 control switch_controllers --activate forward_velocity_controller finger_width_controller --deactivate scaled_joint_trajectory_controller
 
 # Terminal 3 — ROS-TCP bridge
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 ```
 
-No teach pendant needed. Ignore `urscript_interface` connection errors — that node doesn't check for fake hardware mode. Joint states and controllers work fine.
+No teach pendant needed. Joint states and controllers work fine.
 
 ### Network Setup
 
 ```
 Laptop (nic-XPS-15-9520):
-  ├─ Ethernet (192.168.0.121) ←──→ UR3e robot (192.168.0.194)
+  ├─ Ethernet (192.168.0.100) ←──→ UR3e robot (192.168.0.194)
   └─ WiFi (172.19.115.104)    ←──→ Quest 3 (172.19.119.95)
 ```
 
-- **Teach pendant External Control host IP**: `192.168.0.121` (laptop Ethernet)
+- **Teach pendant External Control host IP**: `192.168.0.100` (laptop Ethernet)
 - **Unity ROS Settings IP**: laptop's WiFi IP (e.g., `172.19.115.104`) — this is what the Quest connects to
 - **ros_tcp_endpoint**: `ROS_IP:=0.0.0.0` (listens on all interfaces, bridging both networks)
 - WiFi IP may change if network changes — re-check with `hostname -I`
@@ -257,7 +254,7 @@ Depth Camera verifies correct bin placement
 - **RMRC**: Jacobian-based Cartesian velocity control (translate + rotate sub-modes)
 - **Direct Joint**: Individual joint jogging
 - **Hand Guide**: Controller position tracking with Jacobian IK
-- **Gripper**: Analog control via right index trigger (0–100%), publishes to `/gripper/command`
+- **Gripper**: Analog control via right index trigger (0–100%), publishes to `/finger_width_controller/commands` (metres, via `ur_onrobot` driver)
 - **EE Lock-Down**: Y button toggle — locks tool pointing straight down via angular Jacobian correction
 - **Collision Protection**: Table + self-collision prevention via predictive FK link position checks
 
@@ -282,7 +279,7 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
 
 ### Key Scripts
 
-- `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary. Also animates gripper joints (finger_joint + 5 mimic joints) based on `RobotController.GripperValue` — auto-finds RobotController if not assigned in Inspector.
+- `Assets/Scripts/JointStateSubscriber.cs` — attach to root `ur` GameObject; subscribes to `/joint_states` and sets joint rotations directly via `Transform.localRotation` (no ArticulationBody physics). Disables all ArticulationBody components on Start. Contains `rosToUnity` name mapping dictionary. Also animates gripper joints (finger_joint + 5 mimic joints) from `finger_width` in `/joint_states` (metres, from `ur_onrobot` driver) — maps width to finger_joint angle internally.
 - `Assets/Scripts/RobotBasePlacer.cs` — attach to an **empty parent wrapper** (e.g. `RobotRig`) that contains `ur` (and optionally the trolley) as children. Uses XR controller grip button — hold grip near rig to grab and drag. Supports Y-axis rotation while grabbed (keeps robot upright). Pure transform movement, no physics.
 - `Assets/Scripts/UR3eKinematics.cs` — static utility class. Forward kinematics using standard DH parameters, numerical Jacobian (3x6 linear, finite differences on FK), geometric angular Jacobian (3x6, joint z-axes). DLS pseudoinverse for both linear and angular velocity resolution. Manipulability measure for adaptive damping. `GetLinkPositions()` returns all 7 link origins (used for collision protection). `GetToolZAxis()` returns EE Z-axis direction (used for EE lock-down).
 - `Assets/Scripts/SpatialMarkers.cs` — attach to robot root GameObject (must contain `tool0` in hierarchy). RGB axis cylinders on end-effector + yellow velocity arrow showing commanded Cartesian velocity direction/magnitude.
@@ -293,9 +290,9 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
     - Both use `UR3eKinematics` DLS pseudoinverse. Adaptive damping near singularities. Proportional joint velocity scaling for safety. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`. No MoveIt needed.
   - **Direct Joint mode**: A/B to cycle joints, right stick Y for smooth proportional velocity control of selected joint. Publishes `Float64MultiArray` to `/forward_velocity_controller/commands`.
   - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop (EE lock-down still applies if active). Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s). Joint bias weights (`[0.5, 0.5, 0.7, 1.0, 1.0, 1.0]`) softly favour wrist movement over base/shoulder.
-  - **Gripper**: Right index trigger (analog 0–1) controls gripper width. Dead zone (0.05) so resting finger = fully open. Smoothed, publishes `Float32` to `/gripper/command` at 50Hz. Works in all modes simultaneously.
+  - **Gripper**: Right index trigger (analog 0–1) controls gripper width. Dead zone (0.05) so resting finger = fully open. Smoothed, publishes `Float64MultiArray` (position in metres, 0=closed, 0.11=open) to `/finger_width_controller/commands` at 50Hz. Works in all modes simultaneously.
   - **EE Lock-Down**: Y button (left controller) toggles. When active, angular Jacobian drives tool Z-axis to [0,0,-1] (pointing straight down). Works immediately on toggle — no grip required. 2° dead zone prevents jitter when nearly aligned. Gain 1.5, max 1.0 rad/s, 2× damping on angular solve. Works in RMRC Translate and Hand Guide modes (including when grip is released).
-  - **Collision Protection**: Runs after all velocity computation, before publishing. Table collision: predicts all link positions + gripper tip/mid-gripper (configurable `gripperLength`, default 0.17m) one timestep ahead, scales velocity proportionally if any point would go below `tableHeight + collisionMargin`. Self-collision: checks distances between EE/wrist links (4,5,6) and base/shoulder links (0,1), scales velocity if below `selfCollisionDistance` (default 0.08m).
+  - **Collision Protection**: Runs after all velocity computation, before publishing. Uses Unity world-space Transform positions (auto-discovered at Start via `FindCollisionTransforms()`). Checks 11 points: 6 joint transforms, 2 link midpoints (upper arm, forearm), tool0, gripper tip, gripper mid. Table collision: compares world Y of all points against `tableTransform.position.y` (or `tableWorldY`), soft-zone linear scaling from `collisionMargin` to `collisionMargin + collisionSoftZone`. Object collision: `Physics.OverlapSphereNonAlloc` against `obstacleLayer` with `ClosestPoint` distance. Self-collision: distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm). All zero-allocation at runtime.
   - **Output Smoothing**: All joint velocities pass through an exponential low-pass filter (`outputSmoothTime` default 0.06s) before publishing. Prevents jitter in lock-down mode and smooths Hand Guide/RMRC output. Resets on mode switch to avoid sluggish transitions.
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
   - Publish rate: 50Hz.
@@ -349,8 +346,8 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 
 1. **Trigger:** Click the red EMERGENCY STOP button
 2. **Immediate:** Burst-publishes `[0,0,0,0,0,0]` to `/forward_velocity_controller/commands` (10x), then continuous zeros at 50Hz
-3. **Follow-up:** Deactivates `forward_velocity_controller` via `ros2 control switch_controllers`
-4. **Resume:** Hold yellow RESUME button for 5 seconds → reactivates `forward_velocity_controller` + deactivates `scaled_joint_trajectory_controller`
+3. **Follow-up:** Deactivates `forward_velocity_controller` + `finger_width_controller` via `ros2 control switch_controllers`
+4. **Resume:** Hold yellow RESUME button for 5 seconds → reactivates `forward_velocity_controller` + `finger_width_controller` + deactivates `scaled_joint_trajectory_controller`
 5. **Cooldown:** 1-second cooldown after resume prevents accidental re-trigger
 
 ### Screens (tabs)
@@ -366,17 +363,17 @@ QT_SCALE_FACTOR=2.0 python3 dashboard/main.py --fullscreen
 
 ## Known Issues
 
-- **UR driver segfault (exit code -11)** — apt-installed `ros-humble-ur-robot-driver` crashes on Ubuntu 22.04. Fixed by building `Universal_Robots_ROS2_Driver` from source (already in `ros2_ws/src/`).
+- **UR driver segfault (exit code -11)** — apt-installed `ros-humble-ur-robot-driver` crashes on Ubuntu 22.04. Now using `UR_OnRobot_ROS2` which builds the driver from source as a dependency.
 - **Robot falls in Unity on Play** — no longer an issue. JointStateSubscriber.cs disables all ArticulationBody components (purely kinematic).
 - **Git HTTPS clone fails on this machine** — always use SSH (`git@github.com:...`).
 - **Unity Package Manager can't find robotics packages** — clone locally, reference via `file://` in `Packages/manifest.json`.
 - **ros_tcp_endpoint crashes on Unity disconnect/reconnect** — known race condition in v0.7.0 (`InvalidHandle` exception). Restart the endpoint after every Unity Play/Stop cycle. Command must be on one line: `ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0`
 - **`/joint_states` not arriving in Unity despite subscription registering** — caused by duplicate message class registration. Delete `Assets/RosMessages/` entirely; types are built into ROS-TCP-Connector. (Fixed — RosMessages deleted.)
 - **ROS joint names don't match Unity GameObject names** — Fixed with a `rosToUnity` mapping dictionary in JointStateSubscriber.cs.
-- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.121` ↔ `192.168.0.194`), Quest connects via WiFi. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.121`.
+- **Quest 3 networking** — laptop connects to robot via Ethernet (`192.168.0.100` ↔ `192.168.0.194`), Quest connects via WiFi. Set ROS IP in Unity to laptop's WiFi IP. Teach pendant External Control host IP = `192.168.0.100`.
 - **OVRInput does nothing on Quest 3 (MR template)** — the Mixed Reality template uses Unity Input System + XR Interaction Toolkit, not OVR. Fixed by rewriting RobotController.cs to use `InputAction` with `<XRController>` bindings.
 - **XRI Default Input Actions consume thumbsticks/buttons** — RobotController.cs disables conflicting action maps at runtime.
 - **MoveIt Servo not used for teleoperation** — RMRC replaces it. MoveIt 2 will be used by Oliver's autonomous sorting subsystem.
-- **forward_velocity_controller must be active** — both RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`. Switch controllers after launching the UR driver.
+- **forward_velocity_controller + finger_width_controller must be active** — RMRC and Direct Joint modes publish to `/forward_velocity_controller/commands`, gripper publishes to `/finger_width_controller/commands`. Switch controllers after launching the `ur_onrobot` driver.
 - **RobotHUD may not render on Quest 3** — `Camera.main` can return null in the MR template, `Shader.Find` may return null on Android (shader stripping), runtime TextMeshPro needs an explicit font asset. Partially patched, functional enough.
 - **URDF-Importer visual/collision STL name collision** — `LocateAssetHandler.cs:31` uses `Path.GetFileNameWithoutExtension` to check `UsedTemplateFiles`, so if visual and collision meshes share the same filename (e.g., both `base_link.stl`), the visual prefab creation is skipped. Fixed by renaming visual STLs to `*_visual.stl`.

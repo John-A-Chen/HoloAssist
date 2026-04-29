@@ -99,7 +99,6 @@ TOPIC_DEFAULTS = {
     "clicked_point": "/clicked_point",
     "unity_map_loaded": "/unity/map_loaded",
     "velocity_cmd": "/forward_velocity_controller/commands",
-    "gripper_cmd": "/gripper/command",
 }
 
 
@@ -246,12 +245,6 @@ class RosInterface:
             self._session_event_cb, 10,
         )
 
-        # Gripper command (from Unity RobotController)
-        self._node.create_subscription(
-            Float32, TOPIC_DEFAULTS["gripper_cmd"],
-            self._gripper_cmd_cb, qos_profile_sensor_data,
-        )
-
         # Sampling timers for rolling graph data
         self._node.create_timer(0.1, self._sample_velocities)   # 10Hz
         self._node.create_timer(0.5, self._sample_rates)        # 2Hz
@@ -308,6 +301,12 @@ class RosInterface:
             self._status.joint_velocities = list(msg.velocity) if msg.velocity else [0.0] * len(msg.position)
             self._status.last_joint_time = now
             self._status.joint_hz = self._get_hz("joint_states")
+            # Extract gripper finger_width (metres) → 0.0=open, 1.0=closed
+            for i, name in enumerate(msg.name):
+                if name == "finger_width":
+                    width_m = msg.position[i]
+                    self._status.gripper_value = 1.0 - min(width_m / 0.11, 1.0)
+                    break
 
     def _debug_image_cb(self, msg):
         """Convert ROS Image to JPEG bytes for display."""
@@ -382,11 +381,6 @@ class RosInterface:
         except (json.JSONDecodeError, Exception):
             pass
 
-    def _gripper_cmd_cb(self, msg):
-        self._tick_rate("gripper_cmd")
-        with self._lock:
-            self._status.gripper_value = msg.data
-
     def _sample_velocities(self):
         """Downsample joint velocities + latency to 10Hz for rolling graphs."""
         now = time.time()
@@ -450,7 +444,7 @@ class RosInterface:
         try:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
-                 "--deactivate", "forward_velocity_controller"],
+                 "--deactivate", "forward_velocity_controller", "finger_width_controller"],
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
@@ -478,7 +472,7 @@ class RosInterface:
         try:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
-                 "--activate", "forward_velocity_controller",
+                 "--activate", "forward_velocity_controller", "finger_width_controller",
                  "--deactivate", "scaled_joint_trajectory_controller"],
                 capture_output=True, text=True, timeout=10,
             )

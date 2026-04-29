@@ -23,9 +23,9 @@ public class RobotController : MonoBehaviour
     [Tooltip("Robot root GameObject (e.g. 'ur'). Needed for Hand Guide mode coordinate transform.")]
     public Transform robotBase;
     [Tooltip("Proportional gain — higher = snappier tracking, lower = smoother.")]
-    public float positionGain = 2f;
+    public float positionGain = 1f;
     [Tooltip("Maximum Cartesian speed in Hand Guide mode (m/s).")]
-    public float maxTrackingSpeed = 0.15f;
+    public float maxTrackingSpeed = 0.09f;
 
     [Header("Gripper")]
     [Tooltip("Dead zone at trigger rest position. Below this value = fully open.")]
@@ -34,22 +34,28 @@ public class RobotController : MonoBehaviour
     public float gripperSmoothTime = 0.08f;
 
     [Header("Collision Protection")]
-    [Tooltip("Table surface Z height in robot DH frame (Z-up). Default 0 = robot base level.")]
-    public float tableHeight = 0.0f;
-    [Tooltip("Buffer above table height (m). Links are stopped this far above the table.")]
+    [Tooltip("Table surface object. Uses its Y position as the collision boundary. If not set, uses tableWorldY.")]
+    public Transform tableTransform;
+    [Tooltip("World-space Y height of table surface. Used when tableTransform is not set.")]
+    public float tableWorldY = 0f;
+    [Tooltip("Minimum clearance (m) above the table surface.")]
     public float collisionMargin = 0.02f;
-    [Tooltip("Minimum distance (m) between non-adjacent links for self-collision protection.")]
-    public float selfCollisionDistance = 0.08f;
-    [Tooltip("Gripper length from tool0 to fingertip (m). Used for collision checking.")]
+    [Tooltip("Distance (m) above the hard boundary where velocity is gradually reduced.")]
+    public float collisionSoftZone = 0.08f;
+    [Tooltip("Gripper length from tool0 to fingertip (m).")]
     public float gripperLength = 0.17f;
-    [Tooltip("Soft zone (m) above the hard boundary where velocity is gradually reduced.")]
-    public float collisionSoftZone = 0.05f;
+    [Tooltip("Minimum distance (m) between distal and proximal joints for self-collision.")]
+    public float selfCollisionDistance = 0.08f;
+    [Tooltip("Layer mask for obstacle colliders. Joints slow down near objects on these layers.")]
+    public LayerMask obstacleLayer;
+    [Tooltip("Radius (m) around each joint to scan for obstacle colliders.")]
+    public float obstacleCheckRadius = 0.15f;
 
     [Header("EE Lock-Down")]
     [Tooltip("Gain for orientation correction when EE lock is active. Higher = snappier.")]
-    public float lockOrientationGain = 2f;
+    public float lockOrientationGain = 0.5f;
     [Tooltip("Maximum angular speed (rad/s) for orientation correction.")]
-    public float maxOrientationSpeed = 1.5f;
+    public float maxOrientationSpeed = 0.3f;
     [Tooltip("Orientation error below this angle (deg) is ignored to prevent jitter.")]
     public float lockDeadZoneDeg = 1f;
 
@@ -81,6 +87,9 @@ public class RobotController : MonoBehaviour
     public bool IsHandGuideActive => isGripping;
     public float GripperValue => smoothedGripper;
     public bool IsEELockedDown => eeLockedDown;
+    public Transform[] CollisionJoints => jointTransforms;
+    public Transform Tool0 => tool0Transform;
+    public float TableY => (tableTransform != null) ? tableTransform.position.y : tableWorldY;
 
     private ROSConnection ros;
     private int selectedJoint = 0;
@@ -97,12 +106,12 @@ public class RobotController : MonoBehaviour
     // EE Lock-Down state
     private bool eeLockedDown = false;
 
-    // Collision protection — pre-allocated arrays to avoid GC
-    private double[] linkPositions = new double[21]; // 7 links × 3
-    private double[] predictedPositions = new double[21];
-    private double[] qPredicted = new double[6];
+    // Collision protection — Unity transforms (auto-found at Start)
+    private Transform[] jointTransforms;
+    private Transform tool0Transform;
+    private Vector3[] collisionCheckPoints = new Vector3[11];
+    private Collider[] overlapBuffer = new Collider[8];
     private double[] toolZ = new double[3];
-    private double[] predictedToolZ = new double[3];
     private double[] wDesiredLock = new double[3];
 
     // Output smoothing
@@ -149,17 +158,19 @@ public class RobotController : MonoBehaviour
     private static readonly double[] jointLimitsUpper = {  6.2832,  6.2832,  3.1416,  6.2832,  6.2832,  6.2832 };
 
     private const string VELOCITY_TOPIC = "/forward_velocity_controller/commands";
-    private const string GRIPPER_TOPIC = "/gripper/command";
+    private const string GRIPPER_TOPIC = "/finger_width_controller/commands";
+    private const float RG2_MAX_WIDTH = 0.11f; // metres
 
     void Start()
     {
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Float64MultiArrayMsg>(VELOCITY_TOPIC);
-        ros.RegisterPublisher<Float32Msg>(GRIPPER_TOPIC);
+        ros.RegisterPublisher<Float64MultiArrayMsg>(GRIPPER_TOPIC);
         ros.Subscribe<JointStateMsg>("/joint_states", OnJointState);
 
         SetupInputActions();
         DisableConflictingXRIActions();
+        FindCollisionTransforms();
     }
 
     void SetupInputActions()
@@ -542,7 +553,11 @@ public class RobotController : MonoBehaviour
         smoothedGripper = SmoothExp(smoothedGripper, mapped, gripperSmoothTime, dt);
         if (smoothedGripper < 0.005f && mapped < 0.01f) smoothedGripper = 0f;
 
-        ros.Publish(GRIPPER_TOPIC, new Float32Msg(smoothedGripper));
+        // finger_width_controller expects position in metres: 0 = closed, RG2_MAX_WIDTH = open
+        double widthMetres = (1f - smoothedGripper) * RG2_MAX_WIDTH;
+        var gripMsg = new Float64MultiArrayMsg();
+        gripMsg.data = new double[] { widthMetres };
+        ros.Publish(GRIPPER_TOPIC, gripMsg);
     }
 
     void PublishZero()
@@ -611,103 +626,135 @@ public class RobotController : MonoBehaviour
         wDesiredLock[2] = 0;
     }
 
+    void FindCollisionTransforms()
+    {
+        if (robotBase == null) return;
+
+        string[] linkNames = { "shoulder_link", "upper_arm_link", "forearm_link",
+                               "wrist_1_link", "wrist_2_link", "wrist_3_link" };
+        jointTransforms = new Transform[6];
+
+        foreach (var t in robotBase.GetComponentsInChildren<Transform>(true))
+        {
+            for (int i = 0; i < linkNames.Length; i++)
+                if (t.name == linkNames[i])
+                    jointTransforms[i] = t;
+            if (t.name == "tool0")
+                tool0Transform = t;
+        }
+
+        int found = 0;
+        for (int i = 0; i < 6; i++) if (jointTransforms[i] != null) found++;
+        Debug.Log($"[RobotController] Collision transforms: {found}/6 joints, tool0={tool0Transform != null}");
+    }
+
     void ApplyCollisionProtection()
     {
-        if (!hasReceivedJointState) return;
+        if (jointTransforms == null) return;
 
-        double dt = 1.0 / publishRate;
-        float limit = tableHeight + collisionMargin;
+        float tableY = (tableTransform != null) ? tableTransform.position.y : tableWorldY;
 
-        // Predict next joint positions
-        for (int i = 0; i < 6; i++)
-            qPredicted[i] = currentPositions[i] + qDot[i] * dt;
-
-        // Get current and predicted link positions
-        UR3eKinematics.GetLinkPositions(currentPositions, linkPositions);
-        UR3eKinematics.GetLinkPositions(qPredicted, predictedPositions);
-
-        // Get tool Z axis for gripper tip
-        UR3eKinematics.GetToolZAxis(currentPositions, toolZ);
-        UR3eKinematics.GetToolZAxis(qPredicted, predictedToolZ);
-
-        // --- Table collision: all link Z + gripper tip/mid ---
-        double currentMinZ = double.MaxValue;
-        double predictedMinZ = double.MaxValue;
-        for (int link = 1; link < 7; link++)
+        // Gather collision check points (no allocation — pre-sized array)
+        int n = 0;
+        for (int i = 0; i < jointTransforms.Length; i++)
         {
-            double cz = linkPositions[link * 3 + 2];
-            double pz = predictedPositions[link * 3 + 2];
-            if (cz < currentMinZ) currentMinZ = cz;
-            if (pz < predictedMinZ) predictedMinZ = pz;
+            if (jointTransforms[i] != null)
+                collisionCheckPoints[n++] = jointTransforms[i].position;
         }
-        // Gripper tip and mid-gripper
-        double currentTipZ = linkPositions[20] + toolZ[2] * gripperLength;
-        double predictedTipZ = predictedPositions[20] + predictedToolZ[2] * gripperLength;
-        double currentMidZ = linkPositions[20] + toolZ[2] * gripperLength * 0.5;
-        double predictedMidZ = predictedPositions[20] + predictedToolZ[2] * gripperLength * 0.5;
-        if (currentTipZ < currentMinZ) currentMinZ = currentTipZ;
-        if (predictedTipZ < predictedMinZ) predictedMinZ = predictedTipZ;
-        if (currentMidZ < currentMinZ) currentMinZ = currentMidZ;
-        if (predictedMidZ < predictedMinZ) predictedMinZ = predictedMidZ;
 
-        double distToLimit = currentMinZ - limit;
+        // Midpoints of long links (upper arm: joints 0→1, forearm: joints 1→2)
+        if (jointTransforms[0] != null && jointTransforms[1] != null)
+            collisionCheckPoints[n++] = (jointTransforms[0].position + jointTransforms[1].position) * 0.5f;
+        if (jointTransforms[1] != null && jointTransforms[2] != null)
+            collisionCheckPoints[n++] = (jointTransforms[1].position + jointTransforms[2].position) * 0.5f;
 
-        if (distToLimit < collisionSoftZone)
+        // Tool0, gripper tip, and gripper midpoint
+        if (tool0Transform != null)
         {
-            // Check if motion is moving toward boundary (getting worse)
-            bool movingToward = predictedMinZ < currentMinZ;
+            collisionCheckPoints[n++] = tool0Transform.position;
+            // tool0.up = DH Z axis = tool direction (URDF importer maps DH Z → Unity Y)
+            Vector3 gripDir = tool0Transform.up;
+            collisionCheckPoints[n++] = tool0Transform.position + gripDir * gripperLength;
+            collisionCheckPoints[n++] = tool0Transform.position + gripDir * gripperLength * 0.5f;
+        }
 
-            if (distToLimit <= 0)
+        // --- Table collision ---
+        float minTableDist = float.MaxValue;
+        for (int i = 0; i < n; i++)
+        {
+            float dist = collisionCheckPoints[i].y - tableY;
+            if (dist < minTableDist) minTableDist = dist;
+        }
+
+        if (minTableDist <= collisionMargin)
+        {
+            for (int i = 0; i < 6; i++) qDot[i] = 0;
+            return;
+        }
+        if (minTableDist < collisionMargin + collisionSoftZone)
+        {
+            float scale = (minTableDist - collisionMargin) / collisionSoftZone;
+            for (int i = 0; i < 6; i++) qDot[i] *= scale;
+        }
+
+        // --- Object collision (layer-based) ---
+        if (obstacleLayer.value != 0)
+        {
+            float minObjDist = float.MaxValue;
+            for (int i = 0; i < n; i++)
             {
-                // AT or PAST boundary — only allow motion that moves away
-                if (movingToward)
-                    for (int i = 0; i < 6; i++) qDot[i] = 0;
-                // else: moving away, allow it (escape)
+                int count = Physics.OverlapSphereNonAlloc(
+                    collisionCheckPoints[i], obstacleCheckRadius, overlapBuffer, obstacleLayer);
+                for (int c = 0; c < count; c++)
+                {
+                    Vector3 closest = overlapBuffer[c].ClosestPoint(collisionCheckPoints[i]);
+                    float dist = Vector3.Distance(collisionCheckPoints[i], closest);
+                    if (dist < minObjDist) minObjDist = dist;
+                }
             }
-            else if (movingToward)
+
+            if (minObjDist <= collisionMargin)
             {
-                // In soft zone, moving toward boundary — gradual slowdown
-                double scale = distToLimit / collisionSoftZone;
+                for (int i = 0; i < 6; i++) qDot[i] = 0;
+                return;
+            }
+            if (minObjDist < collisionMargin + collisionSoftZone)
+            {
+                float scale = (minObjDist - collisionMargin) / collisionSoftZone;
                 for (int i = 0; i < 6; i++) qDot[i] *= scale;
             }
-            // Moving away in soft zone — no intervention
         }
 
-        // --- Self-collision: EE/wrist vs base/shoulder ---
-        // Recompute predicted after any table scaling
-        for (int i = 0; i < 6; i++)
-            qPredicted[i] = currentPositions[i] + qDot[i] * dt;
-        UR3eKinematics.GetLinkPositions(qPredicted, predictedPositions);
-
-        int[] nearLinks = { 0, 0, 0, 1, 1, 1 };
-        int[] farLinks  = { 4, 5, 6, 4, 5, 6 };
-        double minDist = double.MaxValue;
-        double predictedMinDist = double.MaxValue;
-
-        for (int p = 0; p < nearLinks.Length; p++)
+        // --- Self-collision: distal joints (wrist) vs proximal (shoulder/upper arm) ---
+        float minSelfDist = float.MaxValue;
+        for (int far = 3; far < 6; far++)
         {
-            int a = nearLinks[p], b = farLinks[p];
-            double cdist = LinkDistance(linkPositions, a, b);
-            double pdist = LinkDistance(predictedPositions, a, b);
-            if (cdist < minDist) minDist = cdist;
-            if (pdist < predictedMinDist) predictedMinDist = pdist;
+            if (jointTransforms[far] == null) continue;
+            for (int near = 0; near < 2; near++)
+            {
+                if (jointTransforms[near] == null) continue;
+                float dist = Vector3.Distance(jointTransforms[far].position, jointTransforms[near].position);
+                if (dist < minSelfDist) minSelfDist = dist;
+            }
+        }
+        if (tool0Transform != null)
+        {
+            for (int near = 0; near < 2; near++)
+            {
+                if (jointTransforms[near] == null) continue;
+                float dist = Vector3.Distance(tool0Transform.position, jointTransforms[near].position);
+                if (dist < minSelfDist) minSelfDist = dist;
+            }
         }
 
-        double selfDistToLimit = minDist - selfCollisionDistance;
-        if (selfDistToLimit < collisionSoftZone)
+        if (minSelfDist <= selfCollisionDistance)
         {
-            bool movingCloser = predictedMinDist < minDist;
-
-            if (selfDistToLimit <= 0)
-            {
-                if (movingCloser)
-                    for (int i = 0; i < 6; i++) qDot[i] = 0;
-            }
-            else if (movingCloser)
-            {
-                double scale = selfDistToLimit / collisionSoftZone;
-                for (int i = 0; i < 6; i++) qDot[i] *= scale;
-            }
+            for (int i = 0; i < 6; i++) qDot[i] = 0;
+        }
+        else if (minSelfDist < selfCollisionDistance + collisionSoftZone)
+        {
+            float scale = (minSelfDist - selfCollisionDistance) / collisionSoftZone;
+            for (int i = 0; i < 6; i++) qDot[i] *= scale;
         }
     }
 
@@ -720,15 +767,6 @@ public class RobotController : MonoBehaviour
             smoothedQDot[i] += (qDot[i] - smoothedQDot[i]) * alpha;
             qDot[i] = smoothedQDot[i];
         }
-    }
-
-    static double LinkDistance(double[] positions, int linkA, int linkB)
-    {
-        int a = linkA * 3, b = linkB * 3;
-        double dx = positions[a] - positions[b];
-        double dy = positions[a + 1] - positions[b + 1];
-        double dz = positions[a + 2] - positions[b + 2];
-        return System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     void OnDestroy()
