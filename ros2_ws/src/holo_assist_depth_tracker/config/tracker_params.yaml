@@ -49,8 +49,9 @@ holo_assist_depth_tracker:
 
     # Workspace overlay on RGB debug image, inferred from two front-corner tags.
     enable_workspace_overlay: true
-    workspace_left_tag_id: 1
-    workspace_right_tag_id: 0
+    # Physical placement: id 0 = left front corner, id 1 = right front corner.
+    workspace_left_tag_id: 0
+    workspace_right_tag_id: 1
     workspace_width_m: 0.70
     workspace_depth_m: 0.50
     workspace_tag_size_m: 0.15

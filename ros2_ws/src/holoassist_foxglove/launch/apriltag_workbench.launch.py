@@ -57,12 +57,12 @@ def generate_launch_description() -> LaunchDescription:
     )
     workspace_left_tag_id_arg = DeclareLaunchArgument(
         "workspace_left_tag_id",
-        default_value="1",
+        default_value="0",
         description="Tag ID at front-left board corner.",
     )
     workspace_right_tag_id_arg = DeclareLaunchArgument(
         "workspace_right_tag_id",
-        default_value="0",
+        default_value="1",
         description="Tag ID at front-right board corner.",
     )
     workspace_width_m_arg = DeclareLaunchArgument(

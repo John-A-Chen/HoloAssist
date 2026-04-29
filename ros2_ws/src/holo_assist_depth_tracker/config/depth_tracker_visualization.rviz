@@ -75,8 +75,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: -9999
-        Min Value: 9999
+        Max Value: 0.012849092483520508
+        Min Value: 0.00501251220703125
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -196,7 +196,7 @@ Visualization Manager:
       Enabled: true
       Name: Object Marker
       Namespaces:
-        holoassist_object: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -306,10 +306,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.2900001108646393
+      Pitch: 1.1349998712539673
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.7450053691864014
+      Yaw: 4.8731889724731445
     Saved: ~
 Window Geometry:
   Camera Color Raw:

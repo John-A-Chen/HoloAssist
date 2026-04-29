@@ -244,11 +244,15 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("tag_min_separation_m", 0.08)
         self.declare_parameter("project_tags_to_plane", True)
         self.declare_parameter("tag_plane_projection_max_distance_m", 0.30)
+        self.declare_parameter("tag_markers_use_projected_points", False)
+        self.declare_parameter("tag_markers_flatten_z_to_plane", True)
+        self.declare_parameter("tag_markers_raw_z_offset_m", 0.0)
         self.declare_parameter("single_tag_axis_preference", "x")
         self.declare_parameter("single_tag_left_axis_sign", 1.0)
         self.declare_parameter("single_tag_right_axis_sign", 1.0)
 
         self.declare_parameter("plane_fit_max_points", 18000)
+        self.declare_parameter("plane_fit_near_depth_quantile", 1.0)
         self.declare_parameter("plane_ransac_iterations", 140)
         self.declare_parameter("plane_inlier_threshold_m", 0.015)
         self.declare_parameter("plane_min_inlier_ratio", 0.35)
@@ -366,6 +370,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("plane_marker_thickness_m", 0.006)
         self.declare_parameter("axes_marker_length_m", 0.12)
         self.declare_parameter("axes_marker_radius_m", 0.01)
+        self.declare_parameter("axes_marker_lift_m", 0.0)
         self.declare_parameter("object_marker_min_extent_m", 0.02)
         self.declare_parameter("object_marker_max_extent_m", 0.18)
 
@@ -396,6 +401,15 @@ class WorkspacePerceptionNode(Node):
         self.tag_plane_projection_max_distance_m = float(
             self.get_parameter("tag_plane_projection_max_distance_m").value
         )
+        self.tag_markers_use_projected_points = bool(
+            self.get_parameter("tag_markers_use_projected_points").value
+        )
+        self.tag_markers_flatten_z_to_plane = bool(
+            self.get_parameter("tag_markers_flatten_z_to_plane").value
+        )
+        self.tag_markers_raw_z_offset_m = float(
+            self.get_parameter("tag_markers_raw_z_offset_m").value
+        )
         self.single_tag_axis_preference = str(
             self.get_parameter("single_tag_axis_preference").value
         ).strip().lower()
@@ -408,6 +422,9 @@ class WorkspacePerceptionNode(Node):
 
         self.plane_fit_max_points = int(
             self.get_parameter("plane_fit_max_points").value
+        )
+        self.plane_fit_near_depth_quantile = float(
+            self.get_parameter("plane_fit_near_depth_quantile").value
         )
         self.plane_ransac_iterations = int(
             self.get_parameter("plane_ransac_iterations").value
@@ -579,6 +596,9 @@ class WorkspacePerceptionNode(Node):
         self.axes_marker_radius_m = float(
             self.get_parameter("axes_marker_radius_m").value
         )
+        self.axes_marker_lift_m = float(
+            self.get_parameter("axes_marker_lift_m").value
+        )
         self.object_marker_min_extent_m = float(
             self.get_parameter("object_marker_min_extent_m").value
         )
@@ -607,6 +627,9 @@ class WorkspacePerceptionNode(Node):
         self.below_plane_tolerance_m = max(0.0, self.below_plane_tolerance_m)
 
         self.plane_fit_max_points = max(200, self.plane_fit_max_points)
+        self.plane_fit_near_depth_quantile = min(
+            max(self.plane_fit_near_depth_quantile, 0.05), 1.0
+        )
         self.plane_ransac_iterations = max(20, self.plane_ransac_iterations)
         self.plane_inlier_threshold_m = max(0.001, self.plane_inlier_threshold_m)
         self.plane_min_inlier_ratio = min(max(self.plane_min_inlier_ratio, 0.05), 0.99)
@@ -641,6 +664,7 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_max_extent_m = max(
             self.object_marker_min_extent_m, self.object_marker_max_extent_m
         )
+        self.axes_marker_lift_m = max(0.0, self.axes_marker_lift_m)
         self.marker_lifetime_s = min(max(self.marker_lifetime_s, 0.0), 30.0)
         self.centroid_min_closer_m = max(0.0, self.centroid_min_closer_m)
         self.centroid_smoothing_alpha = min(max(self.centroid_smoothing_alpha, 0.0), 1.0)
@@ -655,6 +679,7 @@ class WorkspacePerceptionNode(Node):
         self.tag_plane_projection_max_distance_m = max(
             0.0, self.tag_plane_projection_max_distance_m
         )
+        self.tag_markers_raw_z_offset_m = float(self.tag_markers_raw_z_offset_m)
         if self.single_tag_axis_preference not in ("x", "y"):
             self.single_tag_axis_preference = "x"
         self.single_tag_left_axis_sign = (
@@ -776,9 +801,21 @@ class WorkspacePerceptionNode(Node):
         self._publish_plane_coefficients(normal, d)
         roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
         if self.publish_debug_markers:
+            tag_marker_points_c = (
+                tag_points_c
+                if self.tag_markers_use_projected_points
+                else tag_points_c_raw
+            )
             self._publish_plane_marker(msg.header.stamp)
             self._publish_axes_markers(msg.header.stamp)
-            self._publish_tag_markers(msg.header.stamp, tag_points_c, origin_c, basis_c)
+            self._publish_tag_markers(
+                msg.header.stamp,
+                tag_marker_points_c,
+                origin_c,
+                basis_c,
+                force_plane_lift=self.tag_markers_use_projected_points,
+                flatten_z_to_plane=self.tag_markers_flatten_z_to_plane,
+            )
 
         points_w = self._to_workspace(xyz, origin_c, basis_c)
         above_plane_mask = self._above_plane_mask(xyz, normal, d)
@@ -1041,14 +1078,32 @@ class WorkspacePerceptionNode(Node):
     def _fit_bench_plane(
         self, points: np.ndarray
     ) -> Optional[Tuple[np.ndarray, float, np.ndarray, float, int, np.ndarray]]:
-        n_points = points.shape[0]
+        points_for_fit = points
+        if (
+            self.plane_fit_near_depth_quantile < 0.999
+            and points.shape[0] >= max(50, self.plane_min_inliers)
+        ):
+            depth = points[:, 2]
+            finite_depth = np.isfinite(depth)
+            if np.any(finite_depth):
+                depth_vals = depth[finite_depth]
+                if depth_vals.size >= max(50, self.plane_min_inliers):
+                    depth_cutoff = float(
+                        np.quantile(depth_vals, self.plane_fit_near_depth_quantile)
+                    )
+                    near_mask = depth <= depth_cutoff
+                    near_points = points[near_mask]
+                    if near_points.shape[0] >= max(50, self.plane_min_inliers):
+                        points_for_fit = near_points
+
+        n_points = points_for_fit.shape[0]
         if n_points < 3:
             return None
 
-        fit_points = points
+        fit_points = points_for_fit
         if n_points > self.plane_fit_max_points:
             idx = self._rng.choice(n_points, self.plane_fit_max_points, replace=False)
-            fit_points = points[idx]
+            fit_points = points_for_fit[idx]
 
         best_count = 0
         best_mask = None
@@ -1099,14 +1154,14 @@ class WorkspacePerceptionNode(Node):
 
         d = -float(np.dot(normal, centroid))
 
-        full_dist = np.abs(points @ normal + d)
+        full_dist = np.abs(points_for_fit @ normal + d)
         full_inlier_mask = full_dist <= self.plane_inlier_threshold_m
         full_inliers = int(np.count_nonzero(full_inlier_mask))
-        full_ratio = full_inliers / max(1, points.shape[0])
+        full_ratio = full_inliers / max(1, points_for_fit.shape[0])
         if full_inliers < self.plane_min_inliers or full_ratio < self.plane_min_inlier_ratio:
             return None
 
-        full_inlier_points = points[full_inlier_mask]
+        full_inlier_points = points_for_fit[full_inlier_mask]
         plane_origin = np.mean(full_inlier_points, axis=0)
         plane_origin = plane_origin - (np.dot(normal, plane_origin) + d) * normal
 
@@ -1351,12 +1406,39 @@ class WorkspacePerceptionNode(Node):
                 cfg_span_y = max(0.02, self.roi_y_max - self.roi_y_min)
                 half_tag = 0.5 * max(0.01, self.tag_size_m)
                 half_x = 0.5 * cfg_span_x
+                center_offset_x = max(0.0, half_x - half_tag)
 
                 if len(ordered_points_w) >= 2:
-                    front_min_x = float(np.min(tag_arr[:, 0])) - half_tag
-                    front_max_x = float(np.max(tag_arr[:, 0])) + half_tag
-                    front_center_x = 0.5 * (front_min_x + front_max_x)
-                    roi_source = "tag_front_pair"
+                    # Pair anchor:
+                    # - left board corner is 0.5*tag_size to the left of left-tag center
+                    # - right board corner is 0.5*tag_size to the right of right-tag center
+                    # This keeps each tag center exactly 7.5 cm from its assigned corner
+                    # when tag_size_m=0.15, regardless of temporary tag separation noise.
+                    frame_to_point = {frame: point for frame, point in ordered_points_w}
+                    left_frame = self.tag_frames[0]
+                    right_frame = self.tag_frames[1] if len(self.tag_frames) >= 2 else None
+
+                    if right_frame is not None and left_frame in frame_to_point and right_frame in frame_to_point:
+                        left_x = float(frame_to_point[left_frame][0])
+                        right_x = float(frame_to_point[right_frame][0])
+                        tx_min = left_x - half_tag
+                        tx_max = right_x + half_tag
+                        front_center_x = 0.5 * (tx_min + tx_max)
+                        roi_source = "tag_front_pair_assigned_corners"
+                    else:
+                        center_x_candidates: List[float] = []
+                        for frame, point_w in ordered_points_w:
+                            if frame == self.tag_frames[0]:
+                                center_x_candidates.append(float(point_w[0]) + center_offset_x)
+                            elif len(self.tag_frames) >= 2 and frame == self.tag_frames[1]:
+                                center_x_candidates.append(float(point_w[0]) - center_offset_x)
+                            else:
+                                center_x_candidates.append(float(point_w[0]))
+                        front_center_x = float(np.mean(center_x_candidates))
+                        tx_min = front_center_x - half_x
+                        tx_max = front_center_x + half_x
+                        roi_source = "tag_front_pair"
+
                     self._last_pair_front_center_x = front_center_x
                     self._last_pair_tag_points_w = {
                         frame: point.copy() for frame, point in ordered_points_w
@@ -1372,7 +1454,6 @@ class WorkspacePerceptionNode(Node):
                         front_center_x = self._last_pair_front_center_x + float(delta[0])
                         roi_source = "tag_single_locked"
                     else:
-                        center_offset_x = max(0.0, half_x - half_tag)
                         if frame == self.tag_frames[0]:
                             front_center_x = float(only_point[0]) + center_offset_x
                             roi_source = "tag_single_left"
@@ -1383,8 +1464,9 @@ class WorkspacePerceptionNode(Node):
                             front_center_x = float(only_point[0])
                             roi_source = "tag_single_unknown"
 
-                tx_min = front_center_x - half_x
-                tx_max = front_center_x + half_x
+                if len(ordered_points_w) < 2:
+                    tx_min = front_center_x - half_x
+                    tx_max = front_center_x + half_x
 
                 if self.roi_from_tags_use_front_edge:
                     tag_mid_y = float(np.mean(tag_arr[:, 1]))
@@ -1406,7 +1488,15 @@ class WorkspacePerceptionNode(Node):
                         )[0]
                         # Camera-side of the tag line is treated as workspace front.
                         interior_sign = -1.0 if camera_w[1] >= tag_mid_y else 1.0
-                        front_edge_y = tag_mid_y - interior_sign * half_tag
+                        if len(ordered_points_w) >= 2:
+                            front_edge_candidates: List[float] = []
+                            for _, point_w in ordered_points_w:
+                                front_edge_candidates.append(
+                                    float(point_w[1]) - interior_sign * half_tag
+                                )
+                            front_edge_y = float(np.mean(front_edge_candidates))
+                        else:
+                            front_edge_y = tag_mid_y - interior_sign * half_tag
                         back_edge_y = front_edge_y + interior_sign * cfg_span_y
 
                     if len(ordered_points_w) >= 2:
@@ -1871,6 +1961,8 @@ class WorkspacePerceptionNode(Node):
         tag_points_c: Dict[str, np.ndarray],
         origin_c: np.ndarray,
         basis_c: np.ndarray,
+        force_plane_lift: bool,
+        flatten_z_to_plane: bool,
     ) -> None:
         marker = Marker()
         marker.header.frame_id = self.workspace_frame
@@ -1890,7 +1982,8 @@ class WorkspacePerceptionNode(Node):
         marker.color.a = 0.9
         self._apply_marker_lifetime(marker)
         ordered_tag_points_w: List[np.ndarray] = []
-        # Keep tag visuals slightly above the bench plane for readability.
+        # In projected mode, keep tag visuals slightly above bench plane.
+        # In raw-TF mode, use TF Z (plus optional offset) for true 3D centering.
         tag_visual_lift_m = max(
             0.001,
             float(self.plane_marker_thickness_m) + 0.5 * float(marker.scale.z),
@@ -1901,7 +1994,10 @@ class WorkspacePerceptionNode(Node):
                 if frame not in tag_points_c:
                     continue
                 point_w = self._to_workspace(tag_points_c[frame].reshape(1, 3), origin_c, basis_c)[0]
-                point_w[2] = tag_visual_lift_m
+                if force_plane_lift or flatten_z_to_plane:
+                    point_w[2] = tag_visual_lift_m
+                else:
+                    point_w[2] = float(point_w[2]) + float(self.tag_markers_raw_z_offset_m)
                 ordered_tag_points_w.append(point_w)
                 pt = Point()
                 pt.x = float(point_w[0])
@@ -1944,6 +2040,14 @@ class WorkspacePerceptionNode(Node):
         self.tag_marker_pub.publish(front_edge)
 
     def _publish_axes_markers(self, stamp) -> None:
+        axes_lift_m = (
+            float(self.axes_marker_lift_m)
+            if self.axes_marker_lift_m > 0.0
+            else max(
+                0.001,
+                float(self.plane_marker_thickness_m) + float(self.axes_marker_radius_m),
+            )
+        )
         colors = [
             (1.0, 0.1, 0.1),
             (0.1, 1.0, 0.1),
@@ -1975,11 +2079,11 @@ class WorkspacePerceptionNode(Node):
             p0 = Point()
             p0.x = 0.0
             p0.y = 0.0
-            p0.z = 0.0
+            p0.z = axes_lift_m
             p1 = Point()
             p1.x = float(end[0])
             p1.y = float(end[1])
-            p1.z = float(end[2])
+            p1.z = float(end[2]) + axes_lift_m
             marker.points = [p0, p1]
             self.axes_marker_pub.publish(marker)
 
