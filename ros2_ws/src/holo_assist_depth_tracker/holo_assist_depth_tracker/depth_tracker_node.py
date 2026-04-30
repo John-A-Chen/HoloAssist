@@ -70,8 +70,39 @@ class DepthTrackerNode(Node):
         self.declare_parameter("max_debug_boxes", 6)
         self.declare_parameter("max_component_area_ratio", 0.30)
         self.declare_parameter("enable_apriltag_overlay", True)
-        self.declare_parameter("apriltag_topic", "/detections")
+        self.declare_parameter("apriltag_topic", "/detections_all")
         self.declare_parameter("apriltag_timeout_s", 1.0)
+        self.declare_parameter("apriltag_distance_tracking_only", True)
+        self.declare_parameter(
+            "apriltag_track_tag_ids",
+            [
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+            ],
+        )
+        self.declare_parameter("apriltag_bbox_padding_px", 8)
         self.declare_parameter("enable_workspace_overlay", True)
         self.declare_parameter("workspace_frame", "workspace_frame")
         self.declare_parameter("workspace_roi_x_min", -0.35)
@@ -148,6 +179,15 @@ class DepthTrackerNode(Node):
         self.apriltag_topic = str(self.get_parameter("apriltag_topic").value)
         self.apriltag_timeout_s = float(
             self.get_parameter("apriltag_timeout_s").value
+        )
+        self.apriltag_distance_tracking_only = bool(
+            self.get_parameter("apriltag_distance_tracking_only").value
+        )
+        self.apriltag_track_tag_ids = [
+            int(v) for v in self.get_parameter("apriltag_track_tag_ids").value
+        ]
+        self.apriltag_bbox_padding_px = int(
+            self.get_parameter("apriltag_bbox_padding_px").value
         )
         self.enable_workspace_overlay = bool(
             self.get_parameter("enable_workspace_overlay").value
@@ -264,6 +304,11 @@ class DepthTrackerNode(Node):
                 "apriltag_timeout_s must be > 0. Using apriltag_timeout_s=1.0."
             )
             self.apriltag_timeout_s = 1.0
+        if self.apriltag_bbox_padding_px < 0:
+            self.get_logger().warn(
+                "apriltag_bbox_padding_px must be >= 0. Using apriltag_bbox_padding_px=0."
+            )
+            self.apriltag_bbox_padding_px = 0
         if self.workspace_roi_x_max <= self.workspace_roi_x_min:
             self.get_logger().warn(
                 "workspace_roi_x_max must be > workspace_roi_x_min. Using [-0.35, 0.35]."
@@ -297,6 +342,7 @@ class DepthTrackerNode(Node):
         self.latest_apriltag_detections = []
         self.latest_apriltag_stamp: Optional[rclpy.time.Time] = None
         self.latest_apriltag_image_size: Optional[tuple[int, int]] = None
+        self.apriltag_track_tag_ids_set = set(self.apriltag_track_tag_ids)
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self._last_debug_image_is_rgb = False
@@ -429,6 +475,14 @@ class DepthTrackerNode(Node):
             f"topic={self.apriltag_topic} timeout={self.apriltag_timeout_s:.2f}s"
         )
         self.get_logger().info(
+            "AprilTag distance tracking only=%s ids=%s bbox_padding_px=%d"
+            % (
+                self.apriltag_distance_tracking_only,
+                sorted(self.apriltag_track_tag_ids_set),
+                self.apriltag_bbox_padding_px,
+            )
+        )
+        self.get_logger().info(
             f"Centroid stabilization closer_only={self.centroid_update_closer_only} "
             f"min_closer={self.centroid_min_closer_m:.3f}m alpha={self.centroid_smoothing_alpha:.2f} "
             f"force_px={self.centroid_force_update_px:.1f}"
@@ -509,60 +563,6 @@ class DepthTrackerNode(Node):
         if self.publish_pointcloud:
             self.last_point_count = self._publish_pointcloud(msg, band_mask, smoothed_depth_m)
 
-        binary_mask = (band_mask.astype(np.uint8) * 255)
-        kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE,
-            (self.morph_kernel, self.morph_kernel),
-        )
-        cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_OPEN, kernel)
-        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel)
-
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-            (cleaned > 0).astype(np.uint8),
-            connectivity=8,
-        )
-        image_area = float(smoothed_depth_m.shape[0] * smoothed_depth_m.shape[1])
-        max_component_area_px = max(
-            self.min_area_px,
-            int(self.max_component_area_ratio * image_area),
-        )
-        components = []
-        filtered_large_count = 0
-        for label in range(1, num_labels):
-            area_px = int(stats[label, cv2.CC_STAT_AREA])
-            if area_px < self.min_area_px:
-                continue
-            if area_px > max_component_area_px:
-                filtered_large_count += 1
-                continue
-
-            x = int(stats[label, cv2.CC_STAT_LEFT])
-            y = int(stats[label, cv2.CC_STAT_TOP])
-            w = int(stats[label, cv2.CC_STAT_WIDTH])
-            h = int(stats[label, cv2.CC_STAT_HEIGHT])
-            cx, cy = centroids[label]
-
-            blob_mask = labels == label
-            blob_depths = smoothed_depth_m[blob_mask]
-            blob_depths = blob_depths[np.isfinite(blob_depths) & (blob_depths > 0.0)]
-            if blob_depths.size == 0:
-                continue
-            median_depth_m = float(np.median(blob_depths))
-
-            components.append(
-                {
-                    "label": int(label),
-                    "x": x,
-                    "y": y,
-                    "w": w,
-                    "h": h,
-                    "cx": float(cx),
-                    "cy": float(cy),
-                    "area_px": int(area_px),
-                    "median_depth_m": float(median_depth_m),
-                }
-            )
-
         debug_bgr = self._create_debug_image(smoothed_depth_m)
         if self.use_rgb_debug_image and not self._last_debug_image_is_rgb:
             cv2.putText(
@@ -578,121 +578,219 @@ class DepthTrackerNode(Node):
 
         bbox_msg = Float32MultiArray()
         bbox_msg.data = list(SENTINEL_BBOX)
-
-        components_by_area = sorted(
-            components, key=lambda c: int(c["area_px"]), reverse=True
-        )
-        for idx, component in enumerate(components_by_area[: self.max_debug_boxes]):
-            color = self._debug_color(idx)
-            x = int(component["x"])
-            y = int(component["y"])
-            w = int(component["w"])
-            h = int(component["h"])
-            cx = float(component["cx"])
-            cy = float(component["cy"])
-            depth = float(component["median_depth_m"])
-            area_px = int(component["area_px"])
-
-            cv2.rectangle(debug_bgr, (x, y), (x + w, y + h), color, 2)
-            cv2.circle(debug_bgr, (int(round(cx)), int(round(cy))), 3, color, -1)
-            label_text = f"#{idx+1} d={depth:.2f}m a={area_px}"
-            cv2.putText(
-                debug_bgr,
-                label_text,
-                (x, max(0, y - 8)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.50,
-                color,
-                2,
-                cv2.LINE_AA,
-            )
-
-        if components:
-            primary_component = min(
-                components, key=lambda c: float(c["median_depth_m"])
-            )
-            x = int(primary_component["x"])
-            y = int(primary_component["y"])
-            w = int(primary_component["w"])
-            h = int(primary_component["h"])
-            area_px = int(primary_component["area_px"])
-            cx = float(primary_component["cx"])
-            cy = float(primary_component["cy"])
-            median_depth_m = float(primary_component["median_depth_m"])
-
-            sx, sy, sw, sh, sdepth = self._stabilize_blob_estimate(
-                x=x,
-                y=y,
-                w=w,
-                h=h,
-                cx=cx,
-                cy=cy,
-                median_depth_m=median_depth_m,
-            )
-
-            x0 = int(round(sx))
-            y0 = int(round(sy))
-            x1 = int(round(sx + sw))
-            y1 = int(round(sy + sh))
-            cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
-
-            pose_text = self._format_pose_text()
-            label = f"primary dist={sdepth:.2f}m area={area_px}"
-            cv2.putText(
-                debug_bgr,
-                label,
-                (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (255, 255, 255),
-                2,
-                cv2.LINE_AA,
-            )
-            if pose_text is not None:
+        if self.apriltag_distance_tracking_only:
+            bbox_msg.data = self._estimate_primary_apriltag_bbox(smoothed_depth_m)
+            self._publish_obstacle_delete(msg.header.frame_id)
+            if bbox_msg.data[0] >= 0.0:
+                sx, sy, x_max, y_max, cx, cy, sdepth, area_px = bbox_msg.data
+                x0 = int(round(sx))
+                y0 = int(round(sy))
+                x1 = int(round(x_max))
+                y1 = int(round(y_max))
+                cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
+                label = f"apriltag dist={sdepth:.2f}m area={int(area_px)}"
                 cv2.putText(
                     debug_bgr,
-                    pose_text,
-                    (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
+                    label,
+                    (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.48,
+                    0.55,
                     (255, 255, 255),
                     2,
                     cv2.LINE_AA,
                 )
-
-            bbox_msg.data = [
-                float(sx),
-                float(sy),
-                float(sx + sw),
-                float(sy + sh),
-                float(sx + 0.5 * sw),
-                float(sy + 0.5 * sh),
-                float(sdepth),
-                float(area_px),
-            ]
-            self._publish_obstacle_from_mask(
-                msg,
-                labels == int(primary_component["label"]),
-            )
-        else:
-            self._on_blob_missed()
-            self._publish_obstacle_delete(msg.header.frame_id)
-            no_blob_msg = "No valid components in depth band"
-            if filtered_large_count > 0:
-                no_blob_msg = (
-                    "Components too large filtered; lower depth band or "
-                    "increase max_component_area_ratio"
+                pose_text = self._format_pose_text()
+                if pose_text is not None:
+                    cv2.putText(
+                        debug_bgr,
+                        pose_text,
+                        (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.48,
+                        (255, 255, 255),
+                        2,
+                        cv2.LINE_AA,
+                    )
+            else:
+                cv2.putText(
+                    debug_bgr,
+                    "No tracked AprilTag target in depth",
+                    (12, 28),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
                 )
-            cv2.putText(
-                debug_bgr,
-                no_blob_msg,
-                (12, 28),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (255, 255, 255),
-                2,
-                cv2.LINE_AA,
+        else:
+            binary_mask = (band_mask.astype(np.uint8) * 255)
+            kernel = cv2.getStructuringElement(
+                cv2.MORPH_ELLIPSE,
+                (self.morph_kernel, self.morph_kernel),
             )
+            cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_OPEN, kernel)
+            cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel)
+
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+                (cleaned > 0).astype(np.uint8),
+                connectivity=8,
+            )
+            image_area = float(smoothed_depth_m.shape[0] * smoothed_depth_m.shape[1])
+            max_component_area_px = max(
+                self.min_area_px,
+                int(self.max_component_area_ratio * image_area),
+            )
+            components = []
+            filtered_large_count = 0
+            for label in range(1, num_labels):
+                area_px = int(stats[label, cv2.CC_STAT_AREA])
+                if area_px < self.min_area_px:
+                    continue
+                if area_px > max_component_area_px:
+                    filtered_large_count += 1
+                    continue
+
+                x = int(stats[label, cv2.CC_STAT_LEFT])
+                y = int(stats[label, cv2.CC_STAT_TOP])
+                w = int(stats[label, cv2.CC_STAT_WIDTH])
+                h = int(stats[label, cv2.CC_STAT_HEIGHT])
+                cx, cy = centroids[label]
+
+                blob_mask = labels == label
+                blob_depths = smoothed_depth_m[blob_mask]
+                blob_depths = blob_depths[np.isfinite(blob_depths) & (blob_depths > 0.0)]
+                if blob_depths.size == 0:
+                    continue
+                median_depth_m = float(np.median(blob_depths))
+
+                components.append(
+                    {
+                        "label": int(label),
+                        "x": x,
+                        "y": y,
+                        "w": w,
+                        "h": h,
+                        "cx": float(cx),
+                        "cy": float(cy),
+                        "area_px": int(area_px),
+                        "median_depth_m": float(median_depth_m),
+                    }
+                )
+
+            components_by_area = sorted(
+                components, key=lambda c: int(c["area_px"]), reverse=True
+            )
+            for idx, component in enumerate(components_by_area[: self.max_debug_boxes]):
+                color = self._debug_color(idx)
+                x = int(component["x"])
+                y = int(component["y"])
+                w = int(component["w"])
+                h = int(component["h"])
+                cx = float(component["cx"])
+                cy = float(component["cy"])
+                depth = float(component["median_depth_m"])
+                area_px = int(component["area_px"])
+
+                cv2.rectangle(debug_bgr, (x, y), (x + w, y + h), color, 2)
+                cv2.circle(debug_bgr, (int(round(cx)), int(round(cy))), 3, color, -1)
+                label_text = f"#{idx+1} d={depth:.2f}m a={area_px}"
+                cv2.putText(
+                    debug_bgr,
+                    label_text,
+                    (x, max(0, y - 8)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.50,
+                    color,
+                    2,
+                    cv2.LINE_AA,
+                )
+
+            if components:
+                primary_component = min(
+                    components, key=lambda c: float(c["median_depth_m"])
+                )
+                x = int(primary_component["x"])
+                y = int(primary_component["y"])
+                w = int(primary_component["w"])
+                h = int(primary_component["h"])
+                area_px = int(primary_component["area_px"])
+                cx = float(primary_component["cx"])
+                cy = float(primary_component["cy"])
+                median_depth_m = float(primary_component["median_depth_m"])
+
+                sx, sy, sw, sh, sdepth = self._stabilize_blob_estimate(
+                    x=x,
+                    y=y,
+                    w=w,
+                    h=h,
+                    cx=cx,
+                    cy=cy,
+                    median_depth_m=median_depth_m,
+                )
+
+                x0 = int(round(sx))
+                y0 = int(round(sy))
+                x1 = int(round(sx + sw))
+                y1 = int(round(sy + sh))
+                cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
+
+                pose_text = self._format_pose_text()
+                label = f"primary dist={sdepth:.2f}m area={area_px}"
+                cv2.putText(
+                    debug_bgr,
+                    label,
+                    (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+                if pose_text is not None:
+                    cv2.putText(
+                        debug_bgr,
+                        pose_text,
+                        (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.48,
+                        (255, 255, 255),
+                        2,
+                        cv2.LINE_AA,
+                    )
+
+                bbox_msg.data = [
+                    float(sx),
+                    float(sy),
+                    float(sx + sw),
+                    float(sy + sh),
+                    float(sx + 0.5 * sw),
+                    float(sy + 0.5 * sh),
+                    float(sdepth),
+                    float(area_px),
+                ]
+                self._publish_obstacle_from_mask(
+                    msg,
+                    labels == int(primary_component["label"]),
+                )
+            else:
+                self._on_blob_missed()
+                self._publish_obstacle_delete(msg.header.frame_id)
+                no_blob_msg = "No valid components in depth band"
+                if filtered_large_count > 0:
+                    no_blob_msg = (
+                        "Components too large filtered; lower depth band or "
+                        "increase max_component_area_ratio"
+                    )
+                cv2.putText(
+                    debug_bgr,
+                    no_blob_msg,
+                    (12, 28),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
 
         if self.latest_camera_info is None:
             if self.frame_count % 60 == 0:
@@ -826,6 +924,116 @@ class DepthTrackerNode(Node):
         bbox_msg.data = data
         self.bbox_pub.publish(bbox_msg)
         self.published_bbox_count += 1
+
+    def _fresh_apriltag_detections(self) -> list:
+        if self.latest_apriltag_stamp is None:
+            return []
+        age_s = (self.get_clock().now() - self.latest_apriltag_stamp).nanoseconds / 1e9
+        if age_s > self.apriltag_timeout_s:
+            return []
+        return list(self.latest_apriltag_detections)
+
+    def _estimate_primary_apriltag_bbox(self, depth_m: np.ndarray) -> list[float]:
+        detections = self._fresh_apriltag_detections()
+        if not detections:
+            self._on_blob_missed()
+            return list(SENTINEL_BBOX)
+
+        out_h, out_w = depth_m.shape[:2]
+        src_w, src_h = out_w, out_h
+        if self.latest_apriltag_image_size is not None:
+            src_w = max(1, int(self.latest_apriltag_image_size[0]))
+            src_h = max(1, int(self.latest_apriltag_image_size[1]))
+        sx = float(out_w) / float(src_w)
+        sy = float(out_h) / float(src_h)
+
+        candidates = []
+        finite_depth = np.isfinite(depth_m) & (depth_m > 0.0)
+        for det in detections:
+            tag_id = int(det.id)
+            if self.apriltag_track_tag_ids_set and tag_id not in self.apriltag_track_tag_ids_set:
+                continue
+            if len(det.corners) < 4:
+                continue
+
+            corners = np.array(
+                [[float(p.x) * sx, float(p.y) * sy] for p in det.corners],
+                dtype=np.float32,
+            )
+            if not np.isfinite(corners).all():
+                continue
+
+            min_x = int(np.floor(np.min(corners[:, 0]))) - self.apriltag_bbox_padding_px
+            max_x = int(np.ceil(np.max(corners[:, 0]))) + self.apriltag_bbox_padding_px
+            min_y = int(np.floor(np.min(corners[:, 1]))) - self.apriltag_bbox_padding_px
+            max_y = int(np.ceil(np.max(corners[:, 1]))) + self.apriltag_bbox_padding_px
+
+            min_x = max(0, min(out_w - 1, min_x))
+            min_y = max(0, min(out_h - 1, min_y))
+            max_x = max(0, min(out_w - 1, max_x))
+            max_y = max(0, min(out_h - 1, max_y))
+            if max_x <= min_x or max_y <= min_y:
+                continue
+
+            poly = np.round(corners).astype(np.int32)
+            poly[:, 0] = np.clip(poly[:, 0], 0, out_w - 1)
+            poly[:, 1] = np.clip(poly[:, 1], 0, out_h - 1)
+
+            mask = np.zeros((out_h, out_w), dtype=np.uint8)
+            cv2.fillConvexPoly(mask, poly, 255)
+            valid_mask = (mask > 0) & finite_depth
+            depth_samples = depth_m[valid_mask]
+            if depth_samples.size == 0:
+                roi = depth_m[min_y : max_y + 1, min_x : max_x + 1]
+                roi_mask = finite_depth[min_y : max_y + 1, min_x : max_x + 1]
+                depth_samples = roi[roi_mask]
+            if depth_samples.size == 0:
+                continue
+
+            median_depth_m = float(np.median(depth_samples))
+            w = float(max_x - min_x)
+            h = float(max_y - min_y)
+            cx = float(0.5 * (min_x + max_x))
+            cy = float(0.5 * (min_y + max_y))
+            area_px = int(max(1.0, w * h))
+            candidates.append(
+                {
+                    "x": int(min_x),
+                    "y": int(min_y),
+                    "w": w,
+                    "h": h,
+                    "cx": cx,
+                    "cy": cy,
+                    "median_depth_m": median_depth_m,
+                    "area_px": area_px,
+                }
+            )
+
+        if not candidates:
+            self._on_blob_missed()
+            return list(SENTINEL_BBOX)
+
+        primary = min(candidates, key=lambda c: float(c["median_depth_m"]))
+        sx0, sy0, sw, sh, sdepth = self._stabilize_blob_estimate(
+            x=int(primary["x"]),
+            y=int(primary["y"]),
+            w=int(max(1.0, float(primary["w"]))),
+            h=int(max(1.0, float(primary["h"]))),
+            cx=float(primary["cx"]),
+            cy=float(primary["cy"]),
+            median_depth_m=float(primary["median_depth_m"]),
+        )
+
+        return [
+            float(sx0),
+            float(sy0),
+            float(sx0 + sw),
+            float(sy0 + sh),
+            float(sx0 + 0.5 * sw),
+            float(sy0 + 0.5 * sh),
+            float(sdepth),
+            float(primary["area_px"]),
+        ]
 
     def _status_timer_cb(self) -> None:
         if self.last_depth_rx_time is None:

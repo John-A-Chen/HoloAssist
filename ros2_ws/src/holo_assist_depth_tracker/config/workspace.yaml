@@ -1,0 +1,26 @@
+holoassist_workspace_board:
+  ros__parameters:
+    detections_topic: /detections_board
+    workspace_frame: workspace_frame
+    tag_family: 36h11
+    board_tag_ids: [0, 1, 2, 3]
+    tag_lookup_timeout_s: 0.05
+    detections_timeout_s: 1.0
+    timer_hz: 20.0
+    geometry_rms_tolerance_m: 0.02
+    dimension_tolerance_m: 0.04
+    workspace_realign_service_name: /holoassist/perception/realign_workspace
+
+    robot_tf_child_frame: ur3e_base_link0
+    publish_robot_tf: true
+    robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
+    robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
+    robot_x_m: 0.450
+    robot_y_m: 0.564
+    robot_z_m: 0.0
+    robot_base_diameter_m: 0.128
+    robot_marker_height_m: 0.01
+
+    workspace_mode_topic: /holoassist/perception/workspace_mode
+    workspace_diag_topic: /holoassist/perception/workspace_diagnostics
+    plane_coeff_topic: /holoassist/perception/bench_plane_coefficients

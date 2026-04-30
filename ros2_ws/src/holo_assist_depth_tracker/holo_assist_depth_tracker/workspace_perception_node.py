@@ -13,6 +13,7 @@ from geometry_msgs.msg import Point, PoseStamped, TransformStamped
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import PointCloud2, PointField
+from std_srvs.srv import Trigger
 from std_msgs.msg import Float32MultiArray, String
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
 from visualization_msgs.msg import Marker
@@ -171,8 +172,19 @@ class WorkspacePerceptionNode(Node):
             self._on_pointcloud,
             qos_profile_sensor_data,
         )
+        self.apriltag_object_pose_sub = self.create_subscription(
+            PoseStamped,
+            self.apriltag_object_pose_topic,
+            self._on_apriltag_object_pose,
+            qos_profile_sensor_data,
+        )
         self.robot_pose_timer = self.create_timer(
             1.0 / self.robot_pose_publish_hz, self._on_robot_pose_timer
+        )
+        self.realign_service = self.create_service(
+            Trigger,
+            self.workspace_realign_service_name,
+            self._on_realign_workspace_service,
         )
 
         self.tf_buffer = Buffer()
@@ -198,6 +210,8 @@ class WorkspacePerceptionNode(Node):
         self._last_pair_front_edge_y: Optional[float] = None
         self._last_pair_interior_sign: Optional[float] = None
         self._last_pair_tag_points_w: Dict[str, np.ndarray] = {}
+        self._latest_apriltag_object_pose: Optional[PoseStamped] = None
+        self._latest_apriltag_object_pose_stamp: Optional[rclpy.time.Time] = None
 
         self._background_scores: Dict[Tuple[int, int, int], float] = {}
         self._last_object_center_w: Optional[np.ndarray] = None
@@ -218,6 +232,9 @@ class WorkspacePerceptionNode(Node):
         self._last_resnap_frame = 0
         self._resnap_count = 0
         self._last_resnap_reason = "startup"
+        self._workspace_locked = False
+        self._workspace_initial_snap_done = False
+        self._manual_realign_requested = False
 
         self.get_logger().info(
             "Workspace perception started. input=%s workspace_frame=%s tags=%s"
@@ -238,9 +255,18 @@ class WorkspacePerceptionNode(Node):
             )
         )
         self.get_logger().info(
-            "robot_pose follow_workspace=%s edge_clearance=%.3fm x_offset=%.3fm manual=(x=%.3f,y=%.3f,z=%.3f,yaw=%.1f) base_dia=%.3fm marker_topic=%s tf=%s child=%s hz=%.1f snap_origin_to_bench_center=%s"
+            "workspace lock_after_initial_two_tag_snap=%s realign_service=%s"
+            % (
+                self.lock_workspace_after_initial_two_tag_snap,
+                self.workspace_realign_service_name,
+            )
+        )
+        self.get_logger().info(
+            "robot_pose follow_workspace=%s from_tag_pair=%s tag_edge_offset=%.3fm edge_clearance=%.3fm x_offset=%.3fm manual=(x=%.3f,y=%.3f,z=%.3f,yaw=%.1f) base_dia=%.3fm marker_topic=%s tf=%s child=%s hz=%.1f snap_origin_to_bench_center=%s"
             % (
                 self.robot_pose_follow_workspace,
+                self.robot_pose_from_tag_pair,
+                self.robot_tag_pair_edge_offset_m,
                 self.robot_edge_clearance_m,
                 self.robot_pose_x_offset_m,
                 self.robot_pose_x_m,
@@ -255,6 +281,15 @@ class WorkspacePerceptionNode(Node):
                 self.workspace_origin_snap_to_bench_center,
             )
         )
+        self.get_logger().info(
+            "object source mode=%s apriltag_topic=%s timeout=%.2fs size=%.3fm"
+            % (
+                self.object_source_mode,
+                self.apriltag_object_pose_topic,
+                self.apriltag_object_timeout_s,
+                self.apriltag_object_size_m,
+            )
+        )
 
     def _declare_parameters(self) -> None:
         self.declare_parameter(
@@ -264,13 +299,14 @@ class WorkspacePerceptionNode(Node):
 
         self.declare_parameter("use_tag_refinement", True)
         self.declare_parameter("tag_family", "36h11")
-        self.declare_parameter("tag_ids", [0, 1])
-        self.declare_parameter("tag_frame_names", ["tag36h11:0", "tag36h11:1"])
+        self.declare_parameter("tag_ids", [1, 0])
+        self.declare_parameter("tag_frame_names", ["tag36h11:1", "tag36h11:0"])
         self.declare_parameter("tag_size_m", 0.035)
         self.declare_parameter("tag_timeout_s", 0.5)
         self.declare_parameter("tag_min_separation_m", 0.08)
         self.declare_parameter("project_tags_to_plane", True)
         self.declare_parameter("tag_plane_projection_max_distance_m", 0.30)
+        self.declare_parameter("bench_plane_from_tags_only", True)
         self.declare_parameter("tag_markers_use_projected_points", False)
         self.declare_parameter("tag_markers_flatten_z_to_plane", True)
         self.declare_parameter("tag_markers_raw_z_offset_m", 0.0)
@@ -285,9 +321,14 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("plane_min_inlier_ratio", 0.35)
         self.declare_parameter("plane_min_inliers", 600)
         self.declare_parameter("plane_smoothing_alpha", 0.25)
-        self.declare_parameter("resnap_interval_s", 30.0)
+        self.declare_parameter("resnap_interval_s", 0.0)
         self.declare_parameter("resnap_clear_background", False)
-        self.declare_parameter("resnap_clear_tracks", True)
+        self.declare_parameter("resnap_clear_tracks", False)
+        self.declare_parameter("lock_workspace_after_initial_two_tag_snap", True)
+        self.declare_parameter(
+            "workspace_realign_service_name",
+            "/holoassist/perception/realign_workspace",
+        )
 
         self.declare_parameter("roi_x_min", -0.45)
         self.declare_parameter("roi_x_max", 0.45)
@@ -375,6 +416,8 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("robot_tf_child_frame", "ur3e_base_link0")
         self.declare_parameter("robot_pose_publish_hz", 10.0)
         self.declare_parameter("robot_pose_follow_workspace", True)
+        self.declare_parameter("robot_pose_from_tag_pair", True)
+        self.declare_parameter("robot_tag_pair_edge_offset_m", 0.564)
         self.declare_parameter("robot_edge_clearance_m", 0.0)
         self.declare_parameter("robot_pose_x_offset_m", 0.0)
         self.declare_parameter("robot_pose_x_m", 0.0)
@@ -420,6 +463,12 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("axes_marker_lift_m", 0.0)
         self.declare_parameter("object_marker_min_extent_m", 0.02)
         self.declare_parameter("object_marker_max_extent_m", 0.18)
+        self.declare_parameter("object_source_mode", "apriltag")
+        self.declare_parameter(
+            "apriltag_object_pose_topic", "/holoassist/perception/april_cube_pose"
+        )
+        self.declare_parameter("apriltag_object_timeout_s", 0.8)
+        self.declare_parameter("apriltag_object_size_m", 0.075)
 
         self.declare_parameter("random_seed", 42)
 
@@ -447,6 +496,9 @@ class WorkspacePerceptionNode(Node):
         )
         self.tag_plane_projection_max_distance_m = float(
             self.get_parameter("tag_plane_projection_max_distance_m").value
+        )
+        self.bench_plane_from_tags_only = bool(
+            self.get_parameter("bench_plane_from_tags_only").value
         )
         self.tag_markers_use_projected_points = bool(
             self.get_parameter("tag_markers_use_projected_points").value
@@ -491,6 +543,12 @@ class WorkspacePerceptionNode(Node):
             self.get_parameter("resnap_clear_background").value
         )
         self.resnap_clear_tracks = bool(self.get_parameter("resnap_clear_tracks").value)
+        self.lock_workspace_after_initial_two_tag_snap = bool(
+            self.get_parameter("lock_workspace_after_initial_two_tag_snap").value
+        )
+        self.workspace_realign_service_name = str(
+            self.get_parameter("workspace_realign_service_name").value
+        ).strip()
 
         self.roi_x_min = float(self.get_parameter("roi_x_min").value)
         self.roi_x_max = float(self.get_parameter("roi_x_max").value)
@@ -628,6 +686,12 @@ class WorkspacePerceptionNode(Node):
         self.robot_pose_follow_workspace = bool(
             self.get_parameter("robot_pose_follow_workspace").value
         )
+        self.robot_pose_from_tag_pair = bool(
+            self.get_parameter("robot_pose_from_tag_pair").value
+        )
+        self.robot_tag_pair_edge_offset_m = float(
+            self.get_parameter("robot_tag_pair_edge_offset_m").value
+        )
         self.robot_edge_clearance_m = float(
             self.get_parameter("robot_edge_clearance_m").value
         )
@@ -686,6 +750,18 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_max_extent_m = float(
             self.get_parameter("object_marker_max_extent_m").value
         )
+        self.object_source_mode = str(
+            self.get_parameter("object_source_mode").value
+        ).strip().lower()
+        self.apriltag_object_pose_topic = str(
+            self.get_parameter("apriltag_object_pose_topic").value
+        )
+        self.apriltag_object_timeout_s = float(
+            self.get_parameter("apriltag_object_timeout_s").value
+        )
+        self.apriltag_object_size_m = float(
+            self.get_parameter("apriltag_object_size_m").value
+        )
 
         self.random_seed = int(self.get_parameter("random_seed").value)
 
@@ -717,6 +793,8 @@ class WorkspacePerceptionNode(Node):
         self.plane_min_inliers = max(100, self.plane_min_inliers)
         self.plane_smoothing_alpha = min(max(self.plane_smoothing_alpha, 0.0), 1.0)
         self.resnap_interval_s = max(0.0, self.resnap_interval_s)
+        if not self.workspace_realign_service_name:
+            self.workspace_realign_service_name = "/holoassist/perception/realign_workspace"
 
         self.background_voxel_size = max(0.005, self.background_voxel_size)
         self.background_increment = min(max(self.background_increment, 0.001), 1.0)
@@ -745,6 +823,10 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_max_extent_m = max(
             self.object_marker_min_extent_m, self.object_marker_max_extent_m
         )
+        if self.object_source_mode not in ("pointcloud", "apriltag"):
+            self.object_source_mode = "apriltag"
+        self.apriltag_object_timeout_s = max(0.05, self.apriltag_object_timeout_s)
+        self.apriltag_object_size_m = max(0.01, self.apriltag_object_size_m)
         self.robot_base_diameter_m = max(0.01, self.robot_base_diameter_m)
         self.robot_marker_height_m = max(0.001, self.robot_marker_height_m)
         self.robot_tf_child_frame = self.robot_tf_child_frame.strip()
@@ -756,6 +838,7 @@ class WorkspacePerceptionNode(Node):
             )
             self.publish_robot_tf = False
         self.robot_pose_publish_hz = max(0.1, self.robot_pose_publish_hz)
+        self.robot_tag_pair_edge_offset_m = max(0.0, self.robot_tag_pair_edge_offset_m)
         self.robot_edge_clearance_m = max(0.0, self.robot_edge_clearance_m)
         self.axes_marker_lift_m = max(0.0, self.axes_marker_lift_m)
         self.marker_lifetime_s = min(max(self.marker_lifetime_s, 0.0), 30.0)
@@ -785,8 +868,87 @@ class WorkspacePerceptionNode(Node):
     def _on_robot_pose_timer(self) -> None:
         self._publish_robot_pose(self.get_clock().now().to_msg())
 
+    def _on_apriltag_object_pose(self, msg: PoseStamped) -> None:
+        self._latest_apriltag_object_pose = msg
+        try:
+            stamp = rclpy.time.Time.from_msg(msg.header.stamp)
+            if stamp.nanoseconds == 0:
+                stamp = self.get_clock().now()
+        except Exception:
+            stamp = self.get_clock().now()
+        self._latest_apriltag_object_pose_stamp = stamp
+
+    def _on_realign_workspace_service(
+        self, request: Trigger.Request, response: Trigger.Response
+    ) -> Trigger.Response:
+        del request
+        self._manual_realign_requested = True
+        self._workspace_locked = False
+        self._workspace_initial_snap_done = False
+        response.success = True
+        response.message = "workspace realign requested; waiting for next valid two-tag snap"
+        self.get_logger().info("manual workspace realign requested via service call")
+        return response
+
+    def _apriltag_object_center_in_cloud(
+        self,
+        cloud_frame: str,
+    ) -> Optional[np.ndarray]:
+        if (
+            self._latest_apriltag_object_pose is None
+            or self._latest_apriltag_object_pose_stamp is None
+        ):
+            return None
+        age_s = (
+            self.get_clock().now() - self._latest_apriltag_object_pose_stamp
+        ).nanoseconds / 1e9
+        if age_s > self.apriltag_object_timeout_s:
+            return None
+
+        pose_msg = self._latest_apriltag_object_pose
+        pose_frame = str(pose_msg.header.frame_id).strip()
+        if not pose_frame:
+            return None
+
+        center_in_pose_frame = np.array(
+            [
+                float(pose_msg.pose.position.x),
+                float(pose_msg.pose.position.y),
+                float(pose_msg.pose.position.z),
+            ],
+            dtype=np.float32,
+        )
+        if pose_frame == cloud_frame:
+            return center_in_pose_frame
+
+        try:
+            tf_msg = self.tf_buffer.lookup_transform(
+                cloud_frame,
+                pose_frame,
+                rclpy.time.Time(),
+            )
+        except TransformException:
+            return None
+
+        t = tf_msg.transform.translation
+        r = tf_msg.transform.rotation
+        rot = _rotation_matrix_from_quaternion(
+            float(r.x),
+            float(r.y),
+            float(r.z),
+            float(r.w),
+        ).astype(np.float32)
+        trans = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float32)
+        return rot @ center_in_pose_frame + trans
+
     def _on_pointcloud(self, msg: PointCloud2) -> None:
         self._frame_count += 1
+        if self._manual_realign_requested:
+            self._reset_workspace_state(
+                msg.header.frame_id, msg.header.stamp, reason="manual_service"
+            )
+            self._last_resnap_time = self.get_clock().now()
+            self._manual_realign_requested = False
         self._maybe_periodic_resnap(msg.header.frame_id, msg.header.stamp)
 
         xyz_all = self._extract_xyz(msg)
@@ -810,24 +972,47 @@ class WorkspacePerceptionNode(Node):
         else:
             xyz = xyz_all
 
-        plane_fit = self._fit_bench_plane(xyz)
-        if plane_fit is None:
-            self._tracks.clear()
-            self._last_primary_track_id = None
-            if self.publish_debug_markers:
-                self._publish_workspace_markers_delete(msg.header.stamp)
-            self._publish_workspace_state(
-                mode="invalid",
-                level=DiagnosticStatus.ERROR,
-                message="plane fit failed",
-                extra={"points": int(xyz.shape[0])},
-            )
-            self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
-            return
-
-        normal, d, inlier_mask, inlier_ratio, inlier_count, plane_origin = plane_fit
-
         tag_observations = self._lookup_tag_observations(msg.header.frame_id)
+        tag_plane = (
+            self._plane_from_tags(tag_observations)
+            if self.bench_plane_from_tags_only
+            else None
+        )
+        if tag_plane is not None:
+            normal, d, plane_origin = tag_plane
+            inlier_mask = np.ones(xyz.shape[0], dtype=bool)
+            inlier_ratio = 1.0
+            inlier_count = int(xyz.shape[0])
+        else:
+            if self.bench_plane_from_tags_only:
+                self._tracks.clear()
+                self._last_primary_track_id = None
+                if self.publish_debug_markers:
+                    self._publish_workspace_markers_delete(msg.header.stamp)
+                self._publish_workspace_state(
+                    mode="invalid",
+                    level=DiagnosticStatus.ERROR,
+                    message="missing tag plane",
+                    extra={"tags_used": int(len(tag_observations))},
+                )
+                self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
+                return
+            plane_fit = self._fit_bench_plane(xyz)
+            if plane_fit is None:
+                self._tracks.clear()
+                self._last_primary_track_id = None
+                if self.publish_debug_markers:
+                    self._publish_workspace_markers_delete(msg.header.stamp)
+                self._publish_workspace_state(
+                    mode="invalid",
+                    level=DiagnosticStatus.ERROR,
+                    message="plane fit failed",
+                    extra={"points": int(xyz.shape[0])},
+                )
+                self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
+                return
+            normal, d, inlier_mask, inlier_ratio, inlier_count, plane_origin = plane_fit
+
         tag_points_c_raw = {frame: value[0] for frame, value in tag_observations.items()}
         tag_points_c, tag_plane_projection_error_m, tag_projected_count = (
             self._project_tag_points_to_plane(
@@ -867,30 +1052,50 @@ class WorkspacePerceptionNode(Node):
             return
 
         basis_c, mode = basis
-        origin_c = plane_origin.copy()
+        if self._workspace_locked and self._last_origin_c is not None and self._last_basis_c is not None:
+            origin_c = self._last_origin_c.copy()
+            basis_c = self._last_basis_c.copy()
+            roi_source = "locked"
+        else:
+            origin_c = plane_origin.copy()
+            if self._last_origin_c is not None and self._last_basis_c is not None:
+                alpha = self.plane_smoothing_alpha
+                if alpha > 0.0:
+                    origin_c = (1.0 - alpha) * self._last_origin_c + alpha * origin_c
+                    z_axis = _normalize(
+                        (1.0 - alpha) * self._last_basis_c[:, 2] + alpha * basis_c[:, 2]
+                    )
+                    x_axis = _normalize(
+                        (1.0 - alpha) * self._last_basis_c[:, 0] + alpha * basis_c[:, 0]
+                    )
+                    if z_axis is not None and x_axis is not None:
+                        y_axis = _normalize(np.cross(z_axis, x_axis))
+                        if y_axis is not None:
+                            x_axis = _normalize(np.cross(y_axis, z_axis))
+                            if x_axis is not None:
+                                basis_c = np.column_stack((x_axis, y_axis, z_axis))
 
-        if self._last_origin_c is not None and self._last_basis_c is not None:
-            alpha = self.plane_smoothing_alpha
-            if alpha > 0.0:
-                origin_c = (1.0 - alpha) * self._last_origin_c + alpha * origin_c
-                z_axis = _normalize((1.0 - alpha) * self._last_basis_c[:, 2] + alpha * basis_c[:, 2])
-                x_axis = _normalize((1.0 - alpha) * self._last_basis_c[:, 0] + alpha * basis_c[:, 0])
-                if z_axis is not None and x_axis is not None:
-                    y_axis = _normalize(np.cross(z_axis, x_axis))
-                    if y_axis is not None:
-                        x_axis = _normalize(np.cross(y_axis, z_axis))
-                        if x_axis is not None:
-                            basis_c = np.column_stack((x_axis, y_axis, z_axis))
+            roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
+            if self.workspace_origin_snap_to_bench_center:
+                origin_c = self._snap_workspace_origin_to_bench_center(origin_c, basis_c)
+
+            self._last_origin_c = origin_c
+            self._last_basis_c = basis_c
+
+            if (
+                self.lock_workspace_after_initial_two_tag_snap
+                and mode == "plane_plus_tags"
+                and not self._workspace_initial_snap_done
+            ):
+                self._workspace_locked = True
+                self._workspace_initial_snap_done = True
+                self.get_logger().info(
+                    "workspace locked after initial two-tag snap; use service %s to realign."
+                    % self.workspace_realign_service_name
+                )
 
         self._last_plane = (float(normal[0]), float(normal[1]), float(normal[2]), float(d))
-
         self._publish_plane_coefficients(normal, d)
-        roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
-        if self.workspace_origin_snap_to_bench_center:
-            origin_c = self._snap_workspace_origin_to_bench_center(origin_c, basis_c)
-
-        self._last_origin_c = origin_c
-        self._last_basis_c = basis_c
 
         if self.publish_tf:
             self._broadcast_workspace_tf(
@@ -954,6 +1159,129 @@ class WorkspacePerceptionNode(Node):
                 frame_id=self.workspace_frame,
                 stamp=msg.header.stamp,
             )
+
+        if self.object_source_mode == "apriltag":
+            apriltag_center_c = self._apriltag_object_center_in_cloud(msg.header.frame_id)
+            if apriltag_center_c is None:
+                self._last_published_center_w = None
+                self._last_published_center_c = None
+                self._last_published_extent_w = None
+                self._last_primary_track_id = None
+                self._object_persistence_score *= self.persistence_decay
+                self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
+                self._publish_workspace_state(
+                    mode=mode,
+                    level=self._workspace_mode_level(mode),
+                    message="workspace updated; no apriltag object pose",
+                    extra={
+                        "inliers": inlier_count,
+                        "inlier_ratio": round(inlier_ratio, 3),
+                        "cropped_points": int(cropped_points_c.shape[0]),
+                        "foreground_points": int(fg_points_c.shape[0]),
+                        "cluster_count": 0,
+                        "roi_source": roi_source,
+                        "roi_x_min": round(self._active_roi_x_min, 3),
+                        "roi_x_max": round(self._active_roi_x_max, 3),
+                        "roi_y_min": round(self._active_roi_y_min, 3),
+                        "roi_y_max": round(self._active_roi_y_max, 3),
+                        "culled_below_plane": culled_below_plane,
+                        "tags_used": int(len(tag_points_c)),
+                        "tags_projected": int(tag_projected_count),
+                        "tag_plane_proj_err_m": round(tag_plane_projection_error_m, 4),
+                    },
+                )
+                self._publish_object_metrics(
+                    foreground_points=int(fg_points_c.shape[0]),
+                    cluster_count=0,
+                    selected_points=0,
+                    center_w=None,
+                    persistence=self._object_persistence_score,
+                )
+                return
+
+            apriltag_center_w = self._to_workspace(
+                apriltag_center_c.reshape(1, 3), origin_c, basis_c
+            )[0]
+            apriltag_extent_w = np.array(
+                [self.apriltag_object_size_m] * 3, dtype=np.float32
+            )
+            self._last_published_center_w = apriltag_center_w.copy()
+            self._last_published_center_c = apriltag_center_c.copy()
+            self._last_published_extent_w = apriltag_extent_w.copy()
+            self._last_primary_track_id = 1
+            self._object_persistence_score = min(
+                1.0, self._object_persistence_score + self.persistence_gain
+            )
+
+            object_pose_c = PoseStamped()
+            object_pose_c.header.frame_id = msg.header.frame_id
+            object_pose_c.header.stamp = msg.header.stamp
+            object_pose_c.pose.position.x = float(apriltag_center_c[0])
+            object_pose_c.pose.position.y = float(apriltag_center_c[1])
+            object_pose_c.pose.position.z = float(apriltag_center_c[2])
+            object_pose_c.pose.orientation.w = 1.0
+            self.object_pose_pub.publish(object_pose_c)
+
+            object_pose_w = PoseStamped()
+            object_pose_w.header.frame_id = self.workspace_frame
+            object_pose_w.header.stamp = msg.header.stamp
+            object_pose_w.pose.position.x = float(apriltag_center_w[0])
+            object_pose_w.pose.position.y = float(apriltag_center_w[1])
+            object_pose_w.pose.position.z = float(apriltag_center_w[2])
+            object_pose_w.pose.orientation.w = 1.0
+            self.object_pose_workspace_pub.publish(object_pose_w)
+
+            self._publish_object_markers(
+                frame_id=msg.header.frame_id,
+                stamp=msg.header.stamp,
+                origin_c=origin_c,
+                basis_c=basis_c,
+                tracked_objects=[
+                    {
+                        "track_id": 1,
+                        "center_w": apriltag_center_w,
+                        "extent_w": apriltag_extent_w,
+                        "points": 1,
+                    }
+                ],
+                primary_track_id=1,
+                primary_center_w=apriltag_center_w,
+                primary_extent_w=apriltag_extent_w,
+            )
+            self._publish_workspace_state(
+                mode=mode,
+                level=self._workspace_mode_level(mode),
+                message="workspace and apriltag object updated",
+                extra={
+                    "inliers": inlier_count,
+                    "inlier_ratio": round(inlier_ratio, 3),
+                    "cropped_points": int(cropped_points_c.shape[0]),
+                    "foreground_points": int(fg_points_c.shape[0]),
+                    "cluster_count": 1,
+                    "selected_points": 1,
+                    "culled_below_plane": culled_below_plane,
+                    "roi_source": roi_source,
+                    "roi_x_min": round(self._active_roi_x_min, 3),
+                    "roi_x_max": round(self._active_roi_x_max, 3),
+                    "roi_y_min": round(self._active_roi_y_min, 3),
+                    "roi_y_max": round(self._active_roi_y_max, 3),
+                    "tracked_objects": 1,
+                    "primary_track_id": 1,
+                    "centroid_updated": True,
+                    "centroid_closer_delta_m": 0.0,
+                    "tags_used": int(len(tag_points_c)),
+                    "tags_projected": int(tag_projected_count),
+                    "tag_plane_proj_err_m": round(tag_plane_projection_error_m, 4),
+                },
+            )
+            self._publish_object_metrics(
+                foreground_points=int(fg_points_c.shape[0]),
+                cluster_count=1,
+                selected_points=1,
+                center_w=apriltag_center_w,
+                persistence=self._object_persistence_score,
+            )
+            return
 
         cluster_candidates = self._extract_cluster_candidates(fg_points_w)
         tracked_objects = self._update_tracks(cluster_candidates)
@@ -1097,6 +1425,8 @@ class WorkspacePerceptionNode(Node):
         self._last_origin_c = None
         self._last_basis_c = None
         self._last_plane = None
+        self._workspace_locked = False
+        self._workspace_initial_snap_done = False
 
         self._active_roi_x_min = self.roi_x_min
         self._active_roi_x_max = self.roi_x_max
@@ -1306,6 +1636,41 @@ class WorkspacePerceptionNode(Node):
             observations[frame] = (point_c, rot_c_t)
 
         return observations
+
+    def _plane_from_tags(
+        self, tag_observations: Dict[str, Tuple[np.ndarray, np.ndarray]]
+    ) -> Optional[Tuple[np.ndarray, float, np.ndarray]]:
+        if not tag_observations:
+            return None
+
+        normals: List[np.ndarray] = []
+        points: List[np.ndarray] = []
+        for frame in self.tag_frames:
+            value = tag_observations.get(frame)
+            if value is None:
+                continue
+            point_c, rot_c_t = value
+            n = _normalize(np.asarray(rot_c_t[:, 2], dtype=np.float32))
+            if n is None:
+                continue
+            normals.append(n)
+            points.append(np.asarray(point_c, dtype=np.float32))
+
+        if not normals or not points:
+            return None
+
+        normal = _normalize(np.mean(np.stack(normals, axis=0), axis=0))
+        if normal is None:
+            return None
+
+        origin = np.mean(np.stack(points, axis=0), axis=0).astype(np.float32)
+        sensor_vec = -origin
+        if float(np.dot(normal, sensor_vec)) < 0.0:
+            normal = -normal
+
+        d = -float(np.dot(normal, origin))
+        origin = origin - (np.dot(normal, origin) + d) * normal
+        return normal.astype(np.float32), d, origin.astype(np.float32)
 
     def _project_tag_points_to_plane(
         self,
@@ -1759,6 +2124,32 @@ class WorkspacePerceptionNode(Node):
             return (
                 float(self.robot_pose_x_m),
                 float(self.robot_pose_y_m),
+                float(self.robot_pose_z_m),
+                float(self.robot_pose_yaw_deg),
+            )
+
+        if (
+            self.robot_pose_from_tag_pair
+            and self._last_pair_tag_points_w
+            and len(self._last_pair_tag_points_w) >= 2
+            and self._last_pair_interior_sign is not None
+        ):
+            tag_points = np.asarray(
+                [point for point in self._last_pair_tag_points_w.values()],
+                dtype=np.float32,
+            )
+            tag_mid_x = float(np.mean(tag_points[:, 0]))
+            tag_mid_y = float(np.mean(tag_points[:, 1]))
+            away_sign = 1.0 if self._last_pair_interior_sign >= 0.0 else -1.0
+            nearest_tag_edge_y = tag_mid_y + away_sign * (0.5 * float(self.tag_size_m))
+            robot_x_w = tag_mid_x + float(self.robot_pose_x_offset_m)
+            robot_y_w = nearest_tag_edge_y + away_sign * (
+                float(self.robot_tag_pair_edge_offset_m)
+                + float(self.robot_edge_clearance_m)
+            )
+            return (
+                float(robot_x_w),
+                float(robot_y_w),
                 float(self.robot_pose_z_m),
                 float(self.robot_pose_yaw_deg),
             )
@@ -2504,6 +2895,11 @@ class WorkspacePerceptionNode(Node):
                 value=str(int(max(0, self._frame_count - self._last_resnap_frame))),
             ),
             KeyValue(key="last_resnap_reason", value=self._last_resnap_reason),
+            KeyValue(key="workspace_locked", value=str(bool(self._workspace_locked))),
+            KeyValue(
+                key="manual_realign_requested",
+                value=str(bool(self._manual_realign_requested)),
+            ),
         ]
         if extra:
             for k, v in extra.items():

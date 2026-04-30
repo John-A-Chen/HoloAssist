@@ -30,6 +30,36 @@ def generate_launch_description() -> LaunchDescription:
         default_value="480",
         description="Target webcam height.",
     )
+    use_sensor_data_qos_arg = DeclareLaunchArgument(
+        "use_sensor_data_qos",
+        default_value="true",
+        description="Use sensor-data QoS (best-effort) for image and camera_info topics.",
+    )
+    qos_depth_arg = DeclareLaunchArgument(
+        "qos_depth",
+        default_value="5",
+        description="QoS history depth for webcam topics.",
+    )
+    publish_camera_info_arg = DeclareLaunchArgument(
+        "publish_camera_info",
+        default_value="true",
+        description="Publish synthetic CameraInfo alongside webcam images.",
+    )
+    camera_info_topic_arg = DeclareLaunchArgument(
+        "camera_info_topic",
+        default_value="/holo_assist/webcam/camera_info",
+        description="Webcam CameraInfo topic.",
+    )
+    camera_info_frame_id_arg = DeclareLaunchArgument(
+        "camera_info_frame_id",
+        default_value="webcam_frame",
+        description="Frame id used in CameraInfo header.",
+    )
+    hfov_deg_arg = DeclareLaunchArgument(
+        "hfov_deg",
+        default_value="69.4",
+        description="Approximate horizontal FOV (deg) used for auto intrinsics.",
+    )
     bind_host_arg = DeclareLaunchArgument(
         "bind_host",
         default_value="0.0.0.0",
@@ -53,6 +83,12 @@ def generate_launch_description() -> LaunchDescription:
                 "fps": LaunchConfiguration("fps"),
                 "width": LaunchConfiguration("width"),
                 "height": LaunchConfiguration("height"),
+                "use_sensor_data_qos": LaunchConfiguration("use_sensor_data_qos"),
+                "qos_depth": LaunchConfiguration("qos_depth"),
+                "publish_camera_info": LaunchConfiguration("publish_camera_info"),
+                "camera_info_topic": LaunchConfiguration("camera_info_topic"),
+                "camera_info_frame_id": LaunchConfiguration("camera_info_frame_id"),
+                "hfov_deg": LaunchConfiguration("hfov_deg"),
             }
         ],
     )
@@ -79,6 +115,12 @@ def generate_launch_description() -> LaunchDescription:
             fps_arg,
             width_arg,
             height_arg,
+            use_sensor_data_qos_arg,
+            qos_depth_arg,
+            publish_camera_info_arg,
+            camera_info_topic_arg,
+            camera_info_frame_id_arg,
+            hfov_deg_arg,
             bind_host_arg,
             bind_port_arg,
             webcam_node,

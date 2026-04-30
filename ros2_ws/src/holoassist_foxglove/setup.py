@@ -16,6 +16,7 @@ setup(
         (f"share/{package_name}", ["package.xml"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
+        (os.path.join("share", package_name, "config"), glob("config/*.rviz")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -29,6 +30,7 @@ setup(
             "runtime_observability_node = holoassist_foxglove.runtime_observability_node:main",
             "obstacle_to_object_pose_adapter = holoassist_foxglove.obstacle_to_object_pose_adapter:main",
             "apriltag_image_overlay_node = holoassist_foxglove.apriltag_image_overlay_node:main",
+            "apriltag_cube_pose_node = holoassist_foxglove.apriltag_cube_pose_node:main",
         ],
     },
 )

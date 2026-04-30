@@ -44,8 +44,12 @@ holo_assist_depth_tracker:
     max_component_area_ratio: 0.18
 
     enable_apriltag_overlay: true
-    apriltag_topic: /detections
+    apriltag_topic: /detections_all
     apriltag_timeout_s: 1.0
+    # Track only AprilTag targets (no depth blob centroid tracking).
+    apriltag_distance_tracking_only: true
+    apriltag_track_tag_ids: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+    apriltag_bbox_padding_px: 8
 
     # Workspace overlay on RGB debug image, inferred from two front-corner tags.
     enable_workspace_overlay: true

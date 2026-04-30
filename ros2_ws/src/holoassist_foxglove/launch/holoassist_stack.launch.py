@@ -11,6 +11,7 @@ from launch.actions import (
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -38,6 +39,7 @@ def _profile_defaults(profile: str) -> Dict[str, bool]:
             "enable_tf_marker_bridge": False,
             "enable_object_pose_adapter": True,
             "enable_apriltag_tracking": False,
+            "enable_4tag_board_4cube_pipeline": False,
             "enable_workspace_perception": True,
             "enable_depth_tracker": True,
             "enable_depth_camera": True,
@@ -59,6 +61,7 @@ def _profile_defaults(profile: str) -> Dict[str, bool]:
         "enable_tf_marker_bridge": False,
         "enable_object_pose_adapter": True,
         "enable_apriltag_tracking": False,
+        "enable_4tag_board_4cube_pipeline": False,
         "enable_workspace_perception": False,
         "enable_depth_tracker": False,
         "enable_depth_camera": False,
@@ -105,6 +108,25 @@ def _setup(context):
     apriltag_image_topic = LaunchConfiguration("apriltag_image_topic")
     apriltag_camera_info_topic = LaunchConfiguration("apriltag_camera_info_topic")
     apriltag_params_file = LaunchConfiguration("apriltag_params_file")
+    apriltag_cube_size_m = LaunchConfiguration("apriltag_cube_size_m")
+    apriltag_cube_tf_child_frame = LaunchConfiguration("apriltag_cube_tf_child_frame")
+    apriltag_tag_tf_prefix = LaunchConfiguration("apriltag_tag_tf_prefix")
+    apriltag_cube_obstacle_marker_topic = LaunchConfiguration(
+        "apriltag_cube_obstacle_marker_topic"
+    )
+    apriltag_cube_pose_topic = LaunchConfiguration("apriltag_cube_pose_topic")
+    apriltag_cube_marker_topic = LaunchConfiguration("apriltag_cube_marker_topic")
+    apriltag_cube_status_topic = LaunchConfiguration("apriltag_cube_status_topic")
+    april_pipeline_start_tracker = LaunchConfiguration("apriltag_pipeline_start_tracker")
+    april_pipeline_start_overlay = LaunchConfiguration("apriltag_pipeline_start_overlay")
+
+    apriltag_cube_pose_raw = (
+        LaunchConfiguration("enable_apriltag_cube_pose").perform(context).strip().lower()
+    )
+    if apriltag_cube_pose_raw in ("", "auto"):
+        resolved["enable_apriltag_cube_pose"] = resolved["enable_apriltag_tracking"]
+    else:
+        resolved["enable_apriltag_cube_pose"] = _resolve_bool(apriltag_cube_pose_raw, False)
 
     runtime_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -143,6 +165,7 @@ def _setup(context):
                 "[holoassist_stack] profile=%s observability=%s unity_bringup=%s "
                 "unity_endpoint=%s depth_tracker=%s depth_camera=%s pointcloud_obstacle=%s "
                 "depth_rviz=%s apriltag_tracking=%s workspace_perception=%s object_pose_adapter=%s"
+                " apriltag_cube_pose=%s 4tag_4cube_pipeline=%s"
             )
             % (
                 profile,
@@ -156,6 +179,8 @@ def _setup(context):
                 resolved["enable_apriltag_tracking"],
                 resolved["enable_workspace_perception"],
                 resolved["enable_object_pose_adapter"],
+                resolved["enable_apriltag_cube_pose"],
+                resolved["enable_4tag_board_4cube_pipeline"],
             )
         ),
         runtime_launch,
@@ -201,6 +226,52 @@ def _setup(context):
             }.items(),
         )
         actions.append(apriltag_launch)
+        if resolved["enable_apriltag_cube_pose"]:
+            actions.append(
+                Node(
+                    package="holoassist_foxglove",
+                    executable="apriltag_cube_pose_node",
+                    name="apriltag_cube_pose",
+                    output="screen",
+                    parameters=[
+                        {
+                            "detections_topic": "/detections",
+                            "cube_size_m": apriltag_cube_size_m,
+                            "cube_tf_child_frame": apriltag_cube_tf_child_frame,
+                            "cube_pose_topic": apriltag_cube_pose_topic,
+                            "cube_marker_topic": apriltag_cube_marker_topic,
+                            "cube_status_topic": apriltag_cube_status_topic,
+                            "obstacle_marker_topic": apriltag_cube_obstacle_marker_topic,
+                            "use_obstacle_marker_center_fusion": False,
+                            "publish_obstacle_only_pose": False,
+                            "publish_tag_tfs": True,
+                            "tag_tf_child_prefix": apriltag_tag_tf_prefix,
+                        }
+                    ],
+                )
+            )
+
+    if resolved["enable_4tag_board_4cube_pipeline"]:
+        actions.append(
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("holo_assist_depth_tracker"),
+                            "launch",
+                            "holoassist_4tag_board_4cube.launch.py",
+                        ]
+                    )
+                ),
+                launch_arguments={
+                    "start_camera": apriltag_start_camera,
+                    "image_topic": apriltag_image_topic,
+                    "camera_info_topic": apriltag_camera_info_topic,
+                    "start_tracker": april_pipeline_start_tracker,
+                    "start_overlay": april_pipeline_start_overlay,
+                }.items(),
+            )
+        )
 
     return actions
 
@@ -219,6 +290,8 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("enable_tf_marker_bridge", default_value="auto"),
             DeclareLaunchArgument("enable_object_pose_adapter", default_value="auto"),
             DeclareLaunchArgument("enable_apriltag_tracking", default_value="auto"),
+            DeclareLaunchArgument("enable_4tag_board_4cube_pipeline", default_value="auto"),
+            DeclareLaunchArgument("enable_apriltag_cube_pose", default_value="auto"),
             DeclareLaunchArgument("enable_workspace_perception", default_value="auto"),
             DeclareLaunchArgument("enable_depth_tracker", default_value="auto"),
             DeclareLaunchArgument("enable_depth_camera", default_value="auto"),
@@ -246,6 +319,8 @@ def generate_launch_description() -> LaunchDescription:
                 ),
             ),
             DeclareLaunchArgument("apriltag_start_camera", default_value="false"),
+            DeclareLaunchArgument("apriltag_pipeline_start_tracker", default_value="true"),
+            DeclareLaunchArgument("apriltag_pipeline_start_overlay", default_value="true"),
             DeclareLaunchArgument(
                 "apriltag_image_topic",
                 default_value="/camera/camera/color/image_raw",
@@ -263,6 +338,29 @@ def generate_launch_description() -> LaunchDescription:
                         "apriltag_workbench_36h11.yaml",
                     ]
                 ),
+            ),
+            DeclareLaunchArgument("apriltag_cube_size_m", default_value="0.075"),
+            DeclareLaunchArgument(
+                "apriltag_cube_tf_child_frame", default_value="apriltag_cube"
+            ),
+            DeclareLaunchArgument(
+                "apriltag_tag_tf_prefix", default_value="apriltag_cube_tag_"
+            ),
+            DeclareLaunchArgument(
+                "apriltag_cube_obstacle_marker_topic",
+                default_value="/holo_assist_depth_tracker/obstacle_marker",
+            ),
+            DeclareLaunchArgument(
+                "apriltag_cube_pose_topic",
+                default_value="/holoassist/perception/april_cube_pose",
+            ),
+            DeclareLaunchArgument(
+                "apriltag_cube_marker_topic",
+                default_value="/holoassist/perception/april_cube_marker",
+            ),
+            DeclareLaunchArgument(
+                "apriltag_cube_status_topic",
+                default_value="/holoassist/perception/april_cube_status",
             ),
             OpaqueFunction(function=_setup),
         ]

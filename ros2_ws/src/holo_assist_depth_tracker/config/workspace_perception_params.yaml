@@ -6,13 +6,13 @@ holoassist_workspace_perception:
     use_tag_refinement: true
     tag_family: 36h11
     # Physical placement:
-    # - tag id 0 = left front corner
-    # - tag id 1 = right front corner
-    # +X in workspace will follow tag0 -> tag1 (left to right on the 700 mm edge).
+    # - tag id 1 = left front corner
+    # - tag id 0 = right front corner
+    # +X in workspace will follow tag1 -> tag0 (left to right on the 700 mm edge).
     # Tag size includes white border: 150 mm x 150 mm.
     # Front-edge layout: [150 mm tag] + [400 mm gap] + [150 mm tag] = 700 mm.
-    tag_ids: [0, 1]
-    tag_frame_names: ["tag36h11:0", "tag36h11:1"]
+    tag_ids: [1, 0]
+    tag_frame_names: ["tag36h11:1", "tag36h11:0"]
     tag_size_m: 0.15
     # Hold last valid tag transform longer to avoid mode flapping/jitter
     # when detections momentarily drop.
@@ -21,6 +21,9 @@ holoassist_workspace_perception:
     tag_min_separation_m: 0.45
     # Tags are mounted on the board; snap tag centers onto fitted plane.
     project_tags_to_plane: true
+    # Use tag poses as the primary bench-plane source (normal + anchor).
+    # Falls back to point-cloud RANSAC only if tags are not available.
+    bench_plane_from_tags_only: true
     # 0.0 means always project tags onto fitted plane (no distance cap).
     tag_plane_projection_max_distance_m: 0.0
     # Keep marker centers at raw tag TF centers for visual alignment in RViz.
@@ -32,7 +35,7 @@ holoassist_workspace_perception:
     tag_markers_raw_z_offset_m: 0.0
     # Single-tag fallback:
     # - Use in-plane tag local X axis for workspace +X estimate.
-    # - Sign per side keeps +X consistent as left->right (tag0 -> tag1).
+    # - Sign per side keeps +X consistent as left->right (tag1 -> tag0).
     single_tag_axis_preference: x
     single_tag_left_axis_sign: 1.0
     single_tag_right_axis_sign: 1.0
@@ -47,18 +50,20 @@ holoassist_workspace_perception:
     plane_min_inliers: 600
     # Lower alpha = stronger temporal smoothing (less jiggle, more lag).
     plane_smoothing_alpha: 0.05
-    # Periodically drop smoothed plane/ROI state so cropping can follow
-    # large bench/camera pose changes without restarting the node.
-    resnap_interval_s: 30.0
+    # Disable periodic auto-resnap; use manual service call instead:
+    #   ros2 service call /holoassist/perception/realign_workspace std_srvs/srv/Trigger "{}"
+    resnap_interval_s: 0.0
     # Background reset is optional; keep false so object foreground model
     # remains stable while only the plane/ROI frame re-locks.
     resnap_clear_background: false
-    resnap_clear_tracks: true
+    resnap_clear_tracks: false
+    lock_workspace_after_initial_two_tag_snap: true
+    workspace_realign_service_name: /holoassist/perception/realign_workspace
 
     # Bench dimensions (board):
     #   width (x): 0.700 m  -> [-0.350, +0.350]
     #   depth (y): 0.500 m  -> [-0.250, +0.250]
-    # Front edge is the tagged wide side; +X aligns tag0->tag1.
+    # Front edge is the tagged wide side; +X aligns tag1->tag0.
     roi_x_min: -0.35
     roi_x_max: 0.35
     roi_y_min: -0.25
@@ -132,6 +137,10 @@ holoassist_workspace_perception:
     object_pose_topic: /holoassist/perception/object_pose
     object_pose_workspace_topic: /holoassist/perception/object_pose_workspace
     object_marker_topic: /holoassist/perception/object_marker
+    object_source_mode: apriltag
+    apriltag_object_pose_topic: /holoassist/perception/april_cube_pose
+    apriltag_object_timeout_s: 0.8
+    apriltag_object_size_m: 0.075
     robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
     robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
     publish_robot_pose_marker: true
@@ -140,9 +149,13 @@ holoassist_workspace_perception:
     robot_pose_publish_hz: 10.0
     # Align workspace frame origin with the blue bench marker center each update.
     workspace_origin_snap_to_bench_center: true
-    # Dynamic placement: keep robot centered in board width and on far long side
-    # away from the front-edge tags (touching edge when clearance=0.0).
+    # Dynamic placement from tag pair:
+    # - X is midpoint(tag1, tag0) plus robot_pose_x_offset_m
+    # - Y is 0.564 m from the nearest tag edge in the away-from-tags direction
+    #   (plus robot_edge_clearance_m if nonzero).
     robot_pose_follow_workspace: true
+    robot_pose_from_tag_pair: true
+    robot_tag_pair_edge_offset_m: 0.564
     robot_edge_clearance_m: 0.0
     robot_pose_x_offset_m: 0.0
     # Manual fallback (used only when robot_pose_follow_workspace=false):
