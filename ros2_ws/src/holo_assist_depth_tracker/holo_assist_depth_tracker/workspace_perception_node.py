@@ -158,12 +158,21 @@ class WorkspacePerceptionNode(Node):
         self.object_pose_workspace_pub = self.create_publisher(
             PoseStamped, self.object_pose_workspace_topic, reliable_qos
         )
+        self.robot_pose_pub = self.create_publisher(
+            PoseStamped, self.robot_pose_topic, reliable_qos
+        )
+        self.robot_marker_pub = self.create_publisher(
+            Marker, self.robot_marker_topic, reliable_qos
+        )
 
         self.cloud_sub = self.create_subscription(
             PointCloud2,
             self.input_pointcloud_topic,
             self._on_pointcloud,
             qos_profile_sensor_data,
+        )
+        self.robot_pose_timer = self.create_timer(
+            1.0 / self.robot_pose_publish_hz, self._on_robot_pose_timer
         )
 
         self.tf_buffer = Buffer()
@@ -226,6 +235,24 @@ class WorkspacePerceptionNode(Node):
                 self.resnap_interval_s,
                 self.resnap_clear_background,
                 self.resnap_clear_tracks,
+            )
+        )
+        self.get_logger().info(
+            "robot_pose follow_workspace=%s edge_clearance=%.3fm x_offset=%.3fm manual=(x=%.3f,y=%.3f,z=%.3f,yaw=%.1f) base_dia=%.3fm marker_topic=%s tf=%s child=%s hz=%.1f snap_origin_to_bench_center=%s"
+            % (
+                self.robot_pose_follow_workspace,
+                self.robot_edge_clearance_m,
+                self.robot_pose_x_offset_m,
+                self.robot_pose_x_m,
+                self.robot_pose_y_m,
+                self.robot_pose_z_m,
+                self.robot_pose_yaw_deg,
+                self.robot_base_diameter_m,
+                self.robot_marker_topic,
+                self.publish_robot_tf,
+                self.robot_tf_child_frame,
+                self.robot_pose_publish_hz,
+                self.workspace_origin_snap_to_bench_center,
             )
         )
 
@@ -337,6 +364,26 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter(
             "object_marker_topic", "/holoassist/perception/object_marker"
         )
+        self.declare_parameter(
+            "robot_pose_topic", "/holoassist/perception/ur3e_base_link0_pose"
+        )
+        self.declare_parameter(
+            "robot_marker_topic", "/holoassist/perception/ur3e_base_link0_marker"
+        )
+        self.declare_parameter("publish_robot_pose_marker", True)
+        self.declare_parameter("publish_robot_tf", True)
+        self.declare_parameter("robot_tf_child_frame", "ur3e_base_link0")
+        self.declare_parameter("robot_pose_publish_hz", 10.0)
+        self.declare_parameter("robot_pose_follow_workspace", True)
+        self.declare_parameter("robot_edge_clearance_m", 0.0)
+        self.declare_parameter("robot_pose_x_offset_m", 0.0)
+        self.declare_parameter("robot_pose_x_m", 0.0)
+        self.declare_parameter("robot_pose_y_m", 0.314)
+        self.declare_parameter("robot_pose_z_m", 0.0)
+        self.declare_parameter("robot_pose_yaw_deg", 0.0)
+        self.declare_parameter("robot_base_diameter_m", 0.128)
+        self.declare_parameter("robot_marker_height_m", 0.01)
+        self.declare_parameter("workspace_origin_snap_to_bench_center", True)
 
         self.declare_parameter(
             "plane_marker_topic", "/holoassist/perception/bench_plane_marker"
@@ -566,6 +613,40 @@ class WorkspacePerceptionNode(Node):
             self.get_parameter("object_pose_workspace_topic").value
         )
         self.object_marker_topic = str(self.get_parameter("object_marker_topic").value)
+        self.robot_pose_topic = str(self.get_parameter("robot_pose_topic").value)
+        self.robot_marker_topic = str(self.get_parameter("robot_marker_topic").value)
+        self.publish_robot_pose_marker = bool(
+            self.get_parameter("publish_robot_pose_marker").value
+        )
+        self.publish_robot_tf = bool(self.get_parameter("publish_robot_tf").value)
+        self.robot_tf_child_frame = str(
+            self.get_parameter("robot_tf_child_frame").value
+        )
+        self.robot_pose_publish_hz = float(
+            self.get_parameter("robot_pose_publish_hz").value
+        )
+        self.robot_pose_follow_workspace = bool(
+            self.get_parameter("robot_pose_follow_workspace").value
+        )
+        self.robot_edge_clearance_m = float(
+            self.get_parameter("robot_edge_clearance_m").value
+        )
+        self.robot_pose_x_offset_m = float(
+            self.get_parameter("robot_pose_x_offset_m").value
+        )
+        self.robot_pose_x_m = float(self.get_parameter("robot_pose_x_m").value)
+        self.robot_pose_y_m = float(self.get_parameter("robot_pose_y_m").value)
+        self.robot_pose_z_m = float(self.get_parameter("robot_pose_z_m").value)
+        self.robot_pose_yaw_deg = float(self.get_parameter("robot_pose_yaw_deg").value)
+        self.robot_base_diameter_m = float(
+            self.get_parameter("robot_base_diameter_m").value
+        )
+        self.robot_marker_height_m = float(
+            self.get_parameter("robot_marker_height_m").value
+        )
+        self.workspace_origin_snap_to_bench_center = bool(
+            self.get_parameter("workspace_origin_snap_to_bench_center").value
+        )
         self.plane_marker_topic = str(self.get_parameter("plane_marker_topic").value)
         self.tag_marker_topic = str(self.get_parameter("tag_marker_topic").value)
         self.axes_marker_topic = str(self.get_parameter("axes_marker_topic").value)
@@ -664,6 +745,18 @@ class WorkspacePerceptionNode(Node):
         self.object_marker_max_extent_m = max(
             self.object_marker_min_extent_m, self.object_marker_max_extent_m
         )
+        self.robot_base_diameter_m = max(0.01, self.robot_base_diameter_m)
+        self.robot_marker_height_m = max(0.001, self.robot_marker_height_m)
+        self.robot_tf_child_frame = self.robot_tf_child_frame.strip()
+        if not self.robot_tf_child_frame:
+            self.robot_tf_child_frame = "ur3e_base_link0"
+        if self.robot_tf_child_frame == self.workspace_frame:
+            self.get_logger().warn(
+                "robot_tf_child_frame equals workspace_frame; disabling robot TF publish."
+            )
+            self.publish_robot_tf = False
+        self.robot_pose_publish_hz = max(0.1, self.robot_pose_publish_hz)
+        self.robot_edge_clearance_m = max(0.0, self.robot_edge_clearance_m)
         self.axes_marker_lift_m = max(0.0, self.axes_marker_lift_m)
         self.marker_lifetime_s = min(max(self.marker_lifetime_s, 0.0), 30.0)
         self.centroid_min_closer_m = max(0.0, self.centroid_min_closer_m)
@@ -688,6 +781,9 @@ class WorkspacePerceptionNode(Node):
         self.single_tag_right_axis_sign = (
             1.0 if self.single_tag_right_axis_sign >= 0.0 else -1.0
         )
+
+    def _on_robot_pose_timer(self) -> None:
+        self._publish_robot_pose(self.get_clock().now().to_msg())
 
     def _on_pointcloud(self, msg: PointCloud2) -> None:
         self._frame_count += 1
@@ -786,9 +882,15 @@ class WorkspacePerceptionNode(Node):
                         if x_axis is not None:
                             basis_c = np.column_stack((x_axis, y_axis, z_axis))
 
+        self._last_plane = (float(normal[0]), float(normal[1]), float(normal[2]), float(d))
+
+        self._publish_plane_coefficients(normal, d)
+        roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
+        if self.workspace_origin_snap_to_bench_center:
+            origin_c = self._snap_workspace_origin_to_bench_center(origin_c, basis_c)
+
         self._last_origin_c = origin_c
         self._last_basis_c = basis_c
-        self._last_plane = (float(normal[0]), float(normal[1]), float(normal[2]), float(d))
 
         if self.publish_tf:
             self._broadcast_workspace_tf(
@@ -798,8 +900,6 @@ class WorkspacePerceptionNode(Node):
                 basis_c=basis_c,
             )
 
-        self._publish_plane_coefficients(normal, d)
-        roi_source = self._compute_active_roi_bounds(tag_points_c, origin_c, basis_c)
         if self.publish_debug_markers:
             tag_marker_points_c = (
                 tag_points_c
@@ -1562,6 +1662,126 @@ class WorkspacePerceptionNode(Node):
 
         return mask
 
+    def _shift_workspace_state(self, dx: float, dy: float) -> None:
+        if abs(dx) < 1e-9 and abs(dy) < 1e-9:
+            return
+
+        self._active_roi_x_min += dx
+        self._active_roi_x_max += dx
+        self._active_roi_y_min += dy
+        self._active_roi_y_max += dy
+
+        if self._last_pair_front_center_x is not None:
+            self._last_pair_front_center_x += dx
+        if self._last_pair_front_edge_y is not None:
+            self._last_pair_front_edge_y += dy
+
+        if self._last_pair_tag_points_w:
+            shifted: Dict[str, np.ndarray] = {}
+            for frame, point in self._last_pair_tag_points_w.items():
+                p = np.asarray(point, dtype=np.float32).copy()
+                p[0] += dx
+                p[1] += dy
+                shifted[frame] = p
+            self._last_pair_tag_points_w = shifted
+
+        if self._last_object_center_w is not None:
+            self._last_object_center_w = np.asarray(
+                [
+                    float(self._last_object_center_w[0]) + dx,
+                    float(self._last_object_center_w[1]) + dy,
+                    float(self._last_object_center_w[2]),
+                ],
+                dtype=np.float32,
+            )
+
+        if self._last_published_center_w is not None:
+            self._last_published_center_w = np.asarray(
+                [
+                    float(self._last_published_center_w[0]) + dx,
+                    float(self._last_published_center_w[1]) + dy,
+                    float(self._last_published_center_w[2]),
+                ],
+                dtype=np.float32,
+            )
+
+        for track in self._tracks.values():
+            center_w = np.asarray(track.get("center_w", np.zeros(3)), dtype=np.float32).copy()
+            center_w[0] += dx
+            center_w[1] += dy
+            track["center_w"] = center_w
+
+    def _snap_workspace_origin_to_bench_center(
+        self, origin_c: np.ndarray, basis_c: np.ndarray
+    ) -> np.ndarray:
+        center_x_w = float((self._active_roi_x_min + self._active_roi_x_max) * 0.5)
+        center_y_w = float((self._active_roi_y_min + self._active_roi_y_max) * 0.5)
+        if abs(center_x_w) < 1e-9 and abs(center_y_w) < 1e-9:
+            return origin_c
+
+        center_w = np.array([center_x_w, center_y_w, 0.0], dtype=np.float32)
+        snapped_origin_c = self._workspace_to_camera(center_w, origin_c, basis_c).astype(
+            np.float32
+        )
+        # New workspace frame is translated by the ROI center, so convert cached
+        # workspace-state values to the translated frame.
+        self._shift_workspace_state(-center_x_w, -center_y_w)
+        shift_m = math.hypot(center_x_w, center_y_w)
+        # Large frame re-anchors can invalidate workspace-voxel history; restart
+        # background/tracking state so perception settles quickly in the new frame.
+        if shift_m > 0.05:
+            self._background_scores.clear()
+            self._background_warmup_until_frame = (
+                self._frame_count + self.background_warmup_frames
+            )
+            self._tracks.clear()
+            self._last_primary_track_id = None
+            self._last_published_center_w = None
+            self._last_published_center_c = None
+            self._last_published_extent_w = None
+            self._object_persistence_score = 0.0
+        return snapped_origin_c
+
+    def _infer_robot_far_side_sign(self, board_center_y_w: float) -> float:
+        if self._last_pair_interior_sign is not None:
+            return 1.0 if self._last_pair_interior_sign >= 0.0 else -1.0
+
+        if self._last_pair_tag_points_w:
+            tag_ys = [float(point[1]) for point in self._last_pair_tag_points_w.values()]
+            if tag_ys:
+                tag_mid_y = float(np.mean(tag_ys))
+                return 1.0 if board_center_y_w >= tag_mid_y else -1.0
+
+        return 1.0
+
+    def _compute_robot_pose_workspace(self) -> Tuple[float, float, float, float]:
+        if not self.robot_pose_follow_workspace:
+            return (
+                float(self.robot_pose_x_m),
+                float(self.robot_pose_y_m),
+                float(self.robot_pose_z_m),
+                float(self.robot_pose_yaw_deg),
+            )
+
+        center_x_w = float((self._active_roi_x_min + self._active_roi_x_max) * 0.5)
+        center_y_w = float((self._active_roi_y_min + self._active_roi_y_max) * 0.5)
+        half_depth_w = 0.5 * float(
+            max(0.02, self._active_roi_y_max - self._active_roi_y_min)
+        )
+        base_radius_m = 0.5 * float(self.robot_base_diameter_m)
+        far_sign = self._infer_robot_far_side_sign(center_y_w)
+
+        robot_x_w = center_x_w + float(self.robot_pose_x_offset_m)
+        robot_y_w = center_y_w + far_sign * (
+            half_depth_w + base_radius_m + float(self.robot_edge_clearance_m)
+        )
+        return (
+            float(robot_x_w),
+            float(robot_y_w),
+            float(self.robot_pose_z_m),
+            float(self.robot_pose_yaw_deg),
+        )
+
     def _extract_foreground(
         self, cropped_points_c: np.ndarray, cropped_points_w: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -2187,6 +2407,64 @@ class WorkspacePerceptionNode(Node):
             marker.action = Marker.DELETE
             self.object_marker_pub.publish(marker)
         self._last_marker_ids.clear()
+
+    def _publish_robot_pose(self, stamp) -> None:
+        robot_x_w, robot_y_w, robot_z_w, robot_yaw_deg = self._compute_robot_pose_workspace()
+        yaw_rad = math.radians(float(robot_yaw_deg))
+        half_yaw = 0.5 * yaw_rad
+        qz = math.sin(half_yaw)
+        qw = math.cos(half_yaw)
+
+        pose = PoseStamped()
+        pose.header.frame_id = self.workspace_frame
+        pose.header.stamp = stamp
+        pose.pose.position.x = float(robot_x_w)
+        pose.pose.position.y = float(robot_y_w)
+        pose.pose.position.z = float(robot_z_w)
+        pose.pose.orientation.x = 0.0
+        pose.pose.orientation.y = 0.0
+        pose.pose.orientation.z = float(qz)
+        pose.pose.orientation.w = float(qw)
+        self.robot_pose_pub.publish(pose)
+
+        if self.publish_robot_tf:
+            tf_msg = TransformStamped()
+            tf_msg.header.frame_id = self.workspace_frame
+            tf_msg.header.stamp = stamp
+            tf_msg.child_frame_id = self.robot_tf_child_frame
+            tf_msg.transform.translation.x = float(robot_x_w)
+            tf_msg.transform.translation.y = float(robot_y_w)
+            tf_msg.transform.translation.z = float(robot_z_w)
+            tf_msg.transform.rotation.x = 0.0
+            tf_msg.transform.rotation.y = 0.0
+            tf_msg.transform.rotation.z = float(qz)
+            tf_msg.transform.rotation.w = float(qw)
+            self.tf_broadcaster.sendTransform(tf_msg)
+
+        if not self.publish_robot_pose_marker:
+            return
+
+        marker = Marker()
+        marker.header.frame_id = self.workspace_frame
+        marker.header.stamp = stamp
+        marker.ns = "holoassist_robot_pose"
+        marker.id = 0
+        marker.type = Marker.CYLINDER
+        marker.action = Marker.ADD
+        marker.pose.position.x = float(robot_x_w)
+        marker.pose.position.y = float(robot_y_w)
+        marker.pose.position.z = float(robot_z_w + 0.5 * self.robot_marker_height_m)
+        marker.pose.orientation.z = float(qz)
+        marker.pose.orientation.w = float(qw)
+        marker.scale.x = float(self.robot_base_diameter_m)
+        marker.scale.y = float(self.robot_base_diameter_m)
+        marker.scale.z = float(self.robot_marker_height_m)
+        marker.color.r = 0.95
+        marker.color.g = 0.65
+        marker.color.b = 0.15
+        marker.color.a = 0.85
+        self._apply_marker_lifetime(marker)
+        self.robot_marker_pub.publish(marker)
 
     def _publish_workspace_state(
         self,

@@ -205,6 +205,19 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /holoassist/perception/object_marker
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Robot Pose Marker
+      Namespaces:
+        holoassist_robot_pose: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/ur3e_base_link0_marker
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
@@ -224,13 +237,15 @@ Visualization Manager:
           Value: true
         tag36h11:1:
           Value: true
+        ur3e_base_link0:
+          Value: true
         workspace_frame:
           Value: true
       Marker Scale: 0.11999999731779099
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
         camera_link:
           camera_color_frame:

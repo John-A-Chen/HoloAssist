@@ -13,6 +13,21 @@ Foxglove-first runtime observability package for HoloAssist.
 - Heartbeat publishers compatible with `holoassist_manager`
 - Launch integration with `foxglove_bridge`
 
+## Key Metrics Topics
+
+- `/holoassist/metrics/debug_image_hz`
+- `/holoassist/metrics/pointcloud_hz`
+- `/holoassist/metrics/bbox_hz`
+- `/holoassist/metrics/pointcloud_points`
+- `/holoassist/metrics/debug_image_age_s`
+- `/holoassist/metrics/pointcloud_age_s`
+- `/holoassist/metrics/perception_pipeline_ok` (`1.0` = fresh, `0.0` = stale)
+- `/holoassist/metrics/joint_states_hz`
+- `/holoassist/metrics/target_transport_latency_ms`
+- `/holoassist/metrics/twist_transport_latency_ms`
+- `/holoassist/metrics/unity_tcp_latency_ms`
+- `/holoassist/metrics/foxglove_tcp_latency_ms`
+
 ## Launch Files
 
 - `launch/observability.launch.py`

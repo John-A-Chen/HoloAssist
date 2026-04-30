@@ -35,6 +35,9 @@ sections:
         topic: /holoassist/perception/object_marker
         notes: Normalized object marker topic for downstream apps.
       - panel: 3D
+        topic: /holoassist/perception/ur3e_base_link0_marker
+        notes: Hardcoded UR3e base_link0 pose marker in workspace frame.
+      - panel: 3D
         topic: /holoassist/perception/bench_plane_marker
         notes: Bench plane marker in workspace frame.
       - panel: 3D
@@ -67,6 +70,8 @@ sections:
       - panel: Raw Messages
         topic: /holoassist/perception/object_pose_workspace
       - panel: Raw Messages
+        topic: /holoassist/perception/ur3e_base_link0_pose
+      - panel: Raw Messages
         topic: /holoassist/perception/workspace_mode
       - panel: Raw Messages
         topic: /holoassist/perception/workspace_diagnostics
@@ -96,6 +101,16 @@ sections:
         topic: /holoassist/metrics/pointcloud_hz
       - panel: Plot
         topic: /holoassist/metrics/debug_image_hz
+      - panel: Plot
+        topic: /holoassist/metrics/bbox_hz
+      - panel: Plot
+        topic: /holoassist/metrics/pointcloud_points
+      - panel: Plot
+        topic: /holoassist/metrics/debug_image_age_s
+      - panel: Plot
+        topic: /holoassist/metrics/pointcloud_age_s
+      - panel: Plot
+        topic: /holoassist/metrics/perception_pipeline_ok
       - panel: Plot
         topic: /holoassist/metrics/unity_tcp_latency_ms
       - panel: Plot

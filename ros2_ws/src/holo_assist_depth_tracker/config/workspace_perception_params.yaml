@@ -80,16 +80,11 @@ holoassist_workspace_perception:
     # Set >0.0 only if depth noise causes clipping at the plane boundary.
     below_plane_tolerance_m: 0.0
 
-    # Robot pedestal exclusion (assumes workspace origin is bench center):
-    # - Base diameter: 0.128 m (radius 0.064 m), with safety margin => 0.090 m.
-    # - Robot centered in width: 0.300 m from either side edge => x ~= 0.0.
-    # - Robot 0.095 m from back edge to base perimeter:
-    #     center offset from back edge = 0.095 + 0.064 = 0.159 m
-    #     center y from bench center = 0.250 - 0.159 = +0.091 m
-    # If your y-axis points the opposite direction, flip pedestal_center_y sign.
+    # Robot pedestal exclusion (optional hard mask in workspace frame).
+    # Pose publishing below now computes robot center from detected board geometry.
     pedestal_exclusion_enabled: false
     pedestal_center_x: 0.00
-    pedestal_center_y: 0.091
+    pedestal_center_y: 0.314
     pedestal_radius: 0.09
     pedestal_z_min: -0.05
     pedestal_z_max: 0.50
@@ -137,6 +132,26 @@ holoassist_workspace_perception:
     object_pose_topic: /holoassist/perception/object_pose
     object_pose_workspace_topic: /holoassist/perception/object_pose_workspace
     object_marker_topic: /holoassist/perception/object_marker
+    robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
+    robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
+    publish_robot_pose_marker: true
+    publish_robot_tf: true
+    robot_tf_child_frame: ur3e_base_link0
+    robot_pose_publish_hz: 10.0
+    # Align workspace frame origin with the blue bench marker center each update.
+    workspace_origin_snap_to_bench_center: true
+    # Dynamic placement: keep robot centered in board width and on far long side
+    # away from the front-edge tags (touching edge when clearance=0.0).
+    robot_pose_follow_workspace: true
+    robot_edge_clearance_m: 0.0
+    robot_pose_x_offset_m: 0.0
+    # Manual fallback (used only when robot_pose_follow_workspace=false):
+    robot_pose_x_m: 0.0
+    robot_pose_y_m: 0.314
+    robot_pose_z_m: 0.0
+    robot_pose_yaw_deg: 0.0
+    robot_base_diameter_m: 0.128
+    robot_marker_height_m: 0.01
 
     plane_marker_topic: /holoassist/perception/bench_plane_marker
     tag_marker_topic: /holoassist/perception/workspace_tag_markers

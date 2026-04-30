@@ -186,6 +186,21 @@ class RuntimeObservabilityNode(Node):
         self.debug_image_rate_pub = self.create_publisher(
             Float32, "/holoassist/metrics/debug_image_hz", 10
         )
+        self.bbox_rate_pub = self.create_publisher(
+            Float32, "/holoassist/metrics/bbox_hz", 10
+        )
+        self.pointcloud_points_pub = self.create_publisher(
+            Float32, "/holoassist/metrics/pointcloud_points", 10
+        )
+        self.debug_image_age_pub = self.create_publisher(
+            Float32, "/holoassist/metrics/debug_image_age_s", 10
+        )
+        self.pointcloud_age_pub = self.create_publisher(
+            Float32, "/holoassist/metrics/pointcloud_age_s", 10
+        )
+        self.perception_pipeline_ok_pub = self.create_publisher(
+            Float32, "/holoassist/metrics/perception_pipeline_ok", 10
+        )
         self.target_latency_pub = self.create_publisher(
             Float32, "/holoassist/metrics/target_transport_latency_ms", 10
         )
@@ -633,6 +648,21 @@ class RuntimeObservabilityNode(Node):
         self._publish_metric(self.joint_rate_pub, joint_hz)
         self._publish_metric(self.pointcloud_rate_pub, pointcloud_hz)
         self._publish_metric(self.debug_image_rate_pub, debug_hz)
+        self._publish_metric(self.bbox_rate_pub, self._rate_hz("bbox"))
+        self._publish_metric(
+            self.pointcloud_points_pub, float(self._last_pointcloud_points)
+        )
+        self._publish_metric(self.debug_image_age_pub, debug_image_age)
+        self._publish_metric(self.pointcloud_age_pub, pointcloud_age)
+        self._publish_metric(
+            self.perception_pipeline_ok_pub,
+            1.0
+            if (
+                debug_image_age < self.stale_timeout_s
+                and pointcloud_age < self.stale_timeout_s
+            )
+            else 0.0,
+        )
         self._publish_metric(self.target_latency_pub, self._last_target_transport_latency_ms)
         self._publish_metric(self.twist_latency_pub, self._last_twist_transport_latency_ms)
         self._publish_metric(self.unity_tcp_latency_pub, unity_latency_ms)
