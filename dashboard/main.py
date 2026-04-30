@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
     QFrame, QProgressBar, QSizePolicy, QStackedWidget,
 )
 
-from ros_interface import RosInterface, RobotState, ROS_AVAILABLE, TOPIC_DEFAULTS
+from ros_interface import RosInterface, RobotState, OperatingMode, ROS_AVAILABLE, TOPIC_DEFAULTS
 
 
 # ── Colours ─────────────────────────────────────────────────────────
@@ -1173,7 +1173,12 @@ class MainWindow(QMainWindow):
         body.setContentsMargins(0, 0, 0, 0)
         body.setSpacing(0)
 
-        # Tab widget (left, fills remaining space)
+        # Left column: tabs + mode buttons
+        left_col = QVBoxLayout()
+        left_col.setContentsMargins(0, 0, 0, 0)
+        left_col.setSpacing(0)
+
+        # Tab widget
         self.tabs = QTabWidget()
         self.tabs.setFont(QFont("monospace", 8))
 
@@ -1195,7 +1200,32 @@ class MainWindow(QMainWindow):
         self.session_screen = SessionScreen()
         self.tabs.addTab(self.session_screen, "SESSION")
 
-        body.addWidget(self.tabs, 1)
+        left_col.addWidget(self.tabs, 1)
+
+        # Mode buttons (bottom of left column)
+        mode_row = QHBoxLayout()
+        mode_row.setContentsMargins(4, 4, 4, 4)
+        mode_row.setSpacing(4)
+
+        self.teleop_btn = QPushButton("TELEOP")
+        self.teleop_btn.setFont(QFont("monospace", 11, QFont.Bold))
+        self.teleop_btn.setFixedHeight(80)
+        self.teleop_btn.setCursor(Qt.PointingHandCursor)
+        self.teleop_btn.clicked.connect(self._on_teleop)
+        mode_row.addWidget(self.teleop_btn, 1)
+
+        self.moveit_btn = QPushButton("MOVEIT")
+        self.moveit_btn.setFont(QFont("monospace", 11, QFont.Bold))
+        self.moveit_btn.setFixedHeight(80)
+        self.moveit_btn.setCursor(Qt.PointingHandCursor)
+        self.moveit_btn.clicked.connect(self._on_moveit)
+        mode_row.addWidget(self.moveit_btn, 1)
+
+        self._active_mode = "TELEOP"
+        self._update_mode_buttons()
+
+        left_col.addLayout(mode_row)
+        body.addLayout(left_col, 1)
 
         # E-stop (right side, always visible)
         self.estop = EstopWidget(ros)
@@ -1219,6 +1249,63 @@ class MainWindow(QMainWindow):
         self.latency_screen.update_status(status)
         self.session_screen.update_status(status)
         self.estop.sync_state(status)
+        if status.operating_mode != self._active_mode:
+            self._active_mode = status.operating_mode
+            self._update_mode_buttons()
+
+    def _on_teleop(self):
+        self._active_mode = "TELEOP"
+        self._update_mode_buttons()
+        self.ros.switch_to_teleop()
+
+    def _on_moveit(self):
+        self._active_mode = "MOVEIT"
+        self._update_mode_buttons()
+        self.ros.switch_to_moveit()
+
+    def _update_mode_buttons(self):
+        if self._active_mode == "TELEOP":
+            self.teleop_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {GREEN};
+                    color: white;
+                    border: 3px solid #6fdd8b;
+                    border-radius: 12px;
+                }}
+            """)
+            self.moveit_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {DARK_BG};
+                    color: {BLUE};
+                    border: 3px solid {BLUE};
+                    border-radius: 12px;
+                }}
+                QPushButton:hover {{
+                    background-color: #1a2332;
+                    border-color: #79bbff;
+                }}
+            """)
+        else:
+            self.teleop_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {DARK_BG};
+                    color: {GREEN};
+                    border: 3px solid {GREEN};
+                    border-radius: 12px;
+                }}
+                QPushButton:hover {{
+                    background-color: #1a2332;
+                    border-color: #6fdd8b;
+                }}
+            """)
+            self.moveit_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {BLUE};
+                    color: white;
+                    border: 3px solid #79bbff;
+                    border-radius: 12px;
+                }}
+            """)
 
     def keyPressEvent(self, event: QKeyEvent):
         key = event.key()

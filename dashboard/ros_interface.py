@@ -37,6 +37,11 @@ class RobotState(Enum):
     RESUMING = auto()
 
 
+class OperatingMode(Enum):
+    TELEOP = auto()
+    MOVEIT = auto()
+
+
 @dataclass
 class TopicStatus:
     """Tracks a single topic's receive rate and freshness."""
@@ -88,6 +93,8 @@ class DashboardStatus:
     # EE lock
     ee_locked: bool = False
     ee_lock_count: int = 0
+    # Operating mode
+    operating_mode: str = "TELEOP"
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -148,6 +155,7 @@ class RosInterface:
         self._latency_history: deque = deque(maxlen=300)    # 10Hz * 30s
         self._session_info: dict = {}
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
+        self._operating_mode: OperatingMode = OperatingMode.TELEOP
 
     def start(self):
         """Initialize rclpy and start spinning in a background thread."""
@@ -566,6 +574,7 @@ class RosInterface:
                 collision_events=session_info_copy.get("collision_events", 0),
                 ee_locked=session_info_copy.get("ee_locked", False),
                 ee_lock_count=session_info_copy.get("ee_lock_count", 0),
+                operating_mode=self._operating_mode.name,
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
@@ -578,6 +587,52 @@ class RosInterface:
             self._events.append(entry)
             if len(self._events) > 100:
                 self._events = self._events[-100:]
+
+    # ── MODE SWITCHING ─────────────────────────────────────────────
+
+    def switch_to_teleop(self):
+        self._add_event("Switching to TELEOP mode...")
+        self._operating_mode = OperatingMode.TELEOP
+        threading.Thread(target=self._do_switch_teleop, daemon=True).start()
+
+    def switch_to_moveit(self):
+        self._add_event("Switching to MOVEIT mode...")
+        self._operating_mode = OperatingMode.MOVEIT
+        threading.Thread(target=self._do_switch_moveit, daemon=True).start()
+
+    def _do_switch_teleop(self):
+        try:
+            result = subprocess.run(
+                ["ros2", "control", "switch_controllers",
+                 "--activate", "forward_velocity_controller", "finger_width_controller",
+                 "--deactivate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                self._add_event("TELEOP mode active (velocity + gripper controllers)")
+                with self._lock:
+                    self._status.controller_active = True
+            else:
+                self._add_event(f"TELEOP switch failed: {result.stderr.strip()}")
+        except Exception as e:
+            self._add_event(f"TELEOP switch error: {e}")
+
+    def _do_switch_moveit(self):
+        try:
+            result = subprocess.run(
+                ["ros2", "control", "switch_controllers",
+                 "--activate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller",
+                 "--deactivate", "forward_velocity_controller", "finger_width_controller"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                self._add_event("MOVEIT mode active (trajectory controllers)")
+                with self._lock:
+                    self._status.controller_active = True
+            else:
+                self._add_event(f"MOVEIT switch failed: {result.stderr.strip()}")
+        except Exception as e:
+            self._add_event(f"MOVEIT switch error: {e}")
 
     # ── SHUTDOWN ────────────────────────────────────────────────────
 
