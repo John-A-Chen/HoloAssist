@@ -80,6 +80,14 @@ class DashboardStatus:
     session_info: dict = field(default_factory=dict)
     # Gripper
     gripper_value: float = 0.0  # 0.0=open, 1.0=closed
+    gripper_grips: int = 0
+    # Collision
+    collision_scale: float = 1.0
+    collision_blocked: bool = False
+    collision_events: int = 0
+    # EE lock
+    ee_locked: bool = False
+    ee_lock_count: int = 0
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -552,6 +560,12 @@ class RosInterface:
                 last_twist_age_s=self._status.last_twist_age_s,
                 unity_map_loaded=self._status.unity_map_loaded,
                 session_info=session_info_copy,
+                gripper_grips=session_info_copy.get("gripper_grips", 0),
+                collision_scale=session_info_copy.get("collision_scale", 1.0),
+                collision_blocked=session_info_copy.get("collision_blocked", False),
+                collision_events=session_info_copy.get("collision_events", 0),
+                ee_locked=session_info_copy.get("ee_locked", False),
+                ee_lock_count=session_info_copy.get("ee_lock_count", 0),
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
@@ -593,7 +607,11 @@ class RosInterface:
 
         estop_count = sum(1 for _, msg in events_copy if "EMERGENCY STOP" in msg)
         data = {
+            "timestamp": datetime.now().isoformat(),
             "estop_count": estop_count,
+            "collision_events": session_copy.get("collision_events", 0),
+            "gripper_grips": session_copy.get("gripper_grips", 0),
+            "ee_lock_count": session_copy.get("ee_lock_count", 0),
             "event_count": len(events_copy),
             "session_info_from_unity": session_copy,
             "events": [{"t": t, "msg": msg} for t, msg in events_copy],

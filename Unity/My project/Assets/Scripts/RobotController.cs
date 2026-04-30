@@ -34,22 +34,8 @@ public class RobotController : MonoBehaviour
     public float gripperSmoothTime = 0.08f;
 
     [Header("Collision Protection")]
-    [Tooltip("Table surface object. Uses its Y position as the collision boundary. If not set, uses tableWorldY.")]
-    public Transform tableTransform;
-    [Tooltip("World-space Y height of table surface. Used when tableTransform is not set.")]
-    public float tableWorldY = 0f;
-    [Tooltip("Minimum clearance (m) above the table surface.")]
-    public float collisionMargin = 0.02f;
-    [Tooltip("Distance (m) above the hard boundary where velocity is gradually reduced.")]
-    public float collisionSoftZone = 0.08f;
-    [Tooltip("Gripper length from tool0 to fingertip (m).")]
-    public float gripperLength = 0.17f;
-    [Tooltip("Minimum distance (m) between distal and proximal joints for self-collision.")]
-    public float selfCollisionDistance = 0.08f;
-    [Tooltip("Layer mask for obstacle colliders. Joints slow down near objects on these layers.")]
-    public LayerMask obstacleLayer;
-    [Tooltip("Radius (m) around each joint to scan for obstacle colliders.")]
-    public float obstacleCheckRadius = 0.15f;
+    [Tooltip("Mesh-based collision guard. Assign the MeshCollisionGuard component.")]
+    public MeshCollisionGuard collisionGuard;
 
     [Header("EE Lock-Down")]
     [Tooltip("Gain for orientation correction when EE lock is active. Higher = snappier.")]
@@ -87,9 +73,6 @@ public class RobotController : MonoBehaviour
     public bool IsHandGuideActive => isGripping;
     public float GripperValue => smoothedGripper;
     public bool IsEELockedDown => eeLockedDown;
-    public Transform[] CollisionJoints => jointTransforms;
-    public Transform Tool0 => tool0Transform;
-    public float TableY => (tableTransform != null) ? tableTransform.position.y : tableWorldY;
 
     private ROSConnection ros;
     private int selectedJoint = 0;
@@ -106,11 +89,6 @@ public class RobotController : MonoBehaviour
     // EE Lock-Down state
     private bool eeLockedDown = false;
 
-    // Collision protection — Unity transforms (auto-found at Start)
-    private Transform[] jointTransforms;
-    private Transform tool0Transform;
-    private Vector3[] collisionCheckPoints = new Vector3[11];
-    private Collider[] overlapBuffer = new Collider[8];
     private double[] toolZ = new double[3];
     private double[] wDesiredLock = new double[3];
 
@@ -170,7 +148,6 @@ public class RobotController : MonoBehaviour
 
         SetupInputActions();
         DisableConflictingXRIActions();
-        FindCollisionTransforms();
     }
 
     void SetupInputActions()
@@ -626,134 +603,18 @@ public class RobotController : MonoBehaviour
         wDesiredLock[2] = 0;
     }
 
-    void FindCollisionTransforms()
-    {
-        if (robotBase == null) return;
-
-        string[] linkNames = { "shoulder_link", "upper_arm_link", "forearm_link",
-                               "wrist_1_link", "wrist_2_link", "wrist_3_link" };
-        jointTransforms = new Transform[6];
-
-        foreach (var t in robotBase.GetComponentsInChildren<Transform>(true))
-        {
-            for (int i = 0; i < linkNames.Length; i++)
-                if (t.name == linkNames[i])
-                    jointTransforms[i] = t;
-            if (t.name == "tool0")
-                tool0Transform = t;
-        }
-
-        int found = 0;
-        for (int i = 0; i < 6; i++) if (jointTransforms[i] != null) found++;
-        Debug.Log($"[RobotController] Collision transforms: {found}/6 joints, tool0={tool0Transform != null}");
-    }
-
     void ApplyCollisionProtection()
     {
-        if (jointTransforms == null) return;
+        if (collisionGuard == null) return;
 
-        float tableY = (tableTransform != null) ? tableTransform.position.y : tableWorldY;
-
-        // Gather collision check points (no allocation — pre-sized array)
-        int n = 0;
-        for (int i = 0; i < jointTransforms.Length; i++)
-        {
-            if (jointTransforms[i] != null)
-                collisionCheckPoints[n++] = jointTransforms[i].position;
-        }
-
-        // Midpoints of long links (upper arm: joints 0→1, forearm: joints 1→2)
-        if (jointTransforms[0] != null && jointTransforms[1] != null)
-            collisionCheckPoints[n++] = (jointTransforms[0].position + jointTransforms[1].position) * 0.5f;
-        if (jointTransforms[1] != null && jointTransforms[2] != null)
-            collisionCheckPoints[n++] = (jointTransforms[1].position + jointTransforms[2].position) * 0.5f;
-
-        // Tool0, gripper tip, and gripper midpoint
-        if (tool0Transform != null)
-        {
-            collisionCheckPoints[n++] = tool0Transform.position;
-            // tool0.up = DH Z axis = tool direction (URDF importer maps DH Z → Unity Y)
-            Vector3 gripDir = tool0Transform.up;
-            collisionCheckPoints[n++] = tool0Transform.position + gripDir * gripperLength;
-            collisionCheckPoints[n++] = tool0Transform.position + gripDir * gripperLength * 0.5f;
-        }
-
-        // --- Table collision ---
-        float minTableDist = float.MaxValue;
-        for (int i = 0; i < n; i++)
-        {
-            float dist = collisionCheckPoints[i].y - tableY;
-            if (dist < minTableDist) minTableDist = dist;
-        }
-
-        if (minTableDist <= collisionMargin)
+        float scale = collisionGuard.ComputeVelocityScale();
+        if (scale <= 0f)
         {
             for (int i = 0; i < 6; i++) qDot[i] = 0;
             return;
         }
-        if (minTableDist < collisionMargin + collisionSoftZone)
+        if (scale < 1f)
         {
-            float scale = (minTableDist - collisionMargin) / collisionSoftZone;
-            for (int i = 0; i < 6; i++) qDot[i] *= scale;
-        }
-
-        // --- Object collision (layer-based) ---
-        if (obstacleLayer.value != 0)
-        {
-            float minObjDist = float.MaxValue;
-            for (int i = 0; i < n; i++)
-            {
-                int count = Physics.OverlapSphereNonAlloc(
-                    collisionCheckPoints[i], obstacleCheckRadius, overlapBuffer, obstacleLayer);
-                for (int c = 0; c < count; c++)
-                {
-                    Vector3 closest = overlapBuffer[c].ClosestPoint(collisionCheckPoints[i]);
-                    float dist = Vector3.Distance(collisionCheckPoints[i], closest);
-                    if (dist < minObjDist) minObjDist = dist;
-                }
-            }
-
-            if (minObjDist <= collisionMargin)
-            {
-                for (int i = 0; i < 6; i++) qDot[i] = 0;
-                return;
-            }
-            if (minObjDist < collisionMargin + collisionSoftZone)
-            {
-                float scale = (minObjDist - collisionMargin) / collisionSoftZone;
-                for (int i = 0; i < 6; i++) qDot[i] *= scale;
-            }
-        }
-
-        // --- Self-collision: distal joints (wrist) vs proximal (shoulder/upper arm) ---
-        float minSelfDist = float.MaxValue;
-        for (int far = 3; far < 6; far++)
-        {
-            if (jointTransforms[far] == null) continue;
-            for (int near = 0; near < 2; near++)
-            {
-                if (jointTransforms[near] == null) continue;
-                float dist = Vector3.Distance(jointTransforms[far].position, jointTransforms[near].position);
-                if (dist < minSelfDist) minSelfDist = dist;
-            }
-        }
-        if (tool0Transform != null)
-        {
-            for (int near = 0; near < 2; near++)
-            {
-                if (jointTransforms[near] == null) continue;
-                float dist = Vector3.Distance(tool0Transform.position, jointTransforms[near].position);
-                if (dist < minSelfDist) minSelfDist = dist;
-            }
-        }
-
-        if (minSelfDist <= selfCollisionDistance)
-        {
-            for (int i = 0; i < 6; i++) qDot[i] = 0;
-        }
-        else if (minSelfDist < selfCollisionDistance + collisionSoftZone)
-        {
-            float scale = (minSelfDist - selfCollisionDistance) / collisionSoftZone;
             for (int i = 0; i < 6; i++) qDot[i] *= scale;
         }
     }

@@ -122,6 +122,18 @@ class StatusBar(QFrame):
 
         self._add_separator(layout)
 
+        self.collision_label = QLabel("COL: ---")
+        self.collision_label.setFont(QFont("monospace", 8, QFont.Bold))
+        layout.addWidget(self.collision_label)
+
+        self._add_separator(layout)
+
+        self.grip_label = QLabel("GRIP: ---")
+        self.grip_label.setFont(QFont("monospace", 8))
+        layout.addWidget(self.grip_label)
+
+        self._add_separator(layout)
+
         self.state_label = QLabel("STATE: ---")
         self.state_label.setFont(QFont("monospace", 8, QFont.Bold))
         layout.addWidget(self.state_label)
@@ -153,6 +165,29 @@ class StatusBar(QFrame):
         else:
             self.joint_hz_label.setText("JNT: --- Hz")
             self.joint_hz_label.setStyleSheet(f"color: {TEXT_DIM};")
+
+        # Collision
+        if status.collision_blocked:
+            self.collision_label.setText("COL: BLOCKED")
+            self.collision_label.setStyleSheet(f"color: {RED};")
+        elif status.collision_scale < 1.0:
+            self.collision_label.setText(f"COL: SLOW {status.collision_scale:.0%}")
+            self.collision_label.setStyleSheet(f"color: {YELLOW};")
+        else:
+            self.collision_label.setText("COL: CLEAR")
+            self.collision_label.setStyleSheet(f"color: {GREEN};")
+
+        # Gripper
+        g = status.gripper_value
+        if g > 0.9:
+            self.grip_label.setText("GRIP: CLOSED")
+            self.grip_label.setStyleSheet(f"color: {RED};")
+        elif g > 0.05:
+            self.grip_label.setText(f"GRIP: {int(g*100)}%")
+            self.grip_label.setStyleSheet(f"color: {YELLOW};")
+        else:
+            self.grip_label.setText("GRIP: OPEN")
+            self.grip_label.setStyleSheet(f"color: {GREEN};")
 
         state = status.robot_state
         if state == RobotState.RUNNING:
@@ -940,6 +975,18 @@ class SessionScreen(QWidget):
 
         left.addSpacing(8)
 
+        col_title = QLabel("COLLISION & GRIPPER")
+        col_title.setFont(QFont("monospace", 8, QFont.Bold))
+        col_title.setStyleSheet(f"color: {BLUE};")
+        left.addWidget(col_title)
+
+        self.collision_status_lbl = self._metric(left, "Collision: ---")
+        self.collision_count_lbl = self._metric(left, "Collision blocks: 0")
+        self.gripper_count_lbl = self._metric(left, "Gripper grips: 0")
+        self.ee_lock_lbl = self._metric(left, "EE lock: ---")
+
+        left.addSpacing(8)
+
         dur_title = QLabel("MODE DURATIONS")
         dur_title.setFont(QFont("monospace", 8, QFont.Bold))
         dur_title.setStyleSheet(f"color: {BLUE};")
@@ -1029,6 +1076,28 @@ class SessionScreen(QWidget):
         estop_count = sum(1 for _, msg in status.events if "EMERGENCY STOP" in msg)
         self.estops_lbl.setText(f"E-stop count: {estop_count}")
         self.estops_lbl.setStyleSheet(f"color: {RED if estop_count > 0 else TEXT};")
+
+        # Collision & gripper
+        if status.collision_blocked:
+            self.collision_status_lbl.setText("Collision: BLOCKED")
+            self.collision_status_lbl.setStyleSheet(f"color: {RED};")
+        elif status.collision_scale < 1.0:
+            self.collision_status_lbl.setText(f"Collision: slowing ({status.collision_scale:.0%})")
+            self.collision_status_lbl.setStyleSheet(f"color: {YELLOW};")
+        else:
+            self.collision_status_lbl.setText("Collision: clear")
+            self.collision_status_lbl.setStyleSheet(f"color: {GREEN};")
+
+        self.collision_count_lbl.setText(f"Collision blocks: {status.collision_events}")
+        col_color = RED if status.collision_events > 0 else TEXT
+        self.collision_count_lbl.setStyleSheet(f"color: {col_color};")
+
+        self.gripper_count_lbl.setText(f"Gripper grips: {status.gripper_grips}")
+
+        ee_text = "EE lock: ON" if status.ee_locked else "EE lock: off"
+        ee_color = BLUE if status.ee_locked else TEXT_DIM
+        self.ee_lock_lbl.setText(f"{ee_text} ({status.ee_lock_count} toggles)")
+        self.ee_lock_lbl.setStyleSheet(f"color: {ee_color};")
 
         # ── Connection ──
         if status.ros_connected:

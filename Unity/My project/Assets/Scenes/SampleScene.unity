@@ -5188,17 +5188,7 @@ MonoBehaviour:
   maxTrackingSpeed: 0.3
   gripperDeadZone: 0.05
   gripperSmoothTime: 0.08
-  tableTransform: {fileID: 429062963}
-  tableWorldY: -999
-  collisionMargin: 0.02
-  collisionSoftZone: 0.05
-  gripperLength: 0.17
-  selfCollisionDistance: 0.08
-  linkRadius: 0.045
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  obstacleCheckRadius: 0.15
+  collisionGuard: {fileID: 0}
   lockOrientationGain: 2
   maxOrientationSpeed: 1.5
   lockDeadZoneDeg: 1
@@ -5237,6 +5227,7 @@ GameObject:
   - component: {fileID: 719412820}
   - component: {fileID: 719412819}
   - component: {fileID: 719412818}
+  - component: {fileID: 719412823}
   m_Layer: 0
   m_Name: ur3e_rg2
   m_TagString: robot
@@ -5304,17 +5295,7 @@ MonoBehaviour:
   maxTrackingSpeed: 0.15
   gripperDeadZone: 0.05
   gripperSmoothTime: 0.08
-  tableTransform: {fileID: 0}
-  tableWorldY: 0
-  collisionMargin: 0.02
-  collisionSoftZone: 0.05
-  gripperLength: 0.17
-  selfCollisionDistance: 0.08
-  linkRadius: 0.045
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  obstacleCheckRadius: 0.15
+  collisionGuard: {fileID: 0}
   lockOrientationGain: 2
   maxOrientationSpeed: 1.5
   lockDeadZoneDeg: 1
@@ -5336,7 +5317,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f90c1d4ea9eccf790a20ecd99299e8bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JointStateSubscriber
-  controller: {fileID: 705389821}
 --- !u!114 &719412821
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5375,6 +5355,26 @@ MonoBehaviour:
   chosenAxis: 0
   currentOrientation: 0
   collisionExceptions: []
+--- !u!114 &719412823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 719412816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9acf9a0e0b7b5ea71b47dbfa1cedb9f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeshCollisionGuard
+  robotBase: {fileID: 719412817}
+  tableTransform: {fileID: 429062963}
+  tableWorldY: 0
+  tableMargin: 0.01
+  tableSoftZone: 0.05
+  selfMargin: 0.005
+  selfSoftZone: 0.03
+  showDebug: 1
 --- !u!1 &738687311
 GameObject:
   m_ObjectHideFlags: 0
@@ -5807,6 +5807,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SessionLogger
   robotController: {fileID: 705389821}
+  collisionGuard: {fileID: 0}
   publishRate: 2
 --- !u!4 &852536742
 Transform:

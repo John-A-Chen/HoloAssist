@@ -83,17 +83,17 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ✅ OnRobot RG2 gripper URDF created — `ur3e_rg2.urdf` combines UR3e + RG2 gripper (attached to tool0), STL meshes in `Assets/URDF/onrobot_rg2/`
 - ✅ RG2 URDF imported in Unity — replaced old `ur` GameObject with `ur3e_rg2`, visual STLs renamed to `*_visual.stl` to work around URDF-Importer name-collision bug (collision/visual share filenames → `UsedTemplateFiles` skip)
 - ✅ New robot verified working — all 6 arm joints mirror correctly, velocity arrow enlarged (0.25m length, 0.008m thick) to clear gripper geometry
-- ✅ Gripper control from XR — right index trigger (analog 0–100%) maps to gripper width, publishes Float64MultiArray (metres) to `/finger_width_controller/commands` via `ur_onrobot` driver. Digital twin animates all 6 gripper joints (finger_joint + 5 mimic joints) from `finger_width` in `/joint_states`.
+- ✅ Gripper control from XR — right index trigger (analog 0–100%) maps to gripper width, publishes Float64MultiArray (metres) to `/finger_width_controller/commands` via `ur_onrobot` driver. Digital twin animates all 6 gripper joints (finger_joint + 5 mimic joints) from `finger_width` in `/joint_states`. Default grip force lowered to 5N (was 20N) in `onrobot_driver/src/RG.cpp`. Hardware interface only sends Modbus commands when width changes (0.5mm threshold), and re-syncs command to current width on activation to prevent snap-close.
 - ✅ **Switched to `UR_OnRobot_ROS2` driver** (by Tony Le) — replaces separate UR driver + custom `gripper_node.py`. Combined launch (`ur_onrobot_control start_robot.launch.py`) handles UR3e + RG2 gripper natively via C++ Modbus (no more socat/pymodbus hack). Old `gripper_node.py` is now obsolete.
-- ✅ **Collision protection rewritten** — replaced broken DH-frame FK approach with Unity world-space Transform checks. Auto-discovers joint transforms (`shoulder_link` through `wrist_3_link` + `tool0`) at Start via `FindCollisionTransforms()`. Three collision layers: (1) **Table** — checks world Y of all joints, link midpoints (upper arm, forearm), tool0, gripper tip/mid against `tableTransform.position.y` or `tableWorldY`; (2) **Objects** — layer-based obstacle detection via `Physics.OverlapSphereNonAlloc` + `ClosestPoint` on configurable `obstacleLayer`; (3) **Self-collision** — distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm). All use soft-zone scaling: full speed outside zone, linear slowdown inside, full stop at margin. `CollisionDebugVisualizer.cs` draws colored spheres (green/orange/red) at all check points + table grid + skeleton + drop lines. Needs calibration with real hardware (set `tableWorldY` or assign `tableTransform`, tune `collisionMargin`/`collisionSoftZone`).
+- ✅ **Collision protection rewritten (mesh-based)** — `MeshCollisionGuard.cs` replaces old point-based system. Auto-discovers all MeshColliders in robot hierarchy, sets them convex for `ClosestPoint` queries. Two collision layers: (1) **Table** — checks each collider's bounding box min Y against table height; (2) **Self-collision** — proximal links (base/shoulder/upper_arm) vs distal links (wrist_1 through gripper) using `ClosestPoint` distance. Both use soft-zone gradual slowdown + hard stop. Gizmo drawing in Scene view (table planes, collider bounds colour-coded by zone). Attach to `ur3e_rg2`, assign `robotBase` to itself, drag into `RobotController.collisionGuard` field.
 - ✅ EE lock-down mode — Y button toggles; uses combined 6x6 Jacobian solve (`ResolveFullVelocity`) so linear + angular goals are resolved simultaneously (no jitter from competing solves). Works immediately without grip. 1° dead zone, gain 0.5, max 0.3 rad/s (slow gentle transition). Works in RMRC Translate + Hand Guide modes. HUD shows "LOCK ▼" when active.
 - ✅ Output velocity smoothing (60ms exponential low-pass) on all joint velocities before publishing. Resets on mode switch.
 - ✅ Dashboard shows gripper status (bar + percentage) on STATUS tab
 - ✅ RobotHUD shows gripper bar + EE lock indicator in all modes
 - ⚠️ **Performance/lag** — noticeable lag during teleoperation, even on fake hardware (not just Quest 3 WiFi). Gripper lag is partly the ROS round-trip (Unity → ros_tcp_endpoint → controller → `/joint_states` → Unity). Possible fixes: (1) add local gripper preview in `JointStateSubscriber` using `RobotController.GripperValue` for instant visual while still publishing to ROS; (2) reduce GC pressure — pre-allocate arrays in UR3eKinematics; (3) check if ros_tcp_endpoint is the bottleneck.
 - ⬜ **Tuning needed** — linear movement too fast, wrist rotation (RMRC Rotate sub-mode) too slow. Adjust `linearSpeed` (currently 0.25 m/s — reduce) and `jointJogSpeed` (currently 0.5 rad/s — increase for wrist joints in Rotate mode).
-- ⬜ **Collision protection calibration** — `ApplyCollisionProtection()` in RobotController.cs already implements table, object, and self-collision checks using Unity transforms (preventive, zero latency). Needs real-hardware calibration: set `tableWorldY` or assign `tableTransform`, tune `collisionMargin`/`collisionSoftZone`, verify self-collision distances. Self-collision already checks distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm) with soft-zone scaling.
-- ⬜ WiFi resilience (auto e-stop on dropout, latency spike detection, graceful recovery) — stretch goal
+- ⬜ **Collision protection calibration** — `MeshCollisionGuard` implemented, needs `tableWorldY` or `tableTransform` set to actual table height, and self-collision margins tuned on real hardware.
+- ✅ WiFi reliability solved — laptop + Quest 3 both on robot's dedicated router (192.168.0.x subnet), no more university WiFi dropouts
 
 ## Repository Layout
 
@@ -114,6 +114,8 @@ nic/
       Scripts/RobotBasePlacer.cs       — controller grip-to-grab robot placement
       Scripts/RobotHUD.cs              — colour-coded floating HUD with mode, controls, joint names
       Scripts/SpatialMarkers.cs        — end-effector axes + velocity arrow visualisation
+      Scripts/MeshCollisionGuard.cs     — mesh-based collision protection (table + self-collision)
+      Scripts/CollisionDebugVisualizer.cs — collision status on-screen label
       Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
       Scripts/SessionLogger.cs           — session metrics: mode tracking, durations, events → ROS + file
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
@@ -220,16 +222,19 @@ No teach pendant needed. Joint states and controllers work fine.
 
 ### Network Setup
 
+Both laptop and Quest 3 connect to the UR3e's own router — all devices on the same `192.168.0.x` subnet.
+
 ```
-Laptop (nic-XPS-15-9520):
-  ├─ Ethernet (192.168.0.100) ←──→ UR3e robot (192.168.0.194)
-  └─ WiFi (172.19.115.104)    ←──→ Quest 3 (172.19.119.95)
+Robot's Router (192.168.0.x):
+  ├─ UR3e robot:  192.168.0.194
+  ├─ Laptop WiFi: 192.168.0.102  ←──→ Quest 3
+  └─ Laptop Ethernet: 192.168.0.100 ←──→ UR3e (direct)
 ```
 
 - **Teach pendant External Control host IP**: `192.168.0.100` (laptop Ethernet)
-- **Unity ROS Settings IP**: laptop's WiFi IP (e.g., `172.19.115.104`) — this is what the Quest connects to
-- **ros_tcp_endpoint**: `ROS_IP:=0.0.0.0` (listens on all interfaces, bridging both networks)
-- WiFi IP may change if network changes — re-check with `hostname -I`
+- **Unity ROS Settings IP**: `192.168.0.102` (laptop WiFi on robot's router)
+- **ros_tcp_endpoint**: `ROS_IP:=0.0.0.0` (listens on all interfaces)
+- No more university WiFi issues — dedicated robot router provides stable, low-latency connection
 
 ## System Architecture
 
@@ -294,10 +299,11 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
   - **Hand Guide mode**: Hold right grip trigger to engage — controller 3D position is tracked and mapped to end-effector position via proportional control + Jacobian IK. Release grip to stop (EE lock-down still applies if active). Requires `robotBase` field set to the `ur` GameObject in Inspector. Tunable `positionGain` (default 2) and `maxTrackingSpeed` (default 0.15 m/s). Joint bias weights (`[0.5, 0.5, 0.7, 1.0, 1.0, 1.0]`) softly favour wrist movement over base/shoulder.
   - **Gripper**: Right index trigger (analog 0–1) controls gripper width. Dead zone (0.05) so resting finger = fully open. Smoothed, publishes `Float64MultiArray` (position in metres, 0=closed, 0.11=open) to `/finger_width_controller/commands` at 50Hz. Works in all modes simultaneously.
   - **EE Lock-Down**: Y button (left controller) toggles. When active, angular Jacobian drives tool Z-axis to [0,0,-1] (pointing straight down). Works immediately on toggle — no grip required. 2° dead zone prevents jitter when nearly aligned. Gain 1.5, max 1.0 rad/s, 2× damping on angular solve. Works in RMRC Translate and Hand Guide modes (including when grip is released).
-  - **Collision Protection**: Runs after all velocity computation, before publishing. Uses Unity world-space Transform positions (auto-discovered at Start via `FindCollisionTransforms()`). Checks 11 points: 6 joint transforms, 2 link midpoints (upper arm, forearm), tool0, gripper tip, gripper mid. Table collision: compares world Y of all points against `tableTransform.position.y` (or `tableWorldY`), soft-zone linear scaling from `collisionMargin` to `collisionMargin + collisionSoftZone`. Object collision: `Physics.OverlapSphereNonAlloc` against `obstacleLayer` with `ClosestPoint` distance. Self-collision: distal joints (wrist 1/2/3 + tool0) vs proximal (shoulder, upper arm). All zero-allocation at runtime.
+  - **Collision Protection**: Delegated to `MeshCollisionGuard.cs`. Assign the guard in Inspector (`collisionGuard` field). Runs after all velocity computation, before publishing — scales or zeros `qDot` based on `collisionGuard.ComputeVelocityScale()`.
   - **Output Smoothing**: All joint velocities pass through an exponential low-pass filter (`outputSmoothTime` default 0.06s) before publishing. Prevents jitter in lock-down mode and smooths Hand Guide/RMRC output. Resets on mode switch to avoid sluggish transitions.
   - On Start, automatically disables conflicting XRI Default Input Actions (locomotion maps, Jump, Rotate Manipulation, UI Scroll) so thumbsticks and A/B buttons are not consumed by teleport/turn/move.
   - Publish rate: 50Hz.
+- `Assets/Scripts/MeshCollisionGuard.cs` — attach to `ur3e_rg2` GameObject; set `robotBase` to itself. Auto-discovers all MeshColliders in robot hierarchy at Start, sets them convex for `ClosestPoint` queries. Groups colliders into proximal (base/shoulder/upper_arm) and distal (wrist through gripper). Table collision uses bounding box min Y vs table height. Self-collision uses `ClosestPoint` distance between proximal and distal groups. Both have soft-zone gradual slowdown + hard stop. Gizmo drawing in Scene view. `CollisionDebugVisualizer.cs` shows on-screen collision status label.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
 - `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). Uses a skybox background so the dashboard sees the full scene.
 - `Assets/Scripts/SessionLogger.cs` — attach to any GameObject; assign `RobotController` in Inspector (auto-finds via `FindObjectOfType` if not set). Publishes JSON session status to `/session/status` at 2Hz and discrete events to `/session/events`. On application quit, saves a JSON session log to `Application.persistentDataPath/SessionLogs/`.
