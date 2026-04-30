@@ -3,6 +3,9 @@ ROS-TCP-Connector/
 URDF-Importer/
 ros2_ws/src/ROS-TCP-Endpoint/
 ros2_ws/src/Universal_Robots_ROS2_Driver/
+ros2_ws/src/ur_onrobot/
+ros2_ws/src/onrobot_driver/
+ros2_ws/src/onrobot_description/
 
 # Unity generated files
 Unity/My project/Library/
