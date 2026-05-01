@@ -70,6 +70,17 @@ def generate_launch_description() -> LaunchDescription:
         default_value="8765",
         description="Port to probe for Foxglove bridge reachability.",
     )
+    foxglove_bridge_topic_whitelist_arg = DeclareLaunchArgument(
+        "foxglove_bridge_topic_whitelist",
+        default_value=(
+            "['^(?!/camera/camera/color/image_raw/compressedDepth$)"
+            "(?!/camera/camera/depth/image_rect_raw/compressed$).*']"
+        ),
+        description=(
+            "Regex whitelist for foxglove_bridge topics. "
+            "Defaults to excluding invalid RealSense transport combinations."
+        ),
+    )
 
     runtime_observability_node = Node(
         package="holoassist_foxglove",
@@ -125,6 +136,10 @@ def generate_launch_description() -> LaunchDescription:
         foxglove_bridge_action = IncludeLaunchDescription(
             AnyLaunchDescriptionSource(foxglove_launch_file),
             condition=IfCondition(LaunchConfiguration("enable_foxglove_bridge")),
+            launch_arguments={
+                "topic_whitelist": LaunchConfiguration("foxglove_bridge_topic_whitelist"),
+                "client_topic_whitelist": LaunchConfiguration("foxglove_bridge_topic_whitelist"),
+            }.items(),
         )
     except PackageNotFoundError:
         foxglove_bridge_action = LogInfo(
@@ -148,6 +163,7 @@ def generate_launch_description() -> LaunchDescription:
             unity_tcp_port_arg,
             foxglove_bridge_host_arg,
             foxglove_bridge_port_arg,
+            foxglove_bridge_topic_whitelist_arg,
             runtime_observability_node,
             manager_node,
             tf_marker_bridge_node,
