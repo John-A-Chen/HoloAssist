@@ -94,6 +94,10 @@ Full criteria details in `evaluation/subsystem3_nic_teleoperation.md`. All subsy
 - ⬜ **Tuning needed** — linear movement too fast, wrist rotation (RMRC Rotate sub-mode) too slow. Adjust `linearSpeed` (currently 0.25 m/s — reduce) and `jointJogSpeed` (currently 0.5 rad/s — increase for wrist joints in Rotate mode).
 - ⬜ **Collision protection calibration** — `MeshCollisionGuard` implemented, needs `tableWorldY` or `tableTransform` set to actual table height, and self-collision margins tuned on real hardware.
 - ✅ WiFi reliability solved — laptop + Quest 3 both on robot's dedicated router (192.168.0.x subnet), no more university WiFi dropouts
+- ✅ ROSAutoConnect.cs created — auto-discovers `ros_tcp_endpoint` by TCP-scanning `192.168.0.101`–`109` on port 10000 (skips `.100` Ethernet). No beacon/multicast needed — works reliably on Quest/Android. Falls back to Unity ROS Settings IP if nothing found.
+- ✅ beacon.py updated — uses multicast group `239.255.42.99` + subnet broadcast fallback. launch.py auto-detects `192.168.0.x` WiFi IP via `netifaces`.
+- ⚠️ **MeshCollisionGuard breaks arm control** — enabling the collision mesh component prevents all arm velocity commands (only gripper works). Keep disabled until calibrated.
+- ⬜ **Scene needs re-setup after merge** — portal test chamber environment added back to scene temporarily but missing textures. ROSAutoConnect needs to be attached to a GameObject in hierarchy.
 
 ## Repository Layout
 
