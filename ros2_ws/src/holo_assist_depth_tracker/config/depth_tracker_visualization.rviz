@@ -75,8 +75,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.3494076728820801
-        Min Value: 0.005614876747131348
+        Max Value: -9999
+        Min Value: 9999
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -218,18 +218,70 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /holoassist/perception/ur3e_base_link0_marker
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 1 Marker
+      Namespaces:
+        holoassist_april_cube_1: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_1_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 2 Marker
+      Namespaces:
+        holoassist_april_cube_2: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_2_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 3 Marker
+      Namespaces:
+        holoassist_april_cube_3: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_3_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 4 Marker
+      Namespaces:
+        holoassist_april_cube_4: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_4_marker
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        apriltag_cube:
+        apriltag_cube_1:
           Value: true
-        apriltag_cube_tag_12:
+        apriltag_cube_2:
           Value: true
-        apriltag_cube_tag_13:
+        apriltag_cube_3:
           Value: true
-        apriltag_cube_tag_14:
+        apriltag_cube_4:
           Value: true
         camera_color_frame:
           Value: true
@@ -245,25 +297,15 @@ Visualization Manager:
           Value: true
         tag36h11:1:
           Value: true
-        tag36h11:12:
-          Value: true
-        tag36h11:13:
-          Value: true
-        tag36h11:14:
+        tag36h11:10:
           Value: true
         tag36h11:16:
           Value: true
         tag36h11:2:
           Value: true
-        tag36h11:21:
-          Value: true
-        tag36h11:22:
-          Value: true
-        tag36h11:26:
+        tag36h11:24:
           Value: true
         tag36h11:3:
-          Value: true
-        tag36h11:31:
           Value: true
         tag36h11:33:
           Value: true
@@ -280,37 +322,19 @@ Visualization Manager:
         camera_link:
           camera_color_frame:
             camera_color_optical_frame:
-              apriltag_cube:
-                {}
-              apriltag_cube_tag_12:
-                {}
-              apriltag_cube_tag_13:
-                {}
-              apriltag_cube_tag_14:
-                {}
               tag36h11:0:
                 {}
               tag36h11:1:
                 {}
-              tag36h11:12:
-                {}
-              tag36h11:13:
-                {}
-              tag36h11:14:
+              tag36h11:10:
                 {}
               tag36h11:16:
                 {}
               tag36h11:2:
                 {}
-              tag36h11:21:
-                {}
-              tag36h11:22:
-                {}
-              tag36h11:26:
+              tag36h11:24:
                 {}
               tag36h11:3:
-                {}
-              tag36h11:31:
                 {}
               tag36h11:33:
                 {}
@@ -318,6 +342,14 @@ Visualization Manager:
             camera_depth_optical_frame:
               {}
         workspace_frame:
+          apriltag_cube_1:
+            {}
+          apriltag_cube_2:
+            {}
+          apriltag_cube_3:
+            {}
+          apriltag_cube_4:
+            {}
           ur3e_base_link0:
             {}
       Update Interval: 0
@@ -368,7 +400,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.255282402038574
+      Distance: 4.730434417724609
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -383,10 +415,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.09499990940094
+      Pitch: 0.30500108003616333
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.833188056945801
+      Yaw: 5.21319055557251
     Saved: ~
 Window Geometry:
   Camera Color Raw:
@@ -396,7 +428,7 @@ Window Geometry:
   Height: 1136
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000001bc00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff000005be0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000002fe00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff0000047c0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:

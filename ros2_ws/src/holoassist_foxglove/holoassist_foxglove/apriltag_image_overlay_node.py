@@ -36,7 +36,7 @@ class AprilTagImageOverlayNode(Node):
         self.declare_parameter("workspace_right_tag_id", 1)
         self.declare_parameter("workspace_width_m", 0.70)
         self.declare_parameter("workspace_depth_m", 0.50)
-        self.declare_parameter("workspace_tag_size_m", 0.15)
+        self.declare_parameter("workspace_tag_size_m", 0.032)
         self.declare_parameter("workspace_left_corner_index_offset", 0)
         self.declare_parameter("workspace_right_corner_index_offset", 0)
         self.declare_parameter("workspace_left_corner_reverse", False)
@@ -90,7 +90,8 @@ class AprilTagImageOverlayNode(Node):
         self.font_scale = max(0.2, self.font_scale)
         self.workspace_width_m = max(0.10, self.workspace_width_m)
         self.workspace_depth_m = max(0.10, self.workspace_depth_m)
-        self.workspace_tag_size_m = max(0.02, self.workspace_tag_size_m)
+        self.workspace_tag_size_m = max(0.01, self.workspace_tag_size_m)
+        self._warn_expected_apriltag_size("workspace_tag_size_m", self.workspace_tag_size_m)
         self.workspace_outline_max_reproj_error_px = max(
             1.0, self.workspace_outline_max_reproj_error_px
         )
@@ -135,6 +136,24 @@ class AprilTagImageOverlayNode(Node):
                 self.workspace_right_tag_id,
             )
         )
+
+    def _warn_expected_apriltag_size(self, name: str, value_m: float) -> None:
+        expected = 0.032
+        if abs(value_m - expected) > 1e-6:
+            self.get_logger().warn(
+                "%s=%.6f m but all current AprilTags are expected to be %.3f m."
+                % (name, value_m, expected)
+            )
+        if value_m > 0.05:
+            self.get_logger().warn(
+                "%s=%.6f m is unusually large; overlay board mapping may be wrong."
+                % (name, value_m)
+            )
+        if value_m >= 1.0:
+            self.get_logger().warn(
+                "%s=%.6f looks like millimeters passed as meters (e.g. 32/40)."
+                % (name, value_m)
+            )
 
     def _on_detections(self, msg: AprilTagDetectionArray) -> None:
         self.latest_detections = list(msg.detections)

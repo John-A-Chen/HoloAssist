@@ -10,16 +10,16 @@ holoassist_workspace_perception:
     # - tag id 0 = right front corner
     # - tag ids 2 and 3 = rear corners (used for visualization markers)
     # +X in workspace will follow tag1 -> tag0 (left to right on the 700 mm edge).
-    # Tag size includes white border: 100 mm x 100 mm.
-    # Front-edge layout: [100 mm tag] + [500 mm gap] + [100 mm tag] = 700 mm.
+    # All AprilTags use a 32 mm printed edge size.
+    # Front-edge layout for flush-corner tags: [32 mm tag] + [636 mm gap] + [32 mm tag] = 700 mm.
     tag_ids: [1, 0, 2, 3]
     tag_frame_names: ["tag36h11:1", "tag36h11:0", "tag36h11:2", "tag36h11:3"]
-    tag_size_m: 0.10
+    tag_size_m: 0.032
     # Hold last valid tag transform longer to avoid mode flapping/jitter
     # when detections momentarily drop.
     tag_timeout_s: 1.5
-    # Tag center-to-center is expected near 0.60 m in this layout.
-    tag_min_separation_m: 0.50
+    # Front tag center-to-center is expected near 0.668 m in this layout.
+    tag_min_separation_m: 0.60
     # Tags are mounted on the board; snap tag centers onto fitted plane.
     project_tags_to_plane: true
     # Use tag poses as the primary bench-plane source (normal + anchor).
@@ -73,8 +73,7 @@ holoassist_workspace_perception:
     roi_z_max: 0.35
     # Dynamic ROI from detected tags; board span stays 700x500.
     roi_from_tags_enabled: true
-    # Keep zero margin so bench marker corners stay at exact board corners:
-    # tag-center to each assigned front corner remains 0.050 m for 0.10 m tags.
+    # Keep zero margin so bench marker corners stay at exact board corners.
     roi_from_tags_margin_m: 0.0
     # If detected tag span collapses, fall back to configured board span.
     roi_from_tags_min_span_m: 0.50
@@ -186,13 +185,12 @@ holoassist_workspace_perception:
     marker_lifetime_s: 0.8
     plane_marker_thickness_m: 0.006
     # Build the bench plane marker from the first 4 workspace tag centres.
-    # Each tag centre is 50 mm from its board edge.
-    # This matches the configured 100 mm physical workspace tag size.
+    # Tag center to each board edge is 16 mm for the 32 mm printed tags.
     # Keep this enabled for the 4-tag board layout so the plane marker is
     # generated from deterministic board geometry instead of a folded/ambiguous
     # 2-tag corner estimate.
     plane_marker_from_four_tags_enabled: true
-    plane_marker_four_tags_edge_offset_m: 0.05
+    plane_marker_four_tags_edge_offset_m: 0.016
     axes_marker_length_m: 0.12
     axes_marker_radius_m: 0.01
     # 0.0 = auto-lift above plane by (plane thickness + axis radius).

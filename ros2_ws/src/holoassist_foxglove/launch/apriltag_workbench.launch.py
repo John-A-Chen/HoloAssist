@@ -3,10 +3,53 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     LogInfo,
+    OpaqueFunction,
 )
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+import re
+
+
+def _validate_apriltag_params(context, *args):
+    del args
+    expected = 0.032
+    path = LaunchConfiguration("params_file").perform(context)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except Exception as exc:
+        return [LogInfo(msg=f"[WARN] unable to read apriltag params file '{path}': {exc}")]
+
+    match = re.search(r"^\\s*size\\s*:\\s*([-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)\\s*$", text, re.MULTILINE)
+    if not match:
+        return [
+            LogInfo(
+                msg=f"[WARN] apriltag params file '{path}' has no 'size:' entry; expected {expected:.3f} m."
+            )
+        ]
+
+    value = float(match.group(1))
+    messages = []
+    if abs(value - expected) > 1e-6:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size is {value:.6f} m in '{path}', expected {expected:.3f} m."
+            )
+        )
+    if value > 0.05:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size {value:.6f} m is unusually large for current 32 mm tags."
+            )
+        )
+    if value >= 1.0:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size {value:.6f} looks like mm passed as meters (e.g. 32/40)."
+            )
+        )
+    return messages
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -73,8 +116,8 @@ def generate_launch_description() -> LaunchDescription:
     )
     workspace_tag_size_m_arg = DeclareLaunchArgument(
         "workspace_tag_size_m",
-        default_value="0.15",
-        description="Physical tag size in meters (including white border if printed that way).",
+        default_value="0.032",
+        description="Physical printed AprilTag edge size in meters.",
     )
     workspace_left_corner_index_offset_arg = DeclareLaunchArgument(
         "workspace_left_corner_index_offset",
@@ -192,6 +235,7 @@ def generate_launch_description() -> LaunchDescription:
             workspace_left_corner_reverse_arg,
             workspace_right_corner_reverse_arg,
             start_realsense,
+            OpaqueFunction(function=_validate_apriltag_params),
             apriltag_node,
             apriltag_overlay_node,
         ]

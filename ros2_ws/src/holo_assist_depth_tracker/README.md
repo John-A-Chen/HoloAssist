@@ -1,148 +1,43 @@
 # holo_assist_depth_tracker
 
-Deterministic AprilTag-first perception stack for HoloAssist workspace tracking.
+AprilTag-first perception stack for HoloAssist workspace tracking.
 
-## 1) System Overview
+## Overview
 
-This package now provides a deterministic dual-detector AprilTag pipeline:
+This package uses one AprilTag detector configuration and one tag family/size.
+Tag IDs define semantic roles:
+- Workspace board corners: `0..3`
+- Cube faces: `10..33`
 
-- Board detector tracks workspace board tags `0..3` (size `0.15 m`) on `/detections_board`
-- Cube detector tracks cube tags `10..33` (size `0.045 m`) on `/detections_cubes`
-- Merge node outputs deduplicated union on `/detections_all`
-- Workspace node locks `workspace_frame` from the first valid full 4-tag board solve
-- Cube node publishes stable poses/TF/markers/status for 4 cubes
-- Overlay and depth tracker use merged detections (`/detections_all`)
+AprilTag physical size standard in this repo:
+- `AprilTag printed edge size = 0.032 m` for all tags
 
-Legacy nodes/launch files are kept for backward compatibility.
+Primary detection stream:
+- `/detections_all`
 
-## 2) Architecture Diagram
+Core nodes:
+- `holoassist_workspace_board_node`: solves/locks `workspace_frame` from workspace tag IDs
+- `holoassist_cube_pose_node`: solves per-cube pose from configured cube ID groups
+- `holoassist_overlay_node`: draws tag overlays from `/detections_all`
+- `holo_assist_depth_tracker_node`: depth + debug overlay integration
+
+## Pipeline
 
 ```text
 RGB Image + CameraInfo
         |
-        +---------------------------+
-        |                           |
-  apriltag_board               apriltag_cubes
-(ids 0..3, 0.15m)           (ids 10..33, 0.045m)
-        |                           |
- /detections_board           /detections_cubes
-        +-----------+   +-----------+
-                    |   |
-            detection_merge_node
-                    |
-              /detections_all
-               /      |      \
-              /       |       \
- overlay_node   workspace_board_node   cube_pose_node
-      |              |      \             |
- overlay image   workspace TF  robot TF   cube TF/pose/marker/status (x4)
-                                 \
-                             ur3e_base_link0
+    apriltag_node
+ (single config + ID list)
+        |
+  /detections_all
+     /   |    \
+    /    |     \
+overlay  workspace  cube_pose
 ```
 
-## 3) Node Descriptions
+## Launch
 
-### `holoassist_detection_merge_node`
-- Inputs: `/detections_board`, `/detections_cubes`
-- Output: `/detections_all`
-- Behavior:
-  - Union by AprilTag ID
-  - Per-ID latest timestamp wins
-  - Removes duplicates
-  - Prunes stale IDs by timeout
-
-### `holoassist_workspace_board_node`
-- Input: `/detections_board` + TF `tag36h11:0..3`
-- Output:
-  - TF `<camera_frame> -> workspace_frame`
-  - TF `workspace_frame -> ur3e_base_link0` at `(0.450, 0.564, 0.0)`
-  - `/holoassist/perception/ur3e_base_link0_pose`
-  - `/holoassist/perception/ur3e_base_link0_marker`
-  - `/holoassist/perception/workspace_mode`
-  - `/holoassist/perception/workspace_diagnostics`
-  - `/holoassist/perception/bench_plane_coefficients`
-- Behavior:
-  - Uses only board tags `0,1,2,3`
-  - Enforces board geometry (0.700 x 0.500)
-  - Locks on first valid full board solve
-  - No drift updates after lock
-  - `realign_workspace` service clears lock
-
-### `holoassist_cube_pose_node`
-- Input: `/detections_all` + TF `tag36h11:<id>`
-- Cube groups:
-  - Cube 1: `10..15`
-  - Cube 2: `16..21`
-  - Cube 3: `22..27`
-  - Cube 4: `28..33`
-- Output per cube `n=1..4`:
-  - TF `workspace_frame -> apriltag_cube_<n>`
-  - `/holoassist/perception/april_cube_<n>_pose`
-  - `/holoassist/perception/april_cube_<n>_marker`
-  - `/holoassist/perception/april_cube_<n>_status`
-- Additional legacy alias:
-  - `/holoassist/perception/april_cube_pose` (Cube 1)
-- Behavior:
-  - Sequential face-axis mapping per group: `+X,-X,+Y,-Y,+Z,-Z`
-  - Robust to partial visibility
-  - Stable orientation via sign continuity + multi-tag rotation fit
-  - No obstacle-only fallback
-
-### `holoassist_overlay_node`
-- Input: RGB image + `/detections_all`
-- Output: `/holoassist/perception/apriltag_overlay`
-- Behavior:
-  - Draws all merged detections
-  - Footer text: `tags=<count> age=<seconds>`
-
-### Existing `depth_tracker_node` (preserved)
-- Updated defaults for AprilTag integration:
-  - `apriltag_topic=/detections_all`
-  - Tracking IDs default to `10..33` (cube tags only)
-
-## 4) Topics
-
-### Detector/Merge
-- `/detections_board` (`apriltag_msgs/AprilTagDetectionArray`)
-- `/detections_cubes` (`apriltag_msgs/AprilTagDetectionArray`)
-- `/detections_all` (`apriltag_msgs/AprilTagDetectionArray`)
-
-### Workspace/Robot
-- `/holoassist/perception/workspace_mode` (`std_msgs/String`)
-- `/holoassist/perception/workspace_diagnostics` (`diagnostic_msgs/DiagnosticArray`)
-- `/holoassist/perception/bench_plane_coefficients` (`std_msgs/Float32MultiArray`)
-- `/holoassist/perception/ur3e_base_link0_pose` (`geometry_msgs/PoseStamped`)
-- `/holoassist/perception/ur3e_base_link0_marker` (`visualization_msgs/Marker`)
-
-### Cubes
-- `/holoassist/perception/april_cube_1_pose` ... `_4_pose`
-- `/holoassist/perception/april_cube_1_marker` ... `_4_marker`
-- `/holoassist/perception/april_cube_1_status` ... `_4_status`
-- Legacy alias: `/holoassist/perception/april_cube_pose`
-
-### Overlay
-- `/holoassist/perception/apriltag_overlay` (`sensor_msgs/Image`)
-
-## 5) TF Tree
-
-```text
-<camera_frame>
-├── tag36h11:0
-├── tag36h11:1
-├── tag36h11:2
-├── tag36h11:3
-├── tag36h11:10 ... tag36h11:33
-└── workspace_frame
-    ├── ur3e_base_link0
-    ├── apriltag_cube_1
-    ├── apriltag_cube_2
-    ├── apriltag_cube_3
-    └── apriltag_cube_4
-```
-
-## 6) Launch Instructions
-
-### Primary new launch
+Primary launch:
 
 ```bash
 ros2 launch holo_assist_depth_tracker holoassist_4tag_board_4cube.launch.py
@@ -154,113 +49,116 @@ Useful arguments:
 - `camera_info_topic:=/camera/camera/color/camera_info`
 - `start_tracker:=true|false`
 - `start_overlay:=true|false`
-- `board_params_file:=.../apriltag_board.yaml`
-- `cubes_params_file:=.../apriltag_cubes.yaml`
+- `apriltag_params_file:=.../apriltag_all.yaml`
 - `workspace_params_file:=.../workspace.yaml`
 - `cube_pose_params_file:=.../cubes.yaml`
 
-### Realign workspace lock
+## Key Config Files
+
+- `config/apriltag_all.yaml`: single detector config with all tracked IDs
+- `config/workspace.yaml`: workspace solve/lock parameters
+- `config/cubes.yaml`: cube ID groups and cube pose parameters
+- `config/tracker_params.yaml`: depth tracker + overlay parameters
+
+## Size Reference
+
+- AprilTag detector size: `0.032 m`
+- Workspace/board tag size params (`tag_size_m`, `workspace_tag_size_m`): `0.032 m`
+- Cube body edge size (`cube_edge_size_m`): `0.040 m`
+- Cube face-center to cube-center offset (`cube_face_offset_m`): `0.020 m`
+- Board geometry: `0.700 m x 0.500 m`
+- Board tag center offset from board edge: measured placement (`0.016 m` in current configs)
+
+If tag detections are consistently too far/near relative to depth/pointcloud, the detector `size` is likely not `0.032 m`.
+
+## April Cube Groups
+
+The cube pose node tracks four independent April cubes with six face tags each:
+- `april_cube_1`: IDs `[10, 11, 12, 13, 14, 15]`
+- `april_cube_2`: IDs `[16, 17, 18, 19, 20, 21]`
+- `april_cube_3`: IDs `[22, 23, 24, 25, 26, 27]`
+- `april_cube_4`: IDs `[28, 29, 30, 31, 32, 33]`
+
+Published topics:
+- `/holoassist/perception/april_cube_1_pose`
+- `/holoassist/perception/april_cube_2_pose`
+- `/holoassist/perception/april_cube_3_pose`
+- `/holoassist/perception/april_cube_4_pose`
+- `/holoassist/perception/april_cube_1_marker`
+- `/holoassist/perception/april_cube_2_marker`
+- `/holoassist/perception/april_cube_3_marker`
+- `/holoassist/perception/april_cube_4_marker`
+- `/holoassist/perception/april_cube_1_status`
+- `/holoassist/perception/april_cube_2_status`
+- `/holoassist/perception/april_cube_3_status`
+- `/holoassist/perception/april_cube_4_status`
+
+Published cube TF child frames:
+- `apriltag_cube_1`
+- `apriltag_cube_2`
+- `apriltag_cube_3`
+- `apriltag_cube_4`
+
+Marker colors:
+- Cube 1: red `(1.0, 0.0, 0.0, 0.75)`
+- Cube 2: green `(0.0, 1.0, 0.0, 0.75)`
+- Cube 3: blue `(0.0, 0.3, 1.0, 0.75)`
+- Cube 4: yellow/orange `(1.0, 0.7, 0.0, 0.75)`
+
+Marker cube scale in RViz is fixed to `0.040 x 0.040 x 0.040 m` per cube.
+
+## Verify
+
+```bash
+ros2 topic hz /detections_all
+ros2 topic echo /holoassist/perception/workspace_mode --once
+ros2 topic echo /holoassist/perception/april_cube_1_status --once
+```
+
+Per-cube pose checks:
+
+```bash
+ros2 topic echo /holoassist/perception/april_cube_1_pose --once
+ros2 topic echo /holoassist/perception/april_cube_2_pose --once
+ros2 topic echo /holoassist/perception/april_cube_3_pose --once
+ros2 topic echo /holoassist/perception/april_cube_4_pose --once
+```
+
+Per-cube marker checks:
+
+```bash
+ros2 topic echo /holoassist/perception/april_cube_1_marker --once
+ros2 topic echo /holoassist/perception/april_cube_2_marker --once
+ros2 topic echo /holoassist/perception/april_cube_3_marker --once
+ros2 topic echo /holoassist/perception/april_cube_4_marker --once
+```
+
+TF checks:
+
+```bash
+ros2 run tf2_ros tf2_echo workspace_frame apriltag_cube_1
+ros2 run tf2_ros tf2_echo workspace_frame apriltag_cube_2
+ros2 run tf2_ros tf2_echo workspace_frame apriltag_cube_3
+ros2 run tf2_ros tf2_echo workspace_frame apriltag_cube_4
+ros2 topic echo /tf
+```
+
+Useful checks:
+
+```bash
+grep -R "tag_size\\|tag_size_m\\|workspace_tag_size_m\\|size:\\|apriltag\\|0.15\\|0.10\\|0.100\\|0.045\\|0.040\\|0.032\\|32\\|40\\|100\\|150" -n ros2_ws
+ros2 param list
+ros2 param get /apriltag size
+ros2 param get /holoassist_workspace_perception tag_size_m
+ros2 param get /holo_assist_depth_tracker workspace_tag_size_m
+ros2 param get /holoassist_cube_pose cube_edge_size_m
+ros2 param get /holoassist_cube_pose cube_tag_size_m
+ros2 run tf2_ros tf2_echo camera_color_optical_frame tag36h11:0
+ros2 run tf2_ros tf2_echo camera_color_optical_frame tag36h11:10
+```
+
+## Realign Workspace
 
 ```bash
 ros2 service call /holoassist/perception/realign_workspace std_srvs/srv/Trigger "{}"
 ```
-
-### Backward-compatible launch files
-Legacy launch files under `launch/` are preserved and still usable.
-
-## 7) Parameter Highlights
-
-### `config/apriltag_board.yaml`
-- Board detector family/size/IDs (`0..3`, `0.15m`)
-
-### `config/apriltag_cubes.yaml`
-- Cube detector family/size/IDs (`10..33`, `0.045m`)
-
-### `config/workspace.yaml`
-- Workspace frame name and board tag IDs
-- Lock/geometry tolerances
-- Realign service name
-- Fixed robot pose in workspace coordinates
-
-### `config/cubes.yaml`
-- Per-cube tag groups
-- Cube size
-- Timeout/TF lookup/timer rates
-- Legacy alias topic
-
-## 8) Testing Procedure
-
-1. Build and source:
-```bash
-cd ~/git/RS2-HoloAssist/john/ros2_ws
-colcon build --packages-select holo_assist_depth_tracker holoassist_foxglove
-source install/setup.bash
-```
-
-2. Run launch:
-```bash
-ros2 launch holo_assist_depth_tracker holoassist_4tag_board_4cube.launch.py
-```
-
-3. Verify detection streams:
-```bash
-ros2 topic hz /detections_board
-ros2 topic hz /detections_cubes
-ros2 topic echo /detections_all --once
-```
-
-4. Verify workspace lock and diagnostics:
-```bash
-ros2 topic echo /holoassist/perception/workspace_mode --once
-ros2 topic echo /holoassist/perception/workspace_diagnostics --once
-```
-
-5. Verify TF:
-```bash
-ros2 run tf2_ros tf2_echo workspace_frame ur3e_base_link0
-ros2 run tf2_ros tf2_echo workspace_frame apriltag_cube_1
-```
-
-6. Verify overlay and cube outputs:
-```bash
-ros2 topic echo /holoassist/perception/april_cube_1_status --once
-ros2 topic hz /holoassist/perception/apriltag_overlay
-```
-
-## 9) Failure Cases and Behavior
-
-- Missing/stale board detections:
-  - Workspace status publishes `INVALID`
-  - No fallback to alternate geometry
-- Insufficient board tags (`<4`):
-  - Status `INVALID`
-  - Existing lock (if any) is retained until realign
-- Invalid board geometry (dimension/residual tolerance fail):
-  - Status `INVALID`
-  - No lock acquisition
-- Cube tags partially visible:
-  - Cube pose still solved from available tags where possible
-- Cube has no valid tag transforms:
-  - Cube status indicates failure and marker is deleted
-
-## 10) Integration Notes
-
-### RViz
-- Set fixed frame to `workspace_frame` for board-relative visualization.
-- Display TF, cube poses/markers, robot marker, and overlay image topic.
-
-### Foxglove
-- Subscribe to:
-  - `/detections_all`
-  - `/holoassist/perception/workspace_diagnostics`
-  - `/holoassist/perception/april_cube_*_pose`
-  - `/holoassist/perception/april_cube_*_status`
-- Optional stack integration is available in `holoassist_stack.launch.py` via:
-  - `enable_4tag_board_4cube_pipeline:=true`
-
-### Unity
-- Consume TF for:
-  - `workspace_frame`
-  - `ur3e_base_link0`
-  - `apriltag_cube_1..4`
-- The workspace frame is deterministic once locked; call realign service when board setup changes.

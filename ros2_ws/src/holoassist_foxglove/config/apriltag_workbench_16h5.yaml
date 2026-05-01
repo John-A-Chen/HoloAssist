@@ -2,7 +2,7 @@ apriltag:
   ros__parameters:
     image_transport: raw
     family: 16h5
-    size: 0.08
+    size: 0.032
     profile: false
     max_hamming: 1
     pose_estimation_method: pnp

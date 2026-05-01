@@ -1,18 +1,60 @@
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import re
+
+
+def _validate_apriltag_params(context, *args):
+    del args
+    expected = 0.032
+    path = LaunchConfiguration("apriltag_params_file").perform(context)
+    messages = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except Exception as exc:
+        return [LogInfo(msg=f"[WARN] unable to read apriltag params file '{path}': {exc}")]
+
+    match = re.search(r"^\\s*size\\s*:\\s*([-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)\\s*$", text, re.MULTILINE)
+    if not match:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag params file '{path}' has no 'size:' entry; expected {expected:.3f} m."
+            )
+        )
+        return messages
+
+    value = float(match.group(1))
+    if abs(value - expected) > 1e-6:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size is {value:.6f} m in '{path}', expected {expected:.3f} m."
+            )
+        )
+    if value > 0.05:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size {value:.6f} m is unusually large for current 32 mm tags."
+            )
+        )
+    if value >= 1.0:
+        messages.append(
+            LogInfo(
+                msg=f"[WARN] apriltag detector size {value:.6f} looks like mm passed as meters (e.g. 32/40)."
+            )
+        )
+    return messages
 
 
 def generate_launch_description() -> LaunchDescription:
     pkg_share = get_package_share_directory("holo_assist_depth_tracker")
 
-    board_params_default = PathJoinSubstitution([pkg_share, "config", "apriltag_board.yaml"])
-    cubes_params_default = PathJoinSubstitution([pkg_share, "config", "apriltag_cubes.yaml"])
+    apriltag_params_default = PathJoinSubstitution([pkg_share, "config", "apriltag_all.yaml"])
     workspace_params_default = PathJoinSubstitution([pkg_share, "config", "workspace.yaml"])
     cube_pose_params_default = PathJoinSubstitution([pkg_share, "config", "cubes.yaml"])
     tracker_params_default = PathJoinSubstitution([pkg_share, "config", "tracker_params.yaml"])
@@ -23,8 +65,7 @@ def generate_launch_description() -> LaunchDescription:
     start_tracker_arg = DeclareLaunchArgument("start_tracker", default_value="true")
     start_overlay_arg = DeclareLaunchArgument("start_overlay", default_value="true")
 
-    board_params_arg = DeclareLaunchArgument("board_params_file", default_value=board_params_default)
-    cubes_params_arg = DeclareLaunchArgument("cubes_params_file", default_value=cubes_params_default)
+    apriltag_params_arg = DeclareLaunchArgument("apriltag_params_file", default_value=apriltag_params_default)
     workspace_params_arg = DeclareLaunchArgument("workspace_params_file", default_value=workspace_params_default)
     cube_pose_params_arg = DeclareLaunchArgument("cube_pose_params_file", default_value=cube_pose_params_default)
     tracker_params_arg = DeclareLaunchArgument("tracker_params_file", default_value=tracker_params_default)
@@ -38,46 +79,25 @@ def generate_launch_description() -> LaunchDescription:
 
     try:
         get_package_share_directory("apriltag_ros")
-        apriltag_board_node = Node(
+        apriltag_node = Node(
             package="apriltag_ros",
             executable="apriltag_node",
-            name="apriltag_board",
+            name="apriltag",
             output="screen",
-            parameters=[LaunchConfiguration("board_params_file")],
+            parameters=[LaunchConfiguration("apriltag_params_file")],
             remappings=[
                 ("image_rect", LaunchConfiguration("image_topic")),
                 ("camera_info", LaunchConfiguration("camera_info_topic")),
-                ("detections", "/detections_board"),
-            ],
-        )
-        apriltag_cubes_node = Node(
-            package="apriltag_ros",
-            executable="apriltag_node",
-            name="apriltag_cubes",
-            output="screen",
-            parameters=[LaunchConfiguration("cubes_params_file")],
-            remappings=[
-                ("image_rect", LaunchConfiguration("image_topic")),
-                ("camera_info", LaunchConfiguration("camera_info_topic")),
-                ("detections", "/detections_cubes"),
+                ("detections", "/detections_all"),
             ],
         )
     except PackageNotFoundError:
-        apriltag_board_node = LogInfo(
+        apriltag_node = LogInfo(
             msg=(
                 "[holoassist_4tag_board_4cube] apriltag_ros not found. "
                 "Install ros-humble-apriltag ros-humble-apriltag-ros."
             )
         )
-        apriltag_cubes_node = LogInfo(msg="[holoassist_4tag_board_4cube] skipping cube detector")
-
-    merge_node = Node(
-        package="holo_assist_depth_tracker",
-        executable="holoassist_detection_merge_node",
-        name="holoassist_detection_merge",
-        output="screen",
-        parameters=[{"board_topic": "/detections_board", "cubes_topic": "/detections_cubes", "output_topic": "/detections_all"}],
-    )
 
     workspace_node = Node(
         package="holo_assist_depth_tracker",
@@ -126,15 +146,13 @@ def generate_launch_description() -> LaunchDescription:
             camera_info_topic_arg,
             start_tracker_arg,
             start_overlay_arg,
-            board_params_arg,
-            cubes_params_arg,
+            apriltag_params_arg,
             workspace_params_arg,
             cube_pose_params_arg,
             tracker_params_arg,
             camera_launch,
-            apriltag_board_node,
-            apriltag_cubes_node,
-            merge_node,
+            OpaqueFunction(function=_validate_apriltag_params),
+            apriltag_node,
             workspace_node,
             cube_pose_node,
             overlay_node,

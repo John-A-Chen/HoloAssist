@@ -301,7 +301,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("tag_family", "36h11")
         self.declare_parameter("tag_ids", [1, 0])
         self.declare_parameter("tag_frame_names", ["tag36h11:1", "tag36h11:0"])
-        self.declare_parameter("tag_size_m", 0.035)
+        self.declare_parameter("tag_size_m", 0.032)
         self.declare_parameter("tag_timeout_s", 0.5)
         self.declare_parameter("tag_min_separation_m", 0.08)
         self.declare_parameter("project_tags_to_plane", True)
@@ -459,7 +459,7 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("marker_lifetime_s", 0.8)
         self.declare_parameter("plane_marker_thickness_m", 0.006)
         self.declare_parameter("plane_marker_from_four_tags_enabled", True)
-        self.declare_parameter("plane_marker_four_tags_edge_offset_m", 0.05)
+        self.declare_parameter("plane_marker_four_tags_edge_offset_m", 0.016)
         self.declare_parameter("axes_marker_length_m", 0.12)
         self.declare_parameter("axes_marker_radius_m", 0.01)
         self.declare_parameter("axes_marker_lift_m", 0.0)
@@ -876,9 +876,15 @@ class WorkspacePerceptionNode(Node):
 
         self.max_points_per_frame = max(500, self.max_points_per_frame)
         self.tag_size_m = max(0.01, self.tag_size_m)
+        self._warn_expected_apriltag_size("tag_size_m", self.tag_size_m)
         self.tag_plane_projection_max_distance_m = max(
             0.0, self.tag_plane_projection_max_distance_m
         )
+        if self.plane_marker_four_tags_edge_offset_m > 0.05:
+            self.get_logger().warn(
+                "plane_marker_four_tags_edge_offset_m=%.6f m is unusually large for 32 mm tags; check board tag center placement."
+                % self.plane_marker_four_tags_edge_offset_m
+            )
         self.tag_markers_raw_z_offset_m = float(self.tag_markers_raw_z_offset_m)
         if self.single_tag_axis_preference not in ("x", "y"):
             self.single_tag_axis_preference = "x"
@@ -891,6 +897,24 @@ class WorkspacePerceptionNode(Node):
 
     def _on_robot_pose_timer(self) -> None:
         self._publish_robot_pose(self.get_clock().now().to_msg())
+
+    def _warn_expected_apriltag_size(self, name: str, value_m: float) -> None:
+        expected = 0.032
+        if abs(value_m - expected) > 1e-6:
+            self.get_logger().warn(
+                "%s=%.6f m but all current AprilTags are expected to be %.3f m."
+                % (name, value_m, expected)
+            )
+        if value_m > 0.05:
+            self.get_logger().warn(
+                "%s=%.6f m is unusually large; workspace tag geometry may be wrong."
+                % (name, value_m)
+            )
+        if value_m >= 1.0:
+            self.get_logger().warn(
+                "%s=%.6f looks like millimeters passed as meters (e.g. 32/40)."
+                % (name, value_m)
+            )
 
     def _on_apriltag_object_pose(self, msg: PoseStamped) -> None:
         self._latest_apriltag_object_pose = msg
@@ -1924,8 +1948,9 @@ class WorkspacePerceptionNode(Node):
                     # Pair anchor:
                     # - left board corner is 0.5*tag_size to the left of left-tag center
                     # - right board corner is 0.5*tag_size to the right of right-tag center
-                    # This keeps each tag center exactly 7.5 cm from its assigned corner
-                    # when tag_size_m=0.15, regardless of temporary tag separation noise.
+                    # This keeps each tag center at half the configured tag size from
+                    # its assigned corner (16 mm when tag_size_m=0.032), regardless of
+                    # temporary tag separation noise.
                     frame_to_point = {frame: point for frame, point in ordered_points_w}
                     left_frame = self.tag_frames[0]
                     right_frame = self.tag_frames[1] if len(self.tag_frames) >= 2 else None

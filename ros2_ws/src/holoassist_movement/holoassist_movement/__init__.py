@@ -1,1 +1,0 @@
-"""Movement tools for HoloAssist."""

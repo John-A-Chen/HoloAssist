@@ -116,8 +116,8 @@ class DepthTrackerNode(Node):
         self.declare_parameter("workspace_rear_right_tag_id", 3)
         self.declare_parameter("workspace_width_m", 0.70)
         self.declare_parameter("workspace_depth_m", 0.50)
-        self.declare_parameter("workspace_tag_size_m", 0.15)
-        self.declare_parameter("workspace_tag_center_edge_offset_m", 0.05)
+        self.declare_parameter("workspace_tag_size_m", 0.032)
+        self.declare_parameter("workspace_tag_center_edge_offset_m", 0.016)
         self.declare_parameter("workspace_left_corner_index_offset", 0)
         self.declare_parameter("workspace_right_corner_index_offset", 0)
         self.declare_parameter("workspace_left_corner_reverse", False)
@@ -339,9 +339,13 @@ class DepthTrackerNode(Node):
             self.workspace_roi_y_max = 0.25
         self.workspace_width_m = max(0.10, self.workspace_width_m)
         self.workspace_depth_m = max(0.10, self.workspace_depth_m)
-        self.workspace_tag_size_m = max(0.02, self.workspace_tag_size_m)
+        self.workspace_tag_size_m = max(0.01, self.workspace_tag_size_m)
         self.workspace_tag_center_edge_offset_m = max(
             0.0, self.workspace_tag_center_edge_offset_m
+        )
+        self._warn_expected_apriltag_size(
+            name="workspace_tag_size_m",
+            value_m=self.workspace_tag_size_m,
         )
         self.workspace_outline_max_reproj_error_px = max(
             1.0, self.workspace_outline_max_reproj_error_px
@@ -403,6 +407,12 @@ class DepthTrackerNode(Node):
             CameraInfo,
             self.camera_info_topic,
             self.camera_info_callback,
+            qos_profile_sensor_data,
+        )
+        self.rgb_camera_info_sub = self.create_subscription(
+            CameraInfo,
+            self.rgb_camera_info_topic,
+            self.rgb_camera_info_callback,
             qos_profile_sensor_data,
         )
         self.object_pose_sub = self.create_subscription(
@@ -514,6 +524,15 @@ class DepthTrackerNode(Node):
             )
         )
         self.get_logger().info(
+            "Workspace overlay board=(%.3fx%.3fm) tag_size=%.3fm tag_center_edge_offset=%.3fm"
+            % (
+                self.workspace_width_m,
+                self.workspace_depth_m,
+                self.workspace_tag_size_m,
+                self.workspace_tag_center_edge_offset_m,
+            )
+        )
+        self.get_logger().info(
             f"Centroid stabilization closer_only={self.centroid_update_closer_only} "
             f"min_closer={self.centroid_min_closer_m:.3f}m alpha={self.centroid_smoothing_alpha:.2f} "
             f"force_px={self.centroid_force_update_px:.1f}"
@@ -521,6 +540,9 @@ class DepthTrackerNode(Node):
 
     def camera_info_callback(self, msg: CameraInfo) -> None:
         self.latest_camera_info = msg
+
+    def rgb_camera_info_callback(self, msg: CameraInfo) -> None:
+        self.latest_rgb_camera_info = msg
 
     def rgb_callback(self, msg: Image, source_topic: str = "") -> None:
         if not self.use_rgb_debug_image:
@@ -563,9 +585,33 @@ class DepthTrackerNode(Node):
             stamp = self.get_clock().now()
         self.latest_apriltag_stamp = stamp
 
+        if self.latest_rgb_camera_info is not None:
+            w = int(self.latest_rgb_camera_info.width)
+            h = int(self.latest_rgb_camera_info.height)
+            if w > 0 and h > 0:
+                self.latest_apriltag_image_size = (w, h)
+                return
         if self.latest_rgb_bgr is not None:
             h, w = self.latest_rgb_bgr.shape[:2]
             self.latest_apriltag_image_size = (int(w), int(h))
+
+    def _warn_expected_apriltag_size(self, name: str, value_m: float) -> None:
+        expected = 0.032
+        if abs(value_m - expected) > 1e-6:
+            self.get_logger().warn(
+                "%s=%.6f m but all current AprilTags are expected to be %.3f m."
+                % (name, value_m, expected)
+            )
+        if value_m > 0.05:
+            self.get_logger().warn(
+                "%s=%.6f m is unusually large; AprilTag pose/overlay depth may be wrong."
+                % (name, value_m)
+            )
+        if value_m >= 1.0:
+            self.get_logger().warn(
+                "%s=%.6f looks like millimeters passed as meters (e.g. 32/40)."
+                % (name, value_m)
+            )
 
     def depth_callback(self, msg: Image) -> None:
         self.frame_count += 1

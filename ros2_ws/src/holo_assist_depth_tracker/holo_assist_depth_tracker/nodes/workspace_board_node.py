@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
@@ -82,29 +81,16 @@ class WorkspaceSolution:
 class WorkspaceBoardNode(Node):
     """Derive and lock workspace frame from a deterministic 4-tag board."""
 
-    TAG_LAYOUT_W = {
-        0: np.array([0.075, 0.075, 0.0], dtype=np.float64),
-        1: np.array([0.625, 0.075, 0.0], dtype=np.float64),
-        2: np.array([0.075, 0.425, 0.0], dtype=np.float64),
-        3: np.array([0.625, 0.425, 0.0], dtype=np.float64),
-    }
-
-    EXPECTED_CENTER_DISTS = {
-        (0, 1): 0.55,
-        (0, 2): 0.35,
-        (1, 3): 0.35,
-        (2, 3): 0.55,
-        (0, 3): math.sqrt(0.55 * 0.55 + 0.35 * 0.35),
-        (1, 2): math.sqrt(0.55 * 0.55 + 0.35 * 0.35),
-    }
-
     def __init__(self) -> None:
         super().__init__("holoassist_workspace_board")
 
-        self.declare_parameter("detections_topic", "/detections_board")
+        self.declare_parameter("detections_topic", "/detections_all")
         self.declare_parameter("workspace_frame", "workspace_frame")
         self.declare_parameter("tag_family", "36h11")
         self.declare_parameter("board_tag_ids", [0, 1, 2, 3])
+        self.declare_parameter("board_width_m", 0.700)
+        self.declare_parameter("board_depth_m", 0.500)
+        self.declare_parameter("board_tag_center_edge_offset_m", 0.016)
         self.declare_parameter("tag_lookup_timeout_s", 0.05)
         self.declare_parameter("detections_timeout_s", 1.0)
         self.declare_parameter("timer_hz", 20.0)
@@ -130,6 +116,17 @@ class WorkspaceBoardNode(Node):
         self.workspace_frame = str(self.get_parameter("workspace_frame").value)
         self.tag_family = str(self.get_parameter("tag_family").value)
         self.board_tag_ids = [int(v) for v in self.get_parameter("board_tag_ids").value]
+        valid_layout_ids = {0, 1, 2, 3}
+        if any(tag_id not in valid_layout_ids for tag_id in self.board_tag_ids):
+            self.get_logger().warn(
+                "board_tag_ids must be subset of [0,1,2,3] for this board model. Falling back to [0,1,2,3]."
+            )
+            self.board_tag_ids = [0, 1, 2, 3]
+        self.board_width_m = max(0.10, float(self.get_parameter("board_width_m").value))
+        self.board_depth_m = max(0.10, float(self.get_parameter("board_depth_m").value))
+        self.board_tag_center_edge_offset_m = max(
+            0.0, float(self.get_parameter("board_tag_center_edge_offset_m").value)
+        )
         self.tag_lookup_timeout_s = max(0.0, float(self.get_parameter("tag_lookup_timeout_s").value))
         self.detections_timeout_s = max(0.05, float(self.get_parameter("detections_timeout_s").value))
         self.timer_hz = max(1.0, float(self.get_parameter("timer_hz").value))
@@ -150,6 +147,8 @@ class WorkspaceBoardNode(Node):
         self.workspace_mode_topic = str(self.get_parameter("workspace_mode_topic").value)
         self.workspace_diag_topic = str(self.get_parameter("workspace_diag_topic").value)
         self.plane_coeff_topic = str(self.get_parameter("plane_coeff_topic").value)
+        self._tag_layout_w = self._build_tag_layout()
+        self._expected_center_dists = self._build_expected_center_distances()
 
         reliable_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -188,14 +187,54 @@ class WorkspaceBoardNode(Node):
         self._timer = self.create_timer(1.0 / self.timer_hz, self._on_timer)
 
         self.get_logger().info(
-            "workspace board node started detections=%s workspace_frame=%s tags=%s realign_service=%s"
+            "workspace board node started detections=%s workspace_frame=%s tags=%s board=(%.3fx%.3fm) tag_center_edge_offset=%.3fm realign_service=%s"
             % (
                 self.detections_topic,
                 self.workspace_frame,
                 self.board_tag_ids,
+                self.board_width_m,
+                self.board_depth_m,
+                self.board_tag_center_edge_offset_m,
                 self.workspace_realign_service_name,
             )
         )
+        if self.board_tag_center_edge_offset_m > 0.05:
+            self.get_logger().warn(
+                "board_tag_center_edge_offset_m=%.3f looks large for 32 mm tags; expected around 0.016 m unless tags are inset."
+                % self.board_tag_center_edge_offset_m
+            )
+
+    def _build_tag_layout(self) -> Dict[int, np.ndarray]:
+        edge = self.board_tag_center_edge_offset_m
+        if edge * 2.0 >= min(self.board_width_m, self.board_depth_m):
+            edge = 0.5 * min(self.board_width_m, self.board_depth_m) * 0.49
+            self.get_logger().warn(
+                "board_tag_center_edge_offset_m is too large for board dimensions; clamping to %.4f m."
+                % edge
+            )
+        return {
+            0: np.array([edge, edge, 0.0], dtype=np.float64),
+            1: np.array([self.board_width_m - edge, edge, 0.0], dtype=np.float64),
+            2: np.array([edge, self.board_depth_m - edge, 0.0], dtype=np.float64),
+            3: np.array(
+                [self.board_width_m - edge, self.board_depth_m - edge, 0.0],
+                dtype=np.float64,
+            ),
+        }
+
+    def _build_expected_center_distances(self) -> Dict[Tuple[int, int], float]:
+        model_points = self._tag_layout_w
+        distances: Dict[Tuple[int, int], float] = {}
+        for i, a in enumerate(self.board_tag_ids):
+            if a not in model_points:
+                continue
+            for b in self.board_tag_ids[i + 1 :]:
+                if b not in model_points:
+                    continue
+                distances[(a, b)] = float(
+                    np.linalg.norm(model_points[a] - model_points[b])
+                )
+        return distances
 
     def _on_detections(self, msg: AprilTagDetectionArray) -> None:
         self._latest_detections_msg = msg
@@ -312,8 +351,8 @@ class WorkspaceBoardNode(Node):
 
         solved = solve_workspace_pose(
             observed_points=observed_points,
-            model_points={k: self.TAG_LAYOUT_W[k] for k in self.board_tag_ids},
-            expected_dists=self.EXPECTED_CENTER_DISTS,
+            model_points={k: self._tag_layout_w[k] for k in self.board_tag_ids},
+            expected_dists=self._expected_center_dists,
             rms_tolerance_m=self.geometry_rms_tolerance_m,
             dimension_tolerance_m=self.dimension_tolerance_m,
         )

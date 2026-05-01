@@ -1,9 +1,13 @@
 holoassist_workspace_board:
   ros__parameters:
-    detections_topic: /detections_board
+    detections_topic: /detections_all
     workspace_frame: workspace_frame
     tag_family: 36h11
     board_tag_ids: [0, 1, 2, 3]
+    board_width_m: 0.700
+    board_depth_m: 0.500
+    # All AprilTags are 32 mm printed edge size; center is 16 mm from board edges.
+    board_tag_center_edge_offset_m: 0.016
     tag_lookup_timeout_s: 0.05
     detections_timeout_s: 1.0
     timer_hz: 20.0

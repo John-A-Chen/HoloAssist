@@ -65,10 +65,10 @@ holo_assist_depth_tracker:
     workspace_rear_right_tag_id: 3
     workspace_width_m: 0.70
     workspace_depth_m: 0.50
-    workspace_tag_size_m: 0.10
-    # Tag centers are 50 mm from board edges:
-    # [80 mm tag] + [10 mm white border each side] => 100 mm marker.
-    workspace_tag_center_edge_offset_m: 0.05
+    # All AprilTags use a 32 mm printed edge size.
+    workspace_tag_size_m: 0.032
+    # Board tag center-to-edge placement (measured): 16 mm.
+    workspace_tag_center_edge_offset_m: 0.016
     # If outline appears twisted, tune per-tag corner mapping:
     #  - index_offset: 0..3
     #  - reverse: true/false

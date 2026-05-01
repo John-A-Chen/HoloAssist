@@ -81,7 +81,7 @@ def generate_launch_description() -> LaunchDescription:
             [
                 FindPackageShare("holoassist_foxglove"),
                 "config",
-                "apriltag_cube_36h11_45mm.yaml",
+                "apriltag_cube_36h11_32mm.yaml",
             ]
         ),
         description="apriltag_ros parameter file for cube tags.",

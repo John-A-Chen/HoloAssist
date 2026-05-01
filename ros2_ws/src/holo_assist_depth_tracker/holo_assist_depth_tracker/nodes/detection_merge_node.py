@@ -51,18 +51,18 @@ def prune_stale_detections(
 
 
 class DetectionMergeNode(Node):
-    """Merge board/cube AprilTag streams into a deduplicated unified stream."""
+    """Merge multiple AprilTag streams into one deduplicated stream."""
 
     def __init__(self) -> None:
         super().__init__("holoassist_detection_merge")
 
-        self.declare_parameter("board_topic", "/detections_board")
-        self.declare_parameter("cubes_topic", "/detections_cubes")
+        self.declare_parameter("input_topic_a", "/detections_a")
+        self.declare_parameter("input_topic_b", "/detections_b")
         self.declare_parameter("output_topic", "/detections_all")
         self.declare_parameter("stale_timeout_s", 1.0)
 
-        self.board_topic = str(self.get_parameter("board_topic").value)
-        self.cubes_topic = str(self.get_parameter("cubes_topic").value)
+        self.input_topic_a = str(self.get_parameter("input_topic_a").value)
+        self.input_topic_b = str(self.get_parameter("input_topic_b").value)
         self.output_topic = str(self.get_parameter("output_topic").value)
         self.stale_timeout_s = max(0.05, float(self.get_parameter("stale_timeout_s").value))
 
@@ -74,29 +74,29 @@ class DetectionMergeNode(Node):
 
         self._detections_by_id: Dict[int, CachedDetection] = {}
 
-        self._board_sub = self.create_subscription(
+        self._sub_a = self.create_subscription(
             AprilTagDetectionArray,
-            self.board_topic,
-            self._on_board,
+            self.input_topic_a,
+            self._on_input_a,
             reliable_qos,
         )
-        self._cubes_sub = self.create_subscription(
+        self._sub_b = self.create_subscription(
             AprilTagDetectionArray,
-            self.cubes_topic,
-            self._on_cubes,
+            self.input_topic_b,
+            self._on_input_b,
             reliable_qos,
         )
         self._pub = self.create_publisher(AprilTagDetectionArray, self.output_topic, reliable_qos)
 
         self.get_logger().info(
-            "detection merge started board=%s cubes=%s out=%s stale_timeout=%.2fs"
-            % (self.board_topic, self.cubes_topic, self.output_topic, self.stale_timeout_s)
+            "detection merge started input_a=%s input_b=%s out=%s stale_timeout=%.2fs"
+            % (self.input_topic_a, self.input_topic_b, self.output_topic, self.stale_timeout_s)
         )
 
-    def _on_board(self, msg: AprilTagDetectionArray) -> None:
+    def _on_input_a(self, msg: AprilTagDetectionArray) -> None:
         self._merge_message(msg)
 
-    def _on_cubes(self, msg: AprilTagDetectionArray) -> None:
+    def _on_input_b(self, msg: AprilTagDetectionArray) -> None:
         self._merge_message(msg)
 
     def _merge_message(self, msg: AprilTagDetectionArray) -> None:
