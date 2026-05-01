@@ -45,20 +45,21 @@ holo_assist_depth_tracker:
 
     enable_apriltag_overlay: true
     apriltag_topic: /detections_all
+    apriltag_topic_fallback: /detections
     apriltag_timeout_s: 1.0
     # Track only AprilTag targets (no depth blob centroid tracking).
     apriltag_distance_tracking_only: true
-    apriltag_track_tag_ids: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+    apriltag_track_tag_ids: [0, 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
     apriltag_bbox_padding_px: 8
 
     # Workspace overlay on RGB debug image, inferred from two front-corner tags.
     enable_workspace_overlay: true
-    # Physical placement: id 0 = left front corner, id 1 = right front corner.
-    workspace_left_tag_id: 0
-    workspace_right_tag_id: 1
+    # Physical placement: id 1 = left front corner, id 0 = right front corner.
+    workspace_left_tag_id: 1
+    workspace_right_tag_id: 0
     workspace_width_m: 0.70
     workspace_depth_m: 0.50
-    workspace_tag_size_m: 0.15
+    workspace_tag_size_m: 0.10
     # If outline appears twisted, tune per-tag corner mapping:
     #  - index_offset: 0..3
     #  - reverse: true/false

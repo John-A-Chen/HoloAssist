@@ -42,7 +42,8 @@ class CubePoseNode(Node):
         self.declare_parameter("detections_topic", "/detections_all")
         self.declare_parameter("workspace_frame", "workspace_frame")
         self.declare_parameter("tag_family", "36h11")
-        self.declare_parameter("cube_size_m", 0.045)
+        self.declare_parameter("cube_size_m", 0.040)
+        self.declare_parameter("cube_min_center_z_m", -1.0)
         self.declare_parameter("detections_timeout_s", 1.0)
         self.declare_parameter("tf_lookup_timeout_s", 0.05)
         self.declare_parameter("timer_hz", 20.0)
@@ -60,6 +61,9 @@ class CubePoseNode(Node):
         self.workspace_frame = str(self.get_parameter("workspace_frame").value)
         self.tag_family = str(self.get_parameter("tag_family").value)
         self.cube_size_m = max(0.01, float(self.get_parameter("cube_size_m").value))
+        self.cube_min_center_z_m = float(
+            self.get_parameter("cube_min_center_z_m").value
+        )
         self.detections_timeout_s = max(0.05, float(self.get_parameter("detections_timeout_s").value))
         self.tf_lookup_timeout_s = max(0.0, float(self.get_parameter("tf_lookup_timeout_s").value))
         self.timer_hz = max(1.0, float(self.get_parameter("timer_hz").value))
@@ -171,6 +175,14 @@ class CubePoseNode(Node):
                 continue
 
             center, rot_w_c, pos_resid_m, ori_resid_rad, used_ids = solved
+            if self.cube_min_center_z_m >= 0.0:
+                min_z = self.cube_min_center_z_m
+            else:
+                # Default safety floor: center cannot be below half-cube above workspace plane.
+                min_z = 0.5 * float(self.cube_size_m)
+            if float(center[2]) < float(min_z):
+                center = np.asarray(center, dtype=np.float64).copy()
+                center[2] = float(min_z)
             qx, qy, qz, qw = quaternion_from_rotation_matrix(rot_w_c)
             pose = self._publish_cube_outputs(idx, center, (qx, qy, qz, qw))
 

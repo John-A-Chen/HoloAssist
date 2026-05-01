@@ -767,8 +767,21 @@ class WorkspacePerceptionNode(Node):
 
         if self.tag_frame_names:
             self.tag_frames = self.tag_frame_names[:2]
+            self.tag_marker_frames = list(self.tag_frame_names)
         else:
-            self.tag_frames = [f"tag{self.tag_family}:{tag_id}" for tag_id in self.tag_ids[:2]]
+            inferred_frames = [f"tag{self.tag_family}:{tag_id}" for tag_id in self.tag_ids]
+            self.tag_frames = inferred_frames[:2]
+            self.tag_marker_frames = inferred_frames
+
+        if not self.tag_marker_frames:
+            self.tag_marker_frames = list(self.tag_frames)
+        if not self.tag_frames and self.tag_marker_frames:
+            self.tag_frames = self.tag_marker_frames[:2]
+
+        self.tag_marker_frame_to_id = {
+            frame: idx for idx, frame in enumerate(self.tag_marker_frames)
+        }
+        self.workspace_front_edge_marker_id = 1000
 
         if self.roi_x_max <= self.roi_x_min:
             self.roi_x_min, self.roi_x_max = -0.45, 0.45
@@ -972,9 +985,19 @@ class WorkspacePerceptionNode(Node):
         else:
             xyz = xyz_all
 
-        tag_observations = self._lookup_tag_observations(msg.header.frame_id)
+        tag_observations = self._lookup_tag_observations(
+            msg.header.frame_id, self.tag_frames
+        )
+        marker_tag_observations = tag_observations
+        if self.tag_marker_frames != self.tag_frames:
+            marker_tag_observations = self._lookup_tag_observations(
+                msg.header.frame_id, self.tag_marker_frames
+            )
+        plane_tag_observations = (
+            marker_tag_observations if marker_tag_observations else tag_observations
+        )
         tag_plane = (
-            self._plane_from_tags(tag_observations)
+            self._plane_from_tags(plane_tag_observations)
             if self.bench_plane_from_tags_only
             else None
         )
@@ -993,7 +1016,7 @@ class WorkspacePerceptionNode(Node):
                     mode="invalid",
                     level=DiagnosticStatus.ERROR,
                     message="missing tag plane",
-                    extra={"tags_used": int(len(tag_observations))},
+                    extra={"tags_used": int(len(plane_tag_observations))},
                 )
                 self._publish_object_delete(msg.header.frame_id, msg.header.stamp)
                 return
@@ -1106,10 +1129,18 @@ class WorkspacePerceptionNode(Node):
             )
 
         if self.publish_debug_markers:
+            tag_marker_points_c_raw = {
+                frame: value[0] for frame, value in marker_tag_observations.items()
+            }
+            tag_marker_points_c, _, _ = self._project_tag_points_to_plane(
+                tag_points_c=tag_marker_points_c_raw,
+                plane_normal=normal,
+                plane_d=d,
+            )
             tag_marker_points_c = (
-                tag_points_c
+                tag_marker_points_c
                 if self.tag_markers_use_projected_points
-                else tag_points_c_raw
+                else tag_marker_points_c_raw
             )
             self._publish_plane_marker(msg.header.stamp)
             self._publish_axes_markers(msg.header.stamp)
@@ -1598,14 +1629,17 @@ class WorkspacePerceptionNode(Node):
         return normal, d, full_inlier_mask, full_ratio, full_inliers, plane_origin
 
     def _lookup_tag_observations(
-        self, cloud_frame: str
+        self,
+        cloud_frame: str,
+        frames: Optional[List[str]] = None,
     ) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         observations: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
-        if not self.use_tag_refinement or len(self.tag_frames) < 1:
+        frames_to_use = list(frames) if frames is not None else list(self.tag_frames)
+        if not self.use_tag_refinement or len(frames_to_use) < 1:
             return observations
 
         now = self.get_clock().now()
-        for frame in self.tag_frames:
+        for frame in frames_to_use:
             try:
                 tf_msg = self.tf_buffer.lookup_transform(cloud_frame, frame, rclpy.time.Time())
             except TransformException:
@@ -2526,7 +2560,7 @@ class WorkspacePerceptionNode(Node):
         plane.action = Marker.DELETE
         self.plane_marker_pub.publish(plane)
 
-        for marker_id in (0, 1):
+        for marker_id in self.tag_marker_frame_to_id.values():
             tags = Marker()
             tags.header.frame_id = self.workspace_frame
             tags.header.stamp = stamp
@@ -2534,6 +2568,14 @@ class WorkspacePerceptionNode(Node):
             tags.id = marker_id
             tags.action = Marker.DELETE
             self.tag_marker_pub.publish(tags)
+
+        front_edge = Marker()
+        front_edge.header.frame_id = self.workspace_frame
+        front_edge.header.stamp = stamp
+        front_edge.ns = "holoassist_workspace_tags"
+        front_edge.id = self.workspace_front_edge_marker_id
+        front_edge.action = Marker.DELETE
+        self.tag_marker_pub.publish(front_edge)
 
         for idx in range(3):
             axis = Marker()
@@ -2575,56 +2617,55 @@ class WorkspacePerceptionNode(Node):
         force_plane_lift: bool,
         flatten_z_to_plane: bool,
     ) -> None:
-        marker = Marker()
-        marker.header.frame_id = self.workspace_frame
-        marker.header.stamp = stamp
-        marker.ns = "holoassist_workspace_tags"
-        marker.id = 0
-        marker.type = Marker.CUBE_LIST
-        marker.action = Marker.ADD
-        marker.pose.orientation.w = 1.0
+        ordered_tag_points_w: Dict[str, np.ndarray] = {}
         nominal_tag_size = max(0.01, self.tag_size_m)
-        marker.scale.x = nominal_tag_size
-        marker.scale.y = nominal_tag_size
-        marker.scale.z = max(0.002, 0.05 * nominal_tag_size)
-        marker.color.r = 1.0
-        marker.color.g = 0.9
-        marker.color.b = 0.2
-        marker.color.a = 0.9
-        self._apply_marker_lifetime(marker)
-        ordered_tag_points_w: List[np.ndarray] = []
         # In projected mode, keep tag visuals slightly above bench plane.
         # In raw-TF mode, use TF Z (plus optional offset) for true 3D centering.
         tag_visual_lift_m = max(
             0.001,
-            float(self.plane_marker_thickness_m) + 0.5 * float(marker.scale.z),
+            float(self.plane_marker_thickness_m) + 0.5 * max(0.002, 0.05 * nominal_tag_size),
         )
 
-        if tag_points_c:
-            for frame in self.tag_frames:
-                if frame not in tag_points_c:
-                    continue
-                point_w = self._to_workspace(tag_points_c[frame].reshape(1, 3), origin_c, basis_c)[0]
+        for frame in self.tag_marker_frames:
+            marker = Marker()
+            marker.header.frame_id = self.workspace_frame
+            marker.header.stamp = stamp
+            marker.ns = "holoassist_workspace_tags"
+            marker.id = self.tag_marker_frame_to_id[frame]
+            marker.type = Marker.CUBE
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = nominal_tag_size
+            marker.scale.y = nominal_tag_size
+            marker.scale.z = max(0.002, 0.05 * nominal_tag_size)
+            marker.color.r = 1.0
+            marker.color.g = 0.9
+            marker.color.b = 0.2
+            marker.color.a = 0.9
+            self._apply_marker_lifetime(marker)
+
+            if frame in tag_points_c:
+                point_w = self._to_workspace(
+                    tag_points_c[frame].reshape(1, 3), origin_c, basis_c
+                )[0]
                 if force_plane_lift or flatten_z_to_plane:
                     point_w[2] = tag_visual_lift_m
                 else:
                     point_w[2] = float(point_w[2]) + float(self.tag_markers_raw_z_offset_m)
-                ordered_tag_points_w.append(point_w)
-                pt = Point()
-                pt.x = float(point_w[0])
-                pt.y = float(point_w[1])
-                pt.z = float(point_w[2])
-                marker.points.append(pt)
-        else:
-            marker.action = Marker.DELETE
+                marker.action = Marker.ADD
+                marker.pose.position.x = float(point_w[0])
+                marker.pose.position.y = float(point_w[1])
+                marker.pose.position.z = float(point_w[2])
+                ordered_tag_points_w[frame] = point_w
+            else:
+                marker.action = Marker.DELETE
 
-        self.tag_marker_pub.publish(marker)
+            self.tag_marker_pub.publish(marker)
 
         front_edge = Marker()
         front_edge.header.frame_id = self.workspace_frame
         front_edge.header.stamp = stamp
         front_edge.ns = "holoassist_workspace_tags"
-        front_edge.id = 1
+        front_edge.id = self.workspace_front_edge_marker_id
         front_edge.type = Marker.LINE_STRIP
         front_edge.action = Marker.ADD
         front_edge.pose.orientation.w = 1.0
@@ -2635,15 +2676,19 @@ class WorkspacePerceptionNode(Node):
         front_edge.color.a = 0.95
         self._apply_marker_lifetime(front_edge)
 
-        if len(ordered_tag_points_w) >= 2:
+        if (
+            len(self.tag_frames) >= 2
+            and self.tag_frames[0] in ordered_tag_points_w
+            and self.tag_frames[1] in ordered_tag_points_w
+        ):
             p0 = Point()
-            p0.x = float(ordered_tag_points_w[0][0])
-            p0.y = float(ordered_tag_points_w[0][1])
-            p0.z = float(ordered_tag_points_w[0][2])
+            p0.x = float(ordered_tag_points_w[self.tag_frames[0]][0])
+            p0.y = float(ordered_tag_points_w[self.tag_frames[0]][1])
+            p0.z = float(ordered_tag_points_w[self.tag_frames[0]][2])
             p1 = Point()
-            p1.x = float(ordered_tag_points_w[1][0])
-            p1.y = float(ordered_tag_points_w[1][1])
-            p1.z = float(ordered_tag_points_w[1][2])
+            p1.x = float(ordered_tag_points_w[self.tag_frames[1]][0])
+            p1.y = float(ordered_tag_points_w[self.tag_frames[1]][1])
+            p1.z = float(ordered_tag_points_w[self.tag_frames[1]][2])
             front_edge.points = [p0, p1]
         else:
             front_edge.action = Marker.DELETE

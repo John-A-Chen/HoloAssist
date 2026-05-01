@@ -2,7 +2,7 @@ apriltag:
   ros__parameters:
     image_transport: raw
     family: 36h11
-    size: 0.045
+    size: 0.032
     profile: false
     max_hamming: 1
     pose_estimation_method: pnp
@@ -15,4 +15,3 @@ apriltag:
       debug: false
     tag:
       ids: [10, 11, 12, 13, 14, 15]
-

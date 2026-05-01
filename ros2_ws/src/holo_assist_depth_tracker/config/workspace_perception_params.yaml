@@ -8,17 +8,18 @@ holoassist_workspace_perception:
     # Physical placement:
     # - tag id 1 = left front corner
     # - tag id 0 = right front corner
+    # - tag ids 2 and 3 = rear corners (used for visualization markers)
     # +X in workspace will follow tag1 -> tag0 (left to right on the 700 mm edge).
-    # Tag size includes white border: 150 mm x 150 mm.
-    # Front-edge layout: [150 mm tag] + [400 mm gap] + [150 mm tag] = 700 mm.
-    tag_ids: [1, 0]
-    tag_frame_names: ["tag36h11:1", "tag36h11:0"]
-    tag_size_m: 0.15
+    # Tag size includes white border: 100 mm x 100 mm.
+    # Front-edge layout: [100 mm tag] + [500 mm gap] + [100 mm tag] = 700 mm.
+    tag_ids: [1, 0, 2, 3]
+    tag_frame_names: ["tag36h11:1", "tag36h11:0", "tag36h11:2", "tag36h11:3"]
+    tag_size_m: 0.10
     # Hold last valid tag transform longer to avoid mode flapping/jitter
     # when detections momentarily drop.
     tag_timeout_s: 1.5
-    # Tag center-to-center is expected near 0.55 m in this layout.
-    tag_min_separation_m: 0.45
+    # Tag center-to-center is expected near 0.60 m in this layout.
+    tag_min_separation_m: 0.50
     # Tags are mounted on the board; snap tag centers onto fitted plane.
     project_tags_to_plane: true
     # Use tag poses as the primary bench-plane source (normal + anchor).
@@ -73,7 +74,7 @@ holoassist_workspace_perception:
     # Dynamic ROI from detected tags; board span stays 700x500.
     roi_from_tags_enabled: true
     # Keep zero margin so bench marker corners stay at exact board corners:
-    # tag-center to each assigned front corner remains 0.075 m for 0.15 m tags.
+    # tag-center to each assigned front corner remains 0.050 m for 0.10 m tags.
     roi_from_tags_margin_m: 0.0
     # If detected tag span collapses, fall back to configured board span.
     roi_from_tags_min_span_m: 0.50

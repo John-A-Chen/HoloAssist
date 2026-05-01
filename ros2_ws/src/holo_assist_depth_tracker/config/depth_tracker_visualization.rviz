@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 238
+    Tree Height: 435
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -75,8 +75,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.012849092483520508
-        Min Value: 0.00501251220703125
+        Max Value: 0.3494076728820801
+        Min Value: 0.005614876747131348
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -196,7 +196,7 @@ Visualization Manager:
       Enabled: true
       Name: Object Marker
       Namespaces:
-        {}
+        holoassist_object: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -223,6 +223,14 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        apriltag_cube:
+          Value: true
+        apriltag_cube_tag_12:
+          Value: true
+        apriltag_cube_tag_13:
+          Value: true
+        apriltag_cube_tag_14:
+          Value: true
         camera_color_frame:
           Value: true
         camera_color_optical_frame:
@@ -237,6 +245,28 @@ Visualization Manager:
           Value: true
         tag36h11:1:
           Value: true
+        tag36h11:12:
+          Value: true
+        tag36h11:13:
+          Value: true
+        tag36h11:14:
+          Value: true
+        tag36h11:16:
+          Value: true
+        tag36h11:2:
+          Value: true
+        tag36h11:21:
+          Value: true
+        tag36h11:22:
+          Value: true
+        tag36h11:26:
+          Value: true
+        tag36h11:3:
+          Value: true
+        tag36h11:31:
+          Value: true
+        tag36h11:33:
+          Value: true
         ur3e_base_link0:
           Value: true
         workspace_frame:
@@ -250,14 +280,46 @@ Visualization Manager:
         camera_link:
           camera_color_frame:
             camera_color_optical_frame:
+              apriltag_cube:
+                {}
+              apriltag_cube_tag_12:
+                {}
+              apriltag_cube_tag_13:
+                {}
+              apriltag_cube_tag_14:
+                {}
               tag36h11:0:
                 {}
               tag36h11:1:
                 {}
+              tag36h11:12:
+                {}
+              tag36h11:13:
+                {}
+              tag36h11:14:
+                {}
+              tag36h11:16:
+                {}
+              tag36h11:2:
+                {}
+              tag36h11:21:
+                {}
+              tag36h11:22:
+                {}
+              tag36h11:26:
+                {}
+              tag36h11:3:
+                {}
+              tag36h11:31:
+                {}
+              tag36h11:33:
+                {}
           camera_depth_frame:
             camera_depth_optical_frame:
-              workspace_frame:
-                {}
+              {}
+        workspace_frame:
+          ur3e_base_link0:
+            {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
@@ -275,7 +337,7 @@ Visualization Manager:
         Value: /holo_assist_depth_tracker/debug_image
       Value: true
     - Class: rviz_default_plugins/Image
-      Enabled: true
+      Enabled: false
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -287,7 +349,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /camera/camera/color/image_raw
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 30; 30; 30
@@ -321,10 +383,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1349998712539673
+      Pitch: 1.09499990940094
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.8731889724731445
+      Yaw: 4.833188056945801
     Saved: ~
 Window Geometry:
   Camera Color Raw:
@@ -334,7 +396,7 @@ Window Geometry:
   Height: 1136
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000001bc00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077010000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c0061007901000001a7000001350000002800fffffffb000000100044006900730070006c00610079007301000002e200000171000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff000005be0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000001bc00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff000005be0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:

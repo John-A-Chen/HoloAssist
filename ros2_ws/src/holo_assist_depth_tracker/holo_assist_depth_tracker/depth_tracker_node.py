@@ -71,6 +71,7 @@ class DepthTrackerNode(Node):
         self.declare_parameter("max_component_area_ratio", 0.30)
         self.declare_parameter("enable_apriltag_overlay", True)
         self.declare_parameter("apriltag_topic", "/detections_all")
+        self.declare_parameter("apriltag_topic_fallback", "/detections")
         self.declare_parameter("apriltag_timeout_s", 1.0)
         self.declare_parameter("apriltag_distance_tracking_only", True)
         self.declare_parameter(
@@ -177,6 +178,9 @@ class DepthTrackerNode(Node):
             self.get_parameter("enable_apriltag_overlay").value
         )
         self.apriltag_topic = str(self.get_parameter("apriltag_topic").value)
+        self.apriltag_topic_fallback = str(
+            self.get_parameter("apriltag_topic_fallback").value
+        ).strip()
         self.apriltag_timeout_s = float(
             self.get_parameter("apriltag_timeout_s").value
         )
@@ -393,6 +397,7 @@ class DepthTrackerNode(Node):
             qos_profile_sensor_data,
         )
         self.apriltag_sub = None
+        self.apriltag_fallback_sub = None
         if self.enable_apriltag_overlay:
             if HAVE_APRILTAG_MSGS and AprilTagDetectionArray is not None:
                 self.apriltag_sub = self.create_subscription(
@@ -401,6 +406,16 @@ class DepthTrackerNode(Node):
                     self.apriltag_callback,
                     10,
                 )
+                if (
+                    self.apriltag_topic_fallback
+                    and self.apriltag_topic_fallback != self.apriltag_topic
+                ):
+                    self.apriltag_fallback_sub = self.create_subscription(
+                        AprilTagDetectionArray,
+                        self.apriltag_topic_fallback,
+                        self.apriltag_callback,
+                        10,
+                    )
             else:
                 self.get_logger().warn(
                     "enable_apriltag_overlay=true but apriltag_msgs is unavailable. "
@@ -472,7 +487,8 @@ class DepthTrackerNode(Node):
         )
         self.get_logger().info(
             f"AprilTag overlay={'on' if self.enable_apriltag_overlay else 'off'} "
-            f"topic={self.apriltag_topic} timeout={self.apriltag_timeout_s:.2f}s"
+            f"topic={self.apriltag_topic} fallback={self.apriltag_topic_fallback or '<none>'} "
+            f"timeout={self.apriltag_timeout_s:.2f}s"
         )
         self.get_logger().info(
             "AprilTag distance tracking only=%s ids=%s bbox_padding_px=%d"

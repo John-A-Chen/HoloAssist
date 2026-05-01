@@ -3,7 +3,7 @@ holoassist_cube_pose:
     detections_topic: /detections_all
     workspace_frame: workspace_frame
     tag_family: 36h11
-    cube_size_m: 0.045
+    cube_size_m: 0.040
     detections_timeout_s: 1.0
     tf_lookup_timeout_s: 0.05
     timer_hz: 20.0
