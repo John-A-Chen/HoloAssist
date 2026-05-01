@@ -262,7 +262,7 @@ class WorkspacePerceptionNode(Node):
             )
         )
         self.get_logger().info(
-            "robot_pose follow_workspace=%s from_tag_pair=%s tag_edge_offset=%.3fm edge_clearance=%.3fm x_offset=%.3fm manual=(x=%.3f,y=%.3f,z=%.3f,yaw=%.1f) base_dia=%.3fm marker_topic=%s tf=%s child=%s hz=%.1f snap_origin_to_bench_center=%s"
+            "robot_pose follow_workspace=%s from_tag_pair=%s back_edge_offset=%.3fm edge_clearance=%.3fm x_offset=%.3fm manual=(x=%.3f,y=%.3f,z=%.3f,yaw=%.1f) base_dia=%.3fm marker_topic=%s tf=%s child=%s hz=%.1f snap_origin_to_bench_center=%s"
             % (
                 self.robot_pose_follow_workspace,
                 self.robot_pose_from_tag_pair,
@@ -417,12 +417,17 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("robot_pose_publish_hz", 10.0)
         self.declare_parameter("robot_pose_follow_workspace", True)
         self.declare_parameter("robot_pose_from_tag_pair", True)
-        self.declare_parameter("robot_tag_pair_edge_offset_m", 0.564)
+        # Robot center offset from board back edge (not from tag edge), in meters.
+        # For UR3e base radius 64 mm, use 0.064.
+        self.declare_parameter("robot_tag_pair_edge_offset_m", 0.064)
         self.declare_parameter("robot_edge_clearance_m", 0.0)
-        self.declare_parameter("robot_pose_x_offset_m", 0.0)
-        self.declare_parameter("robot_pose_x_m", 0.0)
+        # Centered workspace-frame default for a 700x500 board:
+        # robot center = 450 mm from left edge -> x = +0.100 m
+        self.declare_parameter("robot_pose_x_offset_m", 0.100)
+        self.declare_parameter("robot_pose_x_m", 0.100)
         self.declare_parameter("robot_pose_y_m", 0.314)
-        self.declare_parameter("robot_pose_z_m", 0.0)
+        # UR3e base joint frame is 15 mm below board/plane surface.
+        self.declare_parameter("robot_pose_z_m", -0.015)
         self.declare_parameter("robot_pose_yaw_deg", 0.0)
         self.declare_parameter("robot_base_diameter_m", 0.128)
         self.declare_parameter("robot_marker_height_m", 0.01)
@@ -2200,49 +2205,22 @@ class WorkspacePerceptionNode(Node):
                 float(self.robot_pose_yaw_deg),
             )
 
-        if (
-            self.robot_pose_from_tag_pair
-            and self._last_pair_tag_points_w
-            and len(self._last_pair_tag_points_w) >= 2
-            and self._last_pair_interior_sign is not None
-        ):
-            tag_points = np.asarray(
-                [point for point in self._last_pair_tag_points_w.values()],
-                dtype=np.float32,
-            )
-            tag_mid_x = float(np.mean(tag_points[:, 0]))
-            tag_mid_y = float(np.mean(tag_points[:, 1]))
-            away_sign = 1.0 if self._last_pair_interior_sign >= 0.0 else -1.0
-            nearest_tag_edge_y = tag_mid_y + away_sign * (0.5 * float(self.tag_size_m))
-            robot_x_w = tag_mid_x + float(self.robot_pose_x_offset_m)
-            robot_y_w = nearest_tag_edge_y + away_sign * (
-                float(self.robot_tag_pair_edge_offset_m)
-                + float(self.robot_edge_clearance_m)
-            )
-            return (
-                float(robot_x_w),
-                float(robot_y_w),
-                float(self.robot_pose_z_m),
-                float(self.robot_pose_yaw_deg),
-            )
-
         center_x_w = float((self._active_roi_x_min + self._active_roi_x_max) * 0.5)
         center_y_w = float((self._active_roi_y_min + self._active_roi_y_max) * 0.5)
-        half_depth_w = 0.5 * float(
-            max(0.02, self._active_roi_y_max - self._active_roi_y_min)
-        )
         far_sign = self._infer_robot_far_side_sign(center_y_w)
+        board_back_edge_y_w = (
+            float(self._active_roi_y_max)
+            if far_sign >= 0.0
+            else float(self._active_roi_y_min)
+        )
 
         robot_x_w = center_x_w + float(self.robot_pose_x_offset_m)
-        # Fallback when tag-pair anchoring is unavailable:
-        # keep the same "offset from board edge" semantics as tag-pair mode,
-        # rather than half-depth + base-radius (which causes ~64 mm back-edge bias).
+        # Always measure offset from the board back edge of the active blue plane.
+        # This keeps robot placement invariant to tag size/placement details.
         edge_offset_m = float(self.robot_tag_pair_edge_offset_m) + float(
             self.robot_edge_clearance_m
         )
-        robot_y_w = center_y_w + far_sign * (
-            half_depth_w + edge_offset_m
-        )
+        robot_y_w = board_back_edge_y_w + far_sign * edge_offset_m
         return (
             float(robot_x_w),
             float(robot_y_w),

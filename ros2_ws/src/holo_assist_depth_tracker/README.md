@@ -73,11 +73,32 @@ If tag detections are consistently too far/near relative to depth/pointcloud, th
 
 ## April Cube Groups
 
-The cube pose node tracks four independent April cubes with six face tags each:
+The cube pose node tracks four physical April cubes with six face tags each:
 - `april_cube_1`: IDs `[10, 11, 12, 13, 14, 15]`
 - `april_cube_2`: IDs `[16, 17, 18, 19, 20, 21]`
 - `april_cube_3`: IDs `[22, 23, 24, 25, 26, 27]`
 - `april_cube_4`: IDs `[28, 29, 30, 31, 32, 33]`
+
+Each six-tag group above is one physical cube, not six independent objects.
+
+Default face mapping is configured once in `config/cubes.yaml`:
+- `april_cube_face_order: ["+X", "-X", "+Y", "-Y", "+Z", "-Z"]`
+
+For each cube group, the first ID is `+X`, second `-X`, third `+Y`, fourth `-Y`, fifth `+Z`, sixth `-Z`.
+If sticker placement changes, update `april_cube_face_order` or reorder each `april_cube_N_tag_ids` list.
+
+Cube-centre model:
+- Detector pose is the face tag centre.
+- Cube edge = `0.040 m`, so face-centre to cube-centre offset = `0.020 m`.
+- Per-face local offsets are:
+- `+X -> [-0.020, 0.000, 0.000]`
+- `-X -> [+0.020, 0.000, 0.000]`
+- `+Y -> [0.000, -0.020, 0.000]`
+- `-Y -> [0.000, +0.020, 0.000]`
+- `+Z -> [0.000, 0.000, -0.020]`
+- `-Z -> [0.000, 0.000, +0.020]`
+- Candidate centre is computed as `cube_center = tag_center + tag_rotation * local_face_offset`.
+- Multiple visible faces are fused into one cube centre using candidate-consensus (`0.05 m` default threshold).
 
 Published topics:
 - `/holoassist/perception/april_cube_1_pose`
@@ -107,12 +128,20 @@ Marker colors:
 
 Marker cube scale in RViz is fixed to `0.040 x 0.040 x 0.040 m` per cube.
 
+AprilTag detector config for cubes must keep:
+- `size: 0.032`
+- `ids: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]`
+
 ## Verify
 
 ```bash
 ros2 topic hz /detections_all
+ros2 topic echo /detections_all --once
 ros2 topic echo /holoassist/perception/workspace_mode --once
 ros2 topic echo /holoassist/perception/april_cube_1_status --once
+ros2 topic echo /holoassist/perception/april_cube_2_status --once
+ros2 topic echo /holoassist/perception/april_cube_3_status --once
+ros2 topic echo /holoassist/perception/april_cube_4_status --once
 ```
 
 Per-cube pose checks:
@@ -161,4 +190,80 @@ ros2 run tf2_ros tf2_echo camera_color_optical_frame tag36h11:10
 
 ```bash
 ros2 service call /holoassist/perception/realign_workspace std_srvs/srv/Trigger "{}"
+```
+
+## Gazebo Simulation (D435i + Trolley + Board + Cubes)
+
+This package now includes a simulation launch that runs without RealSense hardware:
+
+- Gazebo world: `worlds/holoassist_trolley_board.world`
+- Sim launch: `launch/sim_holoassist_trolley.launch.py`
+- Synthetic AprilTag publisher: `holoassist_sim_apriltag_publisher_node`
+- Synthetic tag config: `config/sim_apriltag_params.yaml`
+
+Run:
+
+```bash
+ros2 launch holo_assist_depth_tracker sim_holoassist_trolley.launch.py
+```
+
+Useful args:
+- `gui:=true|false`
+- `start_tracker:=true|false`
+- `start_overlay:=true|false`
+- `start_workspace_perception:=true|false`
+- `sim_tag_params_file:=.../sim_apriltag_params.yaml`
+
+Notes:
+- Camera topics are published to match your existing params:
+- `/camera/camera/color/image_raw`
+- `/camera/camera/color/camera_info`
+- `/camera/camera/depth/image_rect_raw`
+- `/camera/camera/depth/camera_info`
+- `/camera/camera/imu`
+- AprilTag detections/TF are synthetic for deterministic bring-up:
+- `/detections_all`
+- tag TF frames `tag36h11:<id>`
+
+If you import your own cube/trolley meshes, keep the simulated tag/board geometry aligned by updating:
+- `worlds/holoassist_trolley_board.world`
+- `config/sim_apriltag_params.yaml`
+
+## Textured Board And AprilTag Visual Plates
+
+RViz digital twin assets live under `worlds/`:
+
+- `worlds/urdf/holoassist_scene.urdf.xacro`
+- `worlds/meshes/apriltags/tag_0.dae` ... `tag_3.dae`
+- `worlds/textures/apriltags/tag36_11_00000.png` ... `tag36_11_00003.png`
+- `worlds/rviz/holoassist_scene.rviz`
+
+Geometry reference:
+
+- Board: `0.700 x 0.500 x 0.010 m`
+- Tag size: `0.032 x 0.032 m`
+- Tag center-to-edge offset (flush): `0.016 m`
+- Tag plate Z: `0.006 m` (1 mm above board top at `z=0.005`)
+
+Important:
+
+- RViz tag textures are cosmetic only.
+- They are not camera detections by themselves in RViz.
+- For image-based detection, use a simulator that publishes camera streams (Gazebo/Unity/Isaac) with these same tag planes/textures.
+
+Launch:
+
+```bash
+ros2 launch holo_assist_depth_tracker view_holoassist_scene.launch.py
+```
+
+Validation:
+
+```bash
+ros2 run xacro xacro worlds/urdf/holoassist_scene.urdf.xacro > /tmp/holoassist_scene.urdf
+check_urdf /tmp/holoassist_scene.urdf
+ros2 run tf2_ros tf2_echo workspace_frame tag0_visual
+ros2 run tf2_ros tf2_echo workspace_frame tag1_visual
+ros2 run tf2_ros tf2_echo workspace_frame tag2_visual
+ros2 run tf2_ros tf2_echo workspace_frame tag3_visual
 ```

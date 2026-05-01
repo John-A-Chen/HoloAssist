@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    min_cube_spacing_m: 0.080
+    randomise_yaw: true
+    default_cube_centers_xyz_yaw:
+      [
+        -0.150, -0.100, 0.020, 0.0,
+        0.150, -0.100, 0.020, 0.0,
+        -0.120, 0.100, 0.020, 0.0,
+        0.140, 0.090, 0.020, 0.0,
+      ]

@@ -149,21 +149,25 @@ holoassist_workspace_perception:
     robot_pose_publish_hz: 10.0
     # Align workspace frame origin with the blue bench marker center each update.
     workspace_origin_snap_to_bench_center: true
-    # Dynamic placement from tag pair:
-    # - X is midpoint(tag1, tag0) plus robot_pose_x_offset_m
-    # - Y is 0.064 m from the nearest tag edge in the away-from-tags direction
-    #   (plus robot_edge_clearance_m if nonzero).
+    # UR3e base placement (board: 0.700 m x 0.500 m, centered workspace frame):
+    # - Robot centre is 450 mm from board left edge  -> x = +0.100 m
+    # - Robot centre is 64 mm beyond board back edge -> y = +0.314 m
+    #   (back edge is +0.250 m in centered frame, so +0.250 + 0.064 = +0.314 m).
+    # - Robot base diameter is 128 mm.
+    # - robot_pose_z_m is the UR3e joint frame origin relative to board plane.
+    # Dynamic mode still measures Y from board back edge of the active blue plane.
     robot_pose_follow_workspace: true
     robot_pose_from_tag_pair: true
     robot_tag_pair_edge_offset_m: 0.064
     robot_edge_clearance_m: 0.0
-    # Keep UR3e base from snapping to workspace center.
-    # With centered workspace frame, +0.10 m places X at 0.45 m from left edge on a 0.70 m board.
+    # Keep UR3e base from snapping to workspace center:
+    # +0.10 m = 0.45 m from left edge on a 0.70 m board when centered.
     robot_pose_x_offset_m: 0.10
     # Manual fallback (used only when robot_pose_follow_workspace=false):
-    robot_pose_x_m: 0.0
+    robot_pose_x_m: 0.100
     robot_pose_y_m: 0.314
-    robot_pose_z_m: 0.0
+    # UR3e base joint frame is 15 mm below the blue plane surface.
+    robot_pose_z_m: -0.015
     robot_pose_yaw_deg: 0.0
     robot_base_diameter_m: 0.128
     robot_marker_height_m: 0.01
@@ -185,7 +189,8 @@ holoassist_workspace_perception:
     marker_lifetime_s: 0.8
     plane_marker_thickness_m: 0.006
     # Build the bench plane marker from the first 4 workspace tag centres.
-    # Tag center to each board edge is 16 mm for the 32 mm printed tags.
+    # AprilTag printed size is 0.032 m. If tags are flush with board edges,
+    # tag-centre-to-board-edge offset is 0.016 m (=0.032/2).
     # Keep this enabled for the 4-tag board layout so the plane marker is
     # generated from deterministic board geometry instead of a folded/ambiguous
     # 2-tag corner estimate.

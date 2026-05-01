@@ -455,7 +455,10 @@ class WorkspaceBoardNode(Node):
 
         status = DiagnosticStatus()
         status.name = "holoassist/workspace_frame"
-        status.level = int(level)
+        if isinstance(level, (bytes, bytearray)):
+            status.level = bytes(level[:1]) if level else bytes([0])
+        else:
+            status.level = bytes([max(0, min(255, int(level)))])
         status.hardware_id = "holoassist_workspace_board"
         status.message = message
 

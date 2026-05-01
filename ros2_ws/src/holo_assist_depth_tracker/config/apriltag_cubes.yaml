@@ -2,6 +2,7 @@
   ros__parameters:
     image_transport: raw
     family: 36h11
+    # AprilTag printed edge size. Keep 0.032 m for all cube tags.
     size: 0.032
     profile: false
     max_hamming: 1
