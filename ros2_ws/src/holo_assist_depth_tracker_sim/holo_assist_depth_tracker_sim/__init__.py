@@ -1,1 +1,0 @@
-"""HoloAssist simulation package."""
