@@ -13,12 +13,22 @@ SOURCE_CMD = f"source /opt/ros/humble/setup.bash && source {ROS2_WS}/install/set
 
 DEFAULT_WIFI_IP = "172.19.115.104"
 DEFAULT_ROBOT_IP = "192.168.0.194"
+PREFERRED_SUBNET = "192.168.0."
 
 processes = []
 
 
 def get_wifi_ip():
-    """Try to get current WiFi IP, fall back to default."""
+    """Return the best local IP — prefer the 192.168.0.x subnet."""
+    try:
+        import netifaces
+        for iface in netifaces.interfaces():
+            addrs = netifaces.ifaddresses(iface).get(netifaces.AF_INET, [])
+            for a in addrs:
+                if a["addr"].startswith(PREFERRED_SUBNET):
+                    return a["addr"]
+    except ImportError:
+        pass
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -138,8 +148,13 @@ def main():
     )
     run("ROS-TCP Endpoint", tcp_cmd)
 
+    # 4. UDP beacon for Quest auto-discovery
+    beacon_cmd = f"python3 /home/nic/git/RS2-HoloAssist/nic/beacon.py --ip {wifi_ip}"
+    run("IP Beacon", beacon_cmd)
+
     print("\n" + "=" * 60)
     print("  All running. Ctrl+C to stop everything.")
+    print(f"  IP Beacon:  broadcasting {wifi_ip}:10000 (Quest auto-discovery)")
     if not fake:
         print("  Don't forget: run External Control on teach pendant")
     print("  Then hit Play in Unity.")

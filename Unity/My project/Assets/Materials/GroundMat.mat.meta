@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Unity/My project/Assets/Materials/GroundMat.mat.meta
 guid: 2033a2b85c0b3313084dd0b769e8cbc6
+========
+guid: 2a2ff9ff3aa1fa5608d30564830b134a
+>>>>>>>> b6cb2e4 (set environment):Unity/My project/Assets/PortalMesh/poster.mat.meta
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 2100000

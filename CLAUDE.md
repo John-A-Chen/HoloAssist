@@ -116,6 +116,7 @@ nic/
       Scripts/SpatialMarkers.cs        — end-effector axes + velocity arrow visualisation
       Scripts/MeshCollisionGuard.cs     — mesh-based collision protection (table + self-collision)
       Scripts/CollisionDebugVisualizer.cs — collision status on-screen label
+      Scripts/ROSAutoConnect.cs            — auto-discovers ros_tcp_endpoint on 192.168.0.101–109:10000 via TCP scan
       Scripts/HeadsetStreamPublisher.cs — captures XR camera view, publishes JPEG to ROS for dashboard
       Scripts/SessionLogger.cs           — session metrics: mode tracking, durations, events → ROS + file
       Scripts/RobotControlActions.inputactions — Unity Input System bindings for robot control
@@ -127,7 +128,8 @@ nic/
     main.py            — PyQt5 UI (status bar, tabbed screens, e-stop column)
     ros_interface.py   — rclpy node (velocity publisher, joint subscriber, controller switching)
   gripper_node.py      — OBSOLETE: old custom Modbus gripper node (replaced by ur_onrobot driver)
-  launch.py            — Python launcher: starts ur_onrobot driver, controller switch, TCP endpoint
+  beacon.py            — UDP multicast beacon broadcasting laptop IP for Quest auto-discovery
+  launch.py            — Python launcher: starts ur_onrobot driver, controller switch, TCP endpoint, beacon
   launch.sh            — Shell wrapper for launch.py (sources ROS automatically)
   dashboard.sh         — Shell wrapper to run dashboard with ROS sourced
   urdf/                — OnRobot RG2 xacro source files (from UOsaka-Harada-Laboratory/onrobot)
@@ -305,6 +307,7 @@ Mesh source: [UOsaka-Harada-Laboratory/onrobot](https://github.com/UOsaka-Harada
   - Publish rate: 50Hz.
 - `Assets/Scripts/MeshCollisionGuard.cs` — attach to `ur3e_rg2` GameObject; set `robotBase` to itself. Auto-discovers all MeshColliders in robot hierarchy at Start, sets them convex for `ClosestPoint` queries. Groups colliders into proximal (base/shoulder/upper_arm) and distal (wrist through gripper). Table collision uses bounding box min Y vs table height. Self-collision uses `ClosestPoint` distance between proximal and distal groups. Both have soft-zone gradual slowdown + hard stop. Gizmo drawing in Scene view. `CollisionDebugVisualizer.cs` shows on-screen collision status label.
 - `Assets/Scripts/RobotControlActions.inputactions` — Unity Input System action asset with bindings: LeftStick, RightStick, NextJoint (A), PrevJoint (B), ToggleMode (Menu). Deadzone handled via StickDeadzone processor.
+- `Assets/Scripts/ROSAutoConnect.cs` — attach to any GameObject; auto-discovers `ros_tcp_endpoint` by TCP-scanning `192.168.0.101`–`109` on port 10000 (skips `.100` which is the Ethernet-to-robot interface). Sets `ConnectOnStart = false` in Awake, then scans from a background thread with 300ms connect timeout per IP. Retries up to 20 rounds (500ms between rounds). Falls back to Unity ROS Settings IP if nothing found. No beacon/multicast needed — works reliably on Quest/Android.
 - `Assets/Scripts/HeadsetStreamPublisher.cs` — attach to an empty GameObject (e.g. `HeadsetStream`). Renders the Unity scene from the XR camera's perspective via a hidden secondary camera, JPEG-encodes it, and publishes `CompressedImage` to `/headset/image_compressed` at configurable FPS (default 15). Uses a skybox background so the dashboard sees the full scene.
 - `Assets/Scripts/SessionLogger.cs` — attach to any GameObject; assign `RobotController` in Inspector (auto-finds via `FindObjectOfType` if not set). Publishes JSON session status to `/session/status` at 2Hz and discrete events to `/session/events`. On application quit, saves a JSON session log to `Application.persistentDataPath/SessionLogs/`.
 - `Assets/Scripts/RobotHUD.cs` — attach to an empty GameObject; assign the `RobotController` reference in Inspector. Floating HUD panel tracks the camera with colour-coded mode title (amber=Joint, green=Translate, blue=Rotate, purple/red=Hand Guide), control hints for current mode, and readable joint names in Direct Joint mode.
