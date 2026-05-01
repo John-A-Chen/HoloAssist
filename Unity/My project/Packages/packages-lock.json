@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.meta.xr.mrutilitykit": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.meta.xr.sdk.core": "85.0.0",
+        "com.meta.xr.sdk.core": "201.0.0",
         "com.unity.textmeshpro": "3.0.6",
         "com.unity.ai.navigation": "1.1.4",
         "com.unity.nuget.newtonsoft-json": "3.0.2"
@@ -13,18 +13,18 @@
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.all": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.meta.xr.sdk.core": "85.0.0",
+        "com.meta.xr.sdk.core": "201.0.0",
         "com.meta.xr.sdk.audio": "85.0.0",
         "com.meta.xr.sdk.voice": "85.0.0",
-        "com.meta.xr.sdk.haptics": "85.0.0",
-        "com.meta.xr.mrutilitykit": "85.0.0",
-        "com.meta.xr.sdk.platform": "85.0.0",
-        "com.meta.xr.sdk.interaction": "85.0.0",
-        "com.meta.xr.sdk.interaction.ovr": "85.0.0"
+        "com.meta.xr.sdk.haptics": "201.0.0",
+        "com.meta.xr.mrutilitykit": "201.0.0",
+        "com.meta.xr.sdk.platform": "201.0.0",
+        "com.meta.xr.sdk.interaction": "201.0.0",
+        "com.meta.xr.sdk.interaction.ovr": "201.0.0"
       },
       "url": "https://packages.unity.com"
     },
@@ -36,23 +36,31 @@
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.core": {
-      "version": "85.0.0",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.com"
-    },
-    "com.meta.xr.sdk.haptics": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.meta.xr.sdk.core": "85.0.0"
+        "com.unity.xr.hands": "1.7.2",
+        "com.unity.modules.ui": "1.0.0",
+        "com.unity.modules.audio": "1.0.0",
+        "com.unity.modules.imgui": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0",
+        "com.unity.modules.unitywebrequestaudio": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.meta.xr.sdk.haptics": {
+      "version": "201.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.meta.xr.sdk.core": "201.0.0"
       },
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.interaction": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -62,21 +70,22 @@
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.interaction.ovr": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.meta.xr.sdk.core": "85.0.0",
-        "com.meta.xr.sdk.interaction": "85.0.0"
+        "com.meta.xr.sdk.core": "201.0.0",
+        "com.meta.xr.sdk.interaction": "201.0.0"
       },
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.platform": {
-      "version": "85.0.0",
+      "version": "201.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.ugui": "1.0.0"
+        "com.unity.ugui": "1.0.0",
+        "com.unity.inputsystem": "1.7.0"
       },
       "url": "https://packages.unity.com"
     },
@@ -126,6 +135,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.device-simulator.devices": {
+      "version": "1.0.1",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.editorcoroutines": {
       "version": "1.0.1",
       "depth": 1,
@@ -144,17 +160,17 @@
       "depth": 0,
       "source": "builtin",
       "dependencies": {
-        "com.unity.ide.visualstudio": "2.0.26",
-        "com.unity.ide.rider": "3.0.39",
+        "com.unity.ide.visualstudio": "2.0.27",
+        "com.unity.ide.rider": "3.0.40",
         "com.unity.editorcoroutines": "1.0.1",
-        "com.unity.performance.profile-analyzer": "1.3.1",
+        "com.unity.performance.profile-analyzer": "1.3.4",
         "com.unity.test-framework": "1.6.0",
         "com.unity.testtools.codecoverage": "1.3.0"
       }
     },
     "com.unity.ide.rider": {
-      "version": "3.0.39",
-      "depth": 0,
+      "version": "3.0.40",
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.ext.nunit": "1.0.6"
@@ -162,7 +178,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
-      "version": "2.0.26",
+      "version": "2.0.27",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -226,7 +242,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.performance.profile-analyzer": {
-      "version": "1.3.1",
+      "version": "1.3.4",
       "depth": 1,
       "source": "registry",
       "dependencies": {},
@@ -265,13 +281,13 @@
       }
     },
     "com.unity.robotics.ros-tcp-connector": {
-      "version": "file:/home/nic/git/RS2-HoloAssist/nic/ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
+      "version": "file:../../../ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
       "depth": 0,
       "source": "local",
       "dependencies": {}
     },
     "com.unity.robotics.urdf-importer": {
-      "version": "file:/home/nic/git/RS2-HoloAssist/nic/URDF-Importer/com.unity.robotics.urdf-importer",
+      "version": "file:../../../URDF-Importer/com.unity.robotics.urdf-importer",
       "depth": 0,
       "source": "local",
       "dependencies": {
@@ -361,8 +377,8 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.arfoundation": {
-      "version": "6.3.2",
-      "depth": 0,
+      "version": "6.5.0",
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.ugui": "2.0.0",
@@ -379,7 +395,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.compositionlayers": {
-      "version": "2.3.0",
+      "version": "2.4.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -438,7 +454,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.management": {
-      "version": "4.5.3",
+      "version": "4.5.4",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -450,15 +466,15 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.meta-openxr": {
-      "version": "2.3.0",
+      "version": "2.5.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {
         "com.unity.xr.openxr": "1.15.1",
         "com.unity.xr.core-utils": "2.5.1",
         "com.unity.xr.management": "4.4.0",
-        "com.unity.xr.arfoundation": "6.3.0",
-        "com.unity.xr.compositionlayers": "2.1.1"
+        "com.unity.xr.arfoundation": "6.5.0",
+        "com.unity.xr.compositionlayers": "2.4.0"
       },
       "url": "https://packages.unity.com"
     },

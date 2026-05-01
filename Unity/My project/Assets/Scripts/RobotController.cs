@@ -74,6 +74,20 @@ public class RobotController : MonoBehaviour
     public float GripperValue => smoothedGripper;
     public bool IsEELockedDown => eeLockedDown;
 
+    /// <summary>Public API: Toggle RMRC sub-mode between Translate and Rotate.</summary>
+    public void ToggleRMRCSubMode()
+    {
+        rmrcSubMode = (rmrcSubMode == RMRCSubMode.Translate) ? RMRCSubMode.Rotate : RMRCSubMode.Translate;
+        Debug.Log($"[RobotController] RMRC sub-mode: {rmrcSubMode}");
+    }
+
+    /// <summary>Public API: Toggle end-effector lock-down state.</summary>
+    public void ToggleEELockDown()
+    {
+        eeLockedDown = !eeLockedDown;
+        Debug.Log($"[RobotController] EE Lock-Down: {(eeLockedDown ? "ON" : "OFF")}");
+    }
+
     private ROSConnection ros;
     private int selectedJoint = 0;
     private double[] currentPositions = new double[6];
@@ -169,8 +183,10 @@ public class RobotController : MonoBehaviour
         robotMap.Enable();
 
         // X button (left controller) — toggle Translate/Rotate sub-mode in RMRC
+        // Disabled — X button is owned by Sebastian's UI features (TF axes toggle via RadialMenu).
+        // RMRC sub-mode toggle is now accessible via RadialMenu → "RMRC Mode" button.
         toggleSubModeAction = new InputAction("ToggleSubMode", InputActionType.Button, "<XRController>{LeftHand}/primaryButton");
-        toggleSubModeAction.Enable();
+        // toggleSubModeAction.Enable();
 
         // Right grip trigger — Hand Guide engage
         gripAction = new InputAction("Grip", InputActionType.Value, "<XRController>{RightHand}/grip");
@@ -181,12 +197,16 @@ public class RobotController : MonoBehaviour
         controllerPosAction.Enable();
 
         // Right index trigger — analog gripper control
-        gripperTriggerAction = new InputAction("GripperTrigger", InputActionType.Value, "<XRController>{RightHand}/trigger");
+        // Gripper moved from RIGHT trigger (which Sebastian's UI uses for ray select)
+        // to LEFT trigger to avoid conflict.
+        gripperTriggerAction = new InputAction("GripperTrigger", InputActionType.Value, "<XRController>{LeftHand}/trigger");
         gripperTriggerAction.Enable();
 
         // Y button (left controller) — toggle EE lock-down
+        // Disabled — Y button is owned by Sebastian's RadialMenu (open/close menu).
+        // EE lock-down toggle is now accessible via RadialMenu → "EE Lock" button.
         lockDownAction = new InputAction("LockDown", InputActionType.Button, "<XRController>{LeftHand}/secondaryButton");
-        lockDownAction.Enable();
+        // lockDownAction.Enable();
     }
 
     void DisableConflictingXRIActions()

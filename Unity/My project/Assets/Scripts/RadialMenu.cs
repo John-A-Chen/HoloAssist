@@ -39,6 +39,8 @@ public class RadialMenu : MonoBehaviour
     public BinStatusPanel binStatusPanel;
     public CoachingPanel coachingPanel;
     public PassthroughToggle passthroughToggle;
+    public RobotController robotController;
+    public RobotHUD robotHUD;
 
     [Header("Controllers (auto-detected if left blank)")]
     [Tooltip("Drag the left controller transform here for reliable anchoring")]
@@ -53,6 +55,10 @@ public class RadialMenu : MonoBehaviour
     private Transform rightController;
     private InputAction selectAction;
     private List<RadialButton> buttons = new List<RadialButton>();
+    private int currentPage = 0;
+    private int totalPages = 2;
+    private TextMeshPro pageLabel;
+    private GameObject pageButton;
 
     // Z layers — more negative = closer to camera (menu's Z points away from camera)
     private const float Z_BG = 0f;
@@ -64,6 +70,7 @@ public class RadialMenu : MonoBehaviour
     private class RadialButton
     {
         public string label;
+        public int page;
         public GameObject bgQuad;
         public GameObject ringQuad;
         public TextMeshPro labelText;
@@ -74,12 +81,14 @@ public class RadialMenu : MonoBehaviour
 
     void Start()
     {
-        if (toggleAction == null || toggleAction.bindings.Count == 0)
-        {
-            toggleAction = new InputAction("ToggleRadialMenu", InputActionType.Button,
-                "<XRController>{LeftHand}/secondaryButton");
-        }
+        // Always create our own action with multiple bindings (Y on quest, K on keyboard for testing)
+        toggleAction = new InputAction("ToggleRadialMenu", InputActionType.Button);
+        toggleAction.AddBinding("<XRController>{LeftHand}/secondaryButton");
+        toggleAction.AddBinding("<OculusTouchController>{LeftHand}/secondaryButton");
+        toggleAction.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/secondaryButton");
+        toggleAction.AddBinding("<Keyboard>/k"); // Editor fallback
         toggleAction.Enable();
+        Debug.Log("[RadialMenu] Toggle action enabled with bindings: Y button + K key");
 
         selectAction = new InputAction("SelectRadial", InputActionType.Button,
             "<XRController>{RightHand}/triggerPressed");
@@ -207,14 +216,65 @@ public class RadialMenu : MonoBehaviour
                 passthroughToggle.Toggle();
         });
 
+        AddButton("Robot\nHUD", true, () =>
+        {
+            if (robotHUD != null)
+                robotHUD.gameObject.SetActive(!robotHUD.gameObject.activeSelf);
+        });
+
+        // === PAGE 1: Robot Controls (Nic's features) ===
+        AddButton("RMRC\nMode", false, () =>
+        {
+            if (robotController != null)
+                robotController.ToggleRMRCSubMode();
+        }, 1);
+
+        AddButton("EE\nLock", false, () =>
+        {
+            if (robotController != null)
+                robotController.ToggleEELockDown();
+        }, 1);
+
+        AddButton("Joint\nMode", false, () =>
+        {
+            if (robotController != null)
+            {
+                robotController.mode = RobotController.ControlMode.DirectJoint;
+                Debug.Log("[RadialMenu] Switched to DirectJoint mode");
+            }
+        }, 1);
+
+        AddButton("RMRC\nCart", false, () =>
+        {
+            if (robotController != null)
+            {
+                robotController.mode = RobotController.ControlMode.RMRC;
+                Debug.Log("[RadialMenu] Switched to RMRC mode");
+            }
+        }, 1);
+
+        AddButton("Hand\nGuide", false, () =>
+        {
+            if (robotController != null)
+            {
+                robotController.mode = RobotController.ControlMode.HandGuide;
+                Debug.Log("[RadialMenu] Switched to HandGuide mode");
+            }
+        }, 1);
+
+        // Page nav button — at center, swaps between page 0 and page 1
+        CreatePageButton();
+
         LayoutButtons();
+        UpdatePageVisibility();
     }
 
-    void AddButton(string label, bool initialState, Action onToggle)
+    void AddButton(string label, bool initialState, Action onToggle, int page = 0)
     {
         var btn = new RadialButton
         {
             label = label,
+            page = page,
             isOn = initialState,
             onToggle = onToggle
         };
@@ -283,31 +343,88 @@ public class RadialMenu : MonoBehaviour
         LayoutButtons();
     }
 
+    void CreatePageButton()
+    {
+        // Small button at center of menu that cycles pages
+        pageButton = CreateQuad(menuRoot.transform, "PageBtn", new Vector3(0, -0.015f, Z_BUTTON),
+            0.024f, 0.024f, accentColor * 0.8f, 3030);
+
+        var labelObj = new GameObject("PageLabel");
+        labelObj.transform.SetParent(menuRoot.transform, false);
+        labelObj.transform.localPosition = new Vector3(0f, -0.015f, Z_TEXT);
+        pageLabel = labelObj.AddComponent<TextMeshPro>();
+        pageLabel.text = "1/2";
+        pageLabel.fontSize = fontSize * 0.7f;
+        pageLabel.color = Color.white;
+        pageLabel.alignment = TextAlignmentOptions.Center;
+        pageLabel.enableWordWrapping = false;
+        pageLabel.fontStyle = FontStyles.Bold;
+        pageLabel.rectTransform.sizeDelta = new Vector2(0.04f, 0.025f);
+        if (pageLabel.fontSharedMaterial != null)
+        {
+            var mat = new Material(pageLabel.fontSharedMaterial);
+            mat.renderQueue = 3500;
+            pageLabel.fontMaterial = mat;
+        }
+    }
+
+    void UpdatePageVisibility()
+    {
+        // Show/hide buttons based on current page
+        foreach (var btn in buttons)
+        {
+            bool show = btn.page == currentPage;
+            if (btn.bgQuad != null) btn.bgQuad.SetActive(show);
+            if (btn.ringQuad != null) btn.ringQuad.SetActive(show);
+            if (btn.labelText != null) btn.labelText.gameObject.SetActive(show);
+            if (btn.statusText != null) btn.statusText.gameObject.SetActive(show);
+        }
+
+        if (pageLabel != null)
+            pageLabel.text = $"{currentPage + 1}/{totalPages}";
+    }
+
+    void NextPage()
+    {
+        currentPage = (currentPage + 1) % totalPages;
+        UpdatePageVisibility();
+        Debug.Log($"[RadialMenu] Switched to page {currentPage + 1}");
+    }
+
     void LayoutButtons()
     {
-        float angleStep = 360f / Mathf.Max(buttons.Count, 1);
-        float startAngle = 90f;
-
-        for (int i = 0; i < buttons.Count; i++)
+        // Layout each page independently — buttons spread evenly within their page
+        for (int p = 0; p < totalPages; p++)
         {
-            float angle = (startAngle - i * angleStep) * Mathf.Deg2Rad;
-            float x = Mathf.Cos(angle) * menuRadius;
-            float y = Mathf.Sin(angle) * menuRadius;
+            var pageButtons = new List<RadialButton>();
+            foreach (var b in buttons) if (b.page == p) pageButtons.Add(b);
 
-            // Shift down slightly to account for header
-            y -= 0.015f;
+            int count = pageButtons.Count;
+            if (count == 0) continue;
 
-            Vector3 pos = new Vector3(x, y, Z_BUTTON);
-            buttons[i].bgQuad.transform.localPosition = pos;
+            float angleStep = 360f / count;
+            float startAngle = 90f;
 
-            Vector3 ringPos = new Vector3(x, y, Z_RING);
-            buttons[i].ringQuad.transform.localPosition = ringPos;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (startAngle - i * angleStep) * Mathf.Deg2Rad;
+                float x = Mathf.Cos(angle) * menuRadius;
+                float y = Mathf.Sin(angle) * menuRadius;
 
-            // Text positions (parented to menuRoot)
-            if (buttons[i].labelText != null)
-                buttons[i].labelText.transform.localPosition = new Vector3(x, y + 0.005f, Z_TEXT);
-            if (buttons[i].statusText != null)
-                buttons[i].statusText.transform.localPosition = new Vector3(x, y - 0.015f, Z_STATUS);
+                // Shift down slightly to account for header
+                y -= 0.015f;
+
+                Vector3 pos = new Vector3(x, y, Z_BUTTON);
+                pageButtons[i].bgQuad.transform.localPosition = pos;
+
+                Vector3 ringPos = new Vector3(x, y, Z_RING);
+                pageButtons[i].ringQuad.transform.localPosition = ringPos;
+
+                if (pageButtons[i].labelText != null)
+                    pageButtons[i].labelText.transform.localPosition = new Vector3(x, y + 0.005f, Z_TEXT);
+                if (pageButtons[i].statusText != null)
+                    pageButtons[i].statusText.transform.localPosition = new Vector3(x, y - 0.015f, Z_STATUS);
+            }
         }
     }
 
@@ -322,7 +439,7 @@ public class RadialMenu : MonoBehaviour
 
         Destroy(quad.GetComponent<Collider>());
 
-        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default"));
         mat.SetFloat("_Surface", 1);
         mat.SetFloat("_Blend", 0);
         mat.SetColor("_BaseColor", color);
@@ -341,6 +458,7 @@ public class RadialMenu : MonoBehaviour
         {
             isOpen = !isOpen;
             menuRoot.SetActive(isOpen);
+            Debug.Log($"[RadialMenu] Toggled: {(isOpen ? "OPEN" : "CLOSED")}");
         }
 
         if (!isOpen) return;
@@ -362,9 +480,17 @@ public class RadialMenu : MonoBehaviour
 
         if (selectAction != null && selectAction.WasPressedThisFrame())
         {
-            int nearest = GetNearestButton();
-            if (nearest >= 0)
-                SelectButton(nearest);
+            // Check page button first (center)
+            if (IsHoveringPageButton())
+            {
+                NextPage();
+            }
+            else
+            {
+                int nearest = GetNearestButton();
+                if (nearest >= 0)
+                    SelectButton(nearest);
+            }
         }
 
         // Sync TF visualizer state (in case toggled via X button)
@@ -392,6 +518,18 @@ public class RadialMenu : MonoBehaviour
         // Sync Passthrough (button 4)
         if (passthroughToggle != null && buttons.Count > 4)
             SyncButton(4, passthroughToggle.PassthroughEnabled);
+
+        // Sync RMRC Mode (button 5) — green when in Rotate mode
+        if (robotController != null && buttons.Count > 5)
+            SyncButton(5, robotController.CurrentRMRCSubMode == RobotController.RMRCSubMode.Rotate);
+
+        // Sync EE Lock (button 6)
+        if (robotController != null && buttons.Count > 6)
+            SyncButton(6, robotController.IsEELockedDown);
+
+        // Sync Robot HUD (button 7)
+        if (robotHUD != null && buttons.Count > 7)
+            SyncButton(7, robotHUD.gameObject.activeSelf);
     }
 
     void SyncButton(int index, bool state)
@@ -463,6 +601,9 @@ public class RadialMenu : MonoBehaviour
         float nearestDist = float.MaxValue;
         for (int i = 0; i < buttons.Count; i++)
         {
+            // Only consider buttons on the current page
+            if (buttons[i].page != currentPage) continue;
+
             Vector3 btnLocal = buttons[i].bgQuad.transform.localPosition;
             float d = Vector2.Distance(
                 new Vector2(hitLocal.x, hitLocal.y),
@@ -474,6 +615,24 @@ public class RadialMenu : MonoBehaviour
             }
         }
         return nearest;
+    }
+
+    bool IsHoveringPageButton()
+    {
+        Transform pointer = rightController != null ? rightController : Camera.main?.transform;
+        if (pointer == null || pageButton == null) return false;
+
+        Ray ray = new Ray(pointer.position, pointer.forward);
+        Plane menuPlane = new Plane(menuRoot.transform.forward, menuRoot.transform.position);
+        if (!menuPlane.Raycast(ray, out float dist)) return false;
+
+        Vector3 hitWorld = ray.GetPoint(dist);
+        Vector3 hitLocal = menuRoot.transform.InverseTransformPoint(hitWorld);
+        Vector3 pageBtnLocal = pageButton.transform.localPosition;
+        float d = Vector2.Distance(
+            new Vector2(hitLocal.x, hitLocal.y),
+            new Vector2(pageBtnLocal.x, pageBtnLocal.y));
+        return d < 0.018f;
     }
 
     public void SelectButton(int index)

@@ -38,6 +38,7 @@ public class PanelPlacer : MonoBehaviour
         panelBehavior = GetComponent<RobotDataPanel>() as MonoBehaviour;
         if (panelBehavior == null) panelBehavior = GetComponent<BinStatusPanel>() as MonoBehaviour;
         if (panelBehavior == null) panelBehavior = GetComponent<CoachingPanel>() as MonoBehaviour;
+        if (panelBehavior == null) panelBehavior = GetComponent<RobotHUD>() as MonoBehaviour;
 
         // Add box collider sized to panel
         grabCollider = GetComponent<BoxCollider>();

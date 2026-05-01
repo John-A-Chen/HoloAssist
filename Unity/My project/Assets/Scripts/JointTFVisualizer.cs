@@ -128,8 +128,33 @@ public class JointTFVisualizer : MonoBehaviour
                 !go.transform.parent.gameObject.isStatic)
                 continue;
 
-            // Skip if this object already has TF axes (from ROSObjectPublisher)
-            if (go.GetComponent<ROSObjectPublisher>() != null) continue;
+            // ROSObjectPublisher objects: still discover them so they get unified axes.
+            // (We disable ROSObjectPublisher's own axes below to avoid duplicates.)
+            var pub = go.GetComponent<ROSObjectPublisher>();
+            if (pub != null)
+            {
+                // Disable the publisher's own axes so we use ours instead
+                pub.SetAxesVisible(false);
+                pub.showPoseAxes = false;
+
+                // Destroy old X_Axis/Y_Axis/Z_Axis children if they exist
+                for (int c = go.transform.childCount - 1; c >= 0; c--)
+                {
+                    var child = go.transform.GetChild(c);
+                    if (child.name == "X_Axis" || child.name == "Y_Axis" || child.name == "Z_Axis")
+                        Destroy(child.gameObject);
+                }
+            }
+
+            // Skip if we already added axes to this object
+            if (discoveredObjects.Contains(go.transform)) continue;
+            // Also skip if it has children named TF_X, TF_Y, TF_Z (manually added axes)
+            bool alreadyHasAxes = false;
+            for (int c = 0; c < go.transform.childCount; c++)
+            {
+                if (go.transform.GetChild(c).name.StartsWith("TF_")) { alreadyHasAxes = true; break; }
+            }
+            if (alreadyHasAxes) continue;
 
             // Skip objects that are clearly UI/visualization
             if (go.GetComponent<TMPro.TextMeshPro>() != null) continue;
@@ -175,7 +200,7 @@ public class JointTFVisualizer : MonoBehaviour
         // Cylinder is 2 units tall by default
         go.transform.localScale = new Vector3(localThick, localLen / 2f, localThick);
 
-        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default"));
         mat.SetColor("_BaseColor", color);
         go.GetComponent<Renderer>().material = mat;
 
@@ -212,7 +237,18 @@ public class JointTFVisualizer : MonoBehaviour
 
     public void Toggle()
     {
+        // Re-discover any new objects each time we toggle on
+        if (!showAxes && autoDiscoverMovingObjects)
+            RefreshDiscovery();
         SetVisible(!showAxes);
+    }
+
+    /// <summary>
+    /// Re-scan the scene for new movable objects and add TF axes to any not yet covered.
+    /// </summary>
+    public void RefreshDiscovery()
+    {
+        DiscoverMovingObjects();
     }
 
     /// <summary>

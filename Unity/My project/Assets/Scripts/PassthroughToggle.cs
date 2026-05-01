@@ -17,6 +17,9 @@ public class PassthroughToggle : MonoBehaviour
     [Tooltip("Virtual environment GameObject — shown when passthrough is OFF (e.g. skybox, room mesh)")]
     public GameObject virtualEnvironment;
 
+    [Tooltip("If true, only hides renderers in MR mode but keeps colliders active (so gravity works)")]
+    public bool keepCollidersInPassthrough = true;
+
     [Header("Settings")]
     [Tooltip("Background color to use when in VR mode (no passthrough)")]
     public Color vrBackgroundColor = new Color(0.05f, 0.07f, 0.1f, 1f);
@@ -71,8 +74,7 @@ public class PassthroughToggle : MonoBehaviour
             if (vrSkyboxMaterial != null && origSkybox != vrSkyboxMaterial)
                 RenderSettings.skybox = origSkybox;
 
-            if (virtualEnvironment != null)
-                virtualEnvironment.SetActive(false);
+            SetEnvironmentVisible(false);
 
             Debug.Log("[PassthroughToggle] Passthrough ON (MR mode)");
         }
@@ -90,10 +92,27 @@ public class PassthroughToggle : MonoBehaviour
                 xrCamera.backgroundColor = vrBackgroundColor;
             }
 
-            if (virtualEnvironment != null)
-                virtualEnvironment.SetActive(true);
+            SetEnvironmentVisible(true);
 
             Debug.Log("[PassthroughToggle] Passthrough OFF (VR mode)");
+        }
+    }
+
+    void SetEnvironmentVisible(bool visible)
+    {
+        if (virtualEnvironment == null) return;
+
+        if (keepCollidersInPassthrough)
+        {
+            // Keep GameObject active so colliders work, but toggle renderers only
+            virtualEnvironment.SetActive(true);
+            foreach (var rend in virtualEnvironment.GetComponentsInChildren<Renderer>(true))
+                rend.enabled = visible;
+        }
+        else
+        {
+            // Original behavior: disable everything
+            virtualEnvironment.SetActive(visible);
         }
     }
 }

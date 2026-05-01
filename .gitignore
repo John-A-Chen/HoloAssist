@@ -88,3 +88,11 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+# Burst debug info (regenerated each build)
+Unity/My project/My project_BurstDebugInformation_DoNotShip/
+
+# XR Temp (Unity recreates each build)
+Unity/My project/Assets/XR/Temp/
+
+# Build APKs in project root
+Unity/My project/*.apk

@@ -1,6 +1,8 @@
 {
   "dependencies": {
-    "com.meta.xr.sdk.all": "85.0.0",
+    "com.meta.xr.sdk.all": "201.0.0",
+    "com.unity.collab-proxy": "2.1.0",
+    "com.unity.device-simulator.devices": "1.0.1",
     "com.unity.feature.development": "1.0.2",
     "com.unity.ide.rider": "3.0.39",
     "com.unity.inputsystem": "1.18.0",
@@ -9,16 +11,16 @@
     "com.unity.multiplayer.center": "1.0.1",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
     "com.unity.render-pipelines.universal": "17.3.0",
-    "com.unity.robotics.ros-tcp-connector": "file:/home/nic/git/RS2-HoloAssist/nic/ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
-    "com.unity.robotics.urdf-importer": "file:/home/nic/git/RS2-HoloAssist/nic/URDF-Importer/com.unity.robotics.urdf-importer",
+    "com.unity.robotics.ros-tcp-connector": "file:../../../ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector",
+    "com.unity.robotics.urdf-importer": "file:../../../URDF-Importer/com.unity.robotics.urdf-importer",
     "com.unity.test-framework": "1.6.0",
     "com.unity.xr.androidxr-openxr": "1.1.0",
-    "com.unity.xr.arfoundation": "6.3.2",
+    "com.unity.xr.arfoundation": "6.3.4",
     "com.unity.xr.core-utils": "2.5.3",
     "com.unity.xr.hands": "1.7.3",
     "com.unity.xr.interaction.toolkit": "3.3.1",
-    "com.unity.xr.management": "4.5.3",
-    "com.unity.xr.meta-openxr": "2.3.0",
+    "com.unity.xr.management": "4.5.4",
+    "com.unity.xr.meta-openxr": "2.5.0",
     "com.unity.xr.openxr": "1.16.1",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
@@ -53,7 +55,6 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.unity.collab-proxy": "2.1.0"
+    "com.unity.modules.xr": "1.0.0"
   }
 }

@@ -173,7 +173,7 @@ public class BinStatusPanel : MonoBehaviour
         else
             DestroyImmediate(quad.GetComponent<Collider>());
 
-        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default"));
         mat.SetFloat("_Surface", 1);
         mat.SetFloat("_Blend", 0);
         mat.SetColor("_BaseColor", color);

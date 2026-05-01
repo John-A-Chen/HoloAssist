@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 
+[ExecuteInEditMode]
 public class RobotHUD : MonoBehaviour
 {
     [Header("References")]
@@ -8,10 +9,18 @@ public class RobotHUD : MonoBehaviour
 
     [Header("Layout")]
     public float distanceFromCamera = 1.5f;
-    public Vector3 offset = new Vector3(0.3f, -0.2f, 0f);
-    public float followSpeed = 3f;
-    public float panelWidth = 2.5f;
-    public float panelHeight = 0.32f;
+    public Vector3 offset = new Vector3(0.3f, -0.12f, 0f);
+    public float followSpeed = 2.5f;
+    public float panelWidth = 0.55f;
+    public float panelHeight = 0.14f;
+    public float headerHeight = 0.035f;
+    public float padding = 0.01f;
+
+    [Header("Style — matches RobotDataPanel")]
+    public Color panelColor = new Color(0.05f, 0.05f, 0.12f, 0.9f);
+    public Color headerColor = new Color(0.1f, 0.15f, 0.3f, 0.95f);
+    public Color titleColor = new Color(0.6f, 0.8f, 1.0f, 1f);
+    public Color accentColor = new Color(0.2f, 0.6f, 1.0f, 1f);
 
     private TextMeshPro titleLabel;
     private TextMeshPro controlsLabel;
@@ -29,11 +38,34 @@ public class RobotHUD : MonoBehaviour
         "Wrist 3"
     };
 
+    private bool built = false;
+
+    void OnEnable()
+    {
+        // Destroy old children to avoid duplicates on recompile/re-enable in editor
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            if (Application.isPlaying)
+                Destroy(transform.GetChild(i).gameObject);
+            else
+                DestroyImmediate(transform.GetChild(i).gameObject);
+        }
+        built = false;
+        BuildHUD();
+    }
+
     void Start()
     {
+        if (!built) BuildHUD();
+    }
+
+    void BuildHUD()
+    {
+        if (built) return;
+
         // Camera.main is often null in XR (camera not tagged MainCamera)
         cam = FindXRCamera();
-        if (cam == null)
+        if (cam == null && Application.isPlaying)
         {
             Debug.LogError("[RobotHUD] No camera found! HUD will not render.");
             return;
@@ -48,26 +80,61 @@ public class RobotHUD : MonoBehaviour
             if (fonts.Length > 0) cachedFont = fonts[0];
         }
 
-        // Background quad
-        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        bg.transform.SetParent(transform, false);
-        bg.transform.localScale = new Vector3(panelWidth + 0.04f, panelHeight + 0.02f, 1f);
-        var bgMat = CreateBackgroundMaterial();
-        bg.GetComponent<Renderer>().material = bgMat;
-        Destroy(bg.GetComponent<Collider>());
+        // Background quad (dark blue, low render queue so it stays behind text)
+        CreateQuad("HUDBackground", Vector3.zero,
+            new Vector2(panelWidth, panelHeight), panelColor, 2950);
 
-        // Title label (top line)
-        titleLabel = CreateLabel("HUDTitle", new Vector3(0f, 0.06f, -0.001f), 0.35f);
+        // Header bar
+        float topY = panelHeight / 2f - headerHeight / 2f;
+        CreateQuad("HUDHeader", new Vector3(0f, topY, -0.005f),
+            new Vector2(panelWidth, headerHeight), headerColor, 3000);
+
+        // Accent line under header
+        float accentY = topY - headerHeight / 2f - padding * 0.5f;
+        CreateQuad("HUDAccent", new Vector3(0f, accentY, -0.01f),
+            new Vector2(panelWidth - padding * 2f, 0.002f), accentColor, 3000);
+
+        // Title (in header bar) — sized for compact panel
+        titleLabel = CreateLabel("HUDTitle", new Vector3(0f, topY, -0.02f), 0.22f);
         titleLabel.fontStyle = FontStyles.Bold;
+        titleLabel.color = titleColor;
 
-        // Controls label (below title)
-        controlsLabel = CreateLabel("HUDControls", new Vector3(0f, -0.03f, -0.001f), 0.22f);
+        // Controls label (middle)
+        controlsLabel = CreateLabel("HUDControls", new Vector3(0f, 0f, -0.02f), 0.16f);
         controlsLabel.color = new Color(0.85f, 0.88f, 0.92f);
 
-        // Gripper label (bottom line)
-        gripperLabel = CreateLabel("HUDGripper", new Vector3(0f, -0.09f, -0.001f), 0.2f);
+        // Gripper label (bottom)
+        gripperLabel = CreateLabel("HUDGripper", new Vector3(0f, -panelHeight / 2f + padding + 0.022f, -0.02f), 0.18f);
 
-        UpdatePosition(true);
+        if (cam != null) UpdatePosition(true);
+        built = true;
+    }
+
+    void CreateQuad(string name, Vector3 localPos, Vector2 size, Color color, int renderQueue)
+    {
+        var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        quad.name = name;
+        quad.transform.SetParent(transform, false);
+        quad.transform.localPosition = localPos;
+        quad.transform.localScale = new Vector3(size.x, size.y, 1f);
+        var col = quad.GetComponent<Collider>();
+        if (col != null)
+        {
+            if (Application.isPlaying) Destroy(col);
+            else DestroyImmediate(col);
+        }
+
+        var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+        var mat = new Material(shader);
+        mat.SetFloat("_Surface", 1);
+        mat.SetFloat("_Blend", 0);
+        mat.SetColor("_BaseColor", color);
+        mat.color = color;
+        mat.SetFloat("_ZWrite", 0);
+        mat.SetOverrideTag("RenderType", "Transparent");
+        mat.renderQueue = renderQueue;
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        quad.GetComponent<Renderer>().material = mat;
     }
 
     Transform FindXRCamera()
@@ -149,12 +216,22 @@ public class RobotHUD : MonoBehaviour
         tmp.enableWordWrapping = false;
         tmp.overflowMode = TextOverflowModes.Overflow;
         tmp.color = Color.white;
-        tmp.rectTransform.sizeDelta = new Vector2(panelWidth, 0.12f);
+        // Match RobotDataPanel: width = panel - 2*padding, height = rowHeight (~0.045)
+        tmp.rectTransform.sizeDelta = new Vector2(panelWidth - padding * 2f, 0.045f);
+        // Force text to render on top of all panel quads
+        if (tmp.fontSharedMaterial != null)
+        {
+            var mat = new Material(tmp.fontSharedMaterial);
+            mat.renderQueue = 3500;
+            tmp.fontMaterial = mat;
+        }
         return tmp;
     }
 
     void LateUpdate()
     {
+        // Only follow camera and update text in Play mode (so panel stays where placed in editor)
+        if (!Application.isPlaying) return;
         if (controller == null || cam == null) return;
         UpdatePosition(false);
         UpdateText();
@@ -187,7 +264,7 @@ public class RobotHUD : MonoBehaviour
             titleLabel.text = active ? "HAND GUIDE  ●  TRACKING" : "HAND GUIDE  ○  READY";
             titleLabel.color = active ? new Color(1f, 0.4f, 0.4f) : new Color(0.9f, 0.6f, 0.9f);
 
-            controlsLabel.text = "Right Grip: Hold to move robot  |  Menu: RMRC Mode";
+            controlsLabel.text = "R-Grip: Hold to move robot  |  Y: Options  |  Menu: cycle mode";
         }
         else if (controller.CurrentMode == RobotController.ControlMode.DirectJoint)
         {
@@ -198,21 +275,21 @@ public class RobotHUD : MonoBehaviour
             titleLabel.text = $"DIRECT JOINT  |  {jointName}  ({idx + 1}/6)";
             titleLabel.color = new Color(1f, 0.8f, 0.3f);
 
-            controlsLabel.text = "R-Stick Y: Jog  |  A/B: Switch Joint  |  Menu: Hand Guide";
+            controlsLabel.text = "R-Stick Y: Jog  |  A/B: Switch Joint  |  Y: Options";
         }
         else if (controller.CurrentRMRCSubMode == RobotController.RMRCSubMode.Translate)
         {
             titleLabel.text = "RMRC  TRANSLATE";
             titleLabel.color = new Color(0.4f, 0.9f, 0.4f);
 
-            controlsLabel.text = "R-Stick: XY Move  |  L-Stick Y: Up/Down  |  L-Stick X: Yaw  |  X: Rotate  |  Menu: Joint";
+            controlsLabel.text = "R-Stick: XY  |  L-Stick: Up/Down + Yaw  |  Y: Options (RMRC Mode)";
         }
         else
         {
             titleLabel.text = "RMRC  ROTATE";
             titleLabel.color = new Color(0.5f, 0.7f, 1f);
 
-            controlsLabel.text = "R-Stick Y: Pitch  |  R-Stick X: Roll  |  L-Stick X: Yaw  |  X: Translate  |  Menu: Joint";
+            controlsLabel.text = "R-Stick: Pitch/Roll  |  L-Stick X: Yaw  |  Y: Options (RMRC Mode)";
         }
 
         // Gripper + lock status — shown in all modes
