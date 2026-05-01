@@ -152,13 +152,15 @@ holoassist_workspace_perception:
     workspace_origin_snap_to_bench_center: true
     # Dynamic placement from tag pair:
     # - X is midpoint(tag1, tag0) plus robot_pose_x_offset_m
-    # - Y is 0.564 m from the nearest tag edge in the away-from-tags direction
+    # - Y is 0.064 m from the nearest tag edge in the away-from-tags direction
     #   (plus robot_edge_clearance_m if nonzero).
     robot_pose_follow_workspace: true
     robot_pose_from_tag_pair: true
-    robot_tag_pair_edge_offset_m: 0.564
+    robot_tag_pair_edge_offset_m: 0.064
     robot_edge_clearance_m: 0.0
-    robot_pose_x_offset_m: 0.0
+    # Keep UR3e base from snapping to workspace center.
+    # With centered workspace frame, +0.10 m places X at 0.45 m from left edge on a 0.70 m board.
+    robot_pose_x_offset_m: 0.10
     # Manual fallback (used only when robot_pose_follow_workspace=false):
     robot_pose_x_m: 0.0
     robot_pose_y_m: 0.314
@@ -183,6 +185,14 @@ holoassist_workspace_perception:
     marker_alpha: 0.35
     marker_lifetime_s: 0.8
     plane_marker_thickness_m: 0.006
+    # Build the bench plane marker from the first 4 workspace tag centres.
+    # Each tag centre is 50 mm from its board edge.
+    # This matches the configured 100 mm physical workspace tag size.
+    # Keep this enabled for the 4-tag board layout so the plane marker is
+    # generated from deterministic board geometry instead of a folded/ambiguous
+    # 2-tag corner estimate.
+    plane_marker_from_four_tags_enabled: true
+    plane_marker_four_tags_edge_offset_m: 0.05
     axes_marker_length_m: 0.12
     axes_marker_radius_m: 0.01
     # 0.0 = auto-lift above plane by (plane thickness + axis radius).

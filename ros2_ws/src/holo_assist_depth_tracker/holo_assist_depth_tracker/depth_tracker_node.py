@@ -112,9 +112,12 @@ class DepthTrackerNode(Node):
         self.declare_parameter("workspace_roi_y_max", 0.25)
         self.declare_parameter("workspace_left_tag_id", 0)
         self.declare_parameter("workspace_right_tag_id", 1)
+        self.declare_parameter("workspace_rear_left_tag_id", 2)
+        self.declare_parameter("workspace_rear_right_tag_id", 3)
         self.declare_parameter("workspace_width_m", 0.70)
         self.declare_parameter("workspace_depth_m", 0.50)
         self.declare_parameter("workspace_tag_size_m", 0.15)
+        self.declare_parameter("workspace_tag_center_edge_offset_m", 0.05)
         self.declare_parameter("workspace_left_corner_index_offset", 0)
         self.declare_parameter("workspace_right_corner_index_offset", 0)
         self.declare_parameter("workspace_left_corner_reverse", False)
@@ -215,10 +218,19 @@ class DepthTrackerNode(Node):
         self.workspace_right_tag_id = int(
             self.get_parameter("workspace_right_tag_id").value
         )
+        self.workspace_rear_left_tag_id = int(
+            self.get_parameter("workspace_rear_left_tag_id").value
+        )
+        self.workspace_rear_right_tag_id = int(
+            self.get_parameter("workspace_rear_right_tag_id").value
+        )
         self.workspace_width_m = float(self.get_parameter("workspace_width_m").value)
         self.workspace_depth_m = float(self.get_parameter("workspace_depth_m").value)
         self.workspace_tag_size_m = float(
             self.get_parameter("workspace_tag_size_m").value
+        )
+        self.workspace_tag_center_edge_offset_m = float(
+            self.get_parameter("workspace_tag_center_edge_offset_m").value
         )
         self.workspace_left_corner_index_offset = int(
             self.get_parameter("workspace_left_corner_index_offset").value
@@ -328,6 +340,9 @@ class DepthTrackerNode(Node):
         self.workspace_width_m = max(0.10, self.workspace_width_m)
         self.workspace_depth_m = max(0.10, self.workspace_depth_m)
         self.workspace_tag_size_m = max(0.02, self.workspace_tag_size_m)
+        self.workspace_tag_center_edge_offset_m = max(
+            0.0, self.workspace_tag_center_edge_offset_m
+        )
         self.workspace_outline_max_reproj_error_px = max(
             1.0, self.workspace_outline_max_reproj_error_px
         )
@@ -1389,15 +1404,130 @@ class DepthTrackerNode(Node):
     ) -> None:
         if not self.enable_workspace_overlay:
             return
-        left_det = self._find_tag_detection(self.workspace_left_tag_id)
-        right_det = self._find_tag_detection(self.workspace_right_tag_id)
-        if left_det is None and right_det is None:
-            return
 
         w = float(self.workspace_width_m)
         d = float(self.workspace_depth_m)
+        edge = float(self.workspace_tag_center_edge_offset_m)
         s = float(self.workspace_tag_size_m)
         right_x0 = w - s
+        board_outline = np.array(
+            [[[0.0, 0.0], [w, 0.0], [w, d], [0.0, d]]], dtype=np.float32
+        )
+
+        def _is_convex_quad(quad_xy: np.ndarray) -> bool:
+            if quad_xy.shape != (4, 2):
+                return False
+            signs = []
+            for i in range(4):
+                a = quad_xy[i]
+                b = quad_xy[(i + 1) % 4]
+                c = quad_xy[(i + 2) % 4]
+                ab = b - a
+                bc = c - b
+                cross_z = float(ab[0] * bc[1] - ab[1] * bc[0])
+                if abs(cross_z) < 1e-6:
+                    return False
+                signs.append(cross_z)
+            first = signs[0]
+            return all((s > 0.0) == (first > 0.0) for s in signs[1:])
+
+        def _homography_projects_valid_outline(h: np.ndarray) -> bool:
+            outline_xy = cv2.perspectiveTransform(board_outline, h).reshape(-1, 2)
+            if not np.isfinite(outline_xy).all():
+                return False
+            if not _is_convex_quad(outline_xy):
+                return False
+            area2 = 0.0
+            for i in range(4):
+                x0, y0 = outline_xy[i]
+                x1, y1 = outline_xy[(i + 1) % 4]
+                area2 += float(x0 * y1 - y0 * x1)
+            area_px2 = abs(area2) * 0.5
+            return area_px2 >= 100.0
+
+        # Preferred path: use all 4 workspace tag centers to estimate homography.
+        # This draws board outer edges from known board geometry and tag center offsets.
+        id_to_board_center = {
+            int(self.workspace_left_tag_id): np.array([edge, edge], dtype=np.float32),
+            int(self.workspace_right_tag_id): np.array([w - edge, edge], dtype=np.float32),
+            int(self.workspace_rear_left_tag_id): np.array([edge, d - edge], dtype=np.float32),
+            int(self.workspace_rear_right_tag_id): np.array([w - edge, d - edge], dtype=np.float32),
+        }
+        board_points_center = []
+        image_points_center = []
+        for tag_id, board_pt in id_to_board_center.items():
+            det = self._find_tag_detection(tag_id)
+            if det is None:
+                continue
+            cx = float(det.centre.x) * sx
+            cy = float(det.centre.y) * sy
+            if not np.isfinite(cx) or not np.isfinite(cy):
+                continue
+            board_points_center.append(board_pt.tolist())
+            image_points_center.append([cx, cy])
+
+        homography = None
+        if len(board_points_center) >= 4 and len(image_points_center) >= 4:
+            board_center_np = np.asarray(board_points_center, dtype=np.float32)
+            image_center_np = np.asarray(image_points_center, dtype=np.float32)
+            h_center, _ = cv2.findHomography(board_center_np, image_center_np, 0)
+            if h_center is not None:
+                projected_center = cv2.perspectiveTransform(
+                    board_center_np.reshape(1, -1, 2), h_center
+                ).reshape(-1, 2)
+                reproj_err_center = float(
+                    np.mean(np.linalg.norm(projected_center - image_center_np, axis=1))
+                )
+                if (
+                    reproj_err_center <= self.workspace_outline_max_reproj_error_px
+                    and _homography_projects_valid_outline(h_center)
+                ):
+                    homography = h_center
+
+        # Geometric ordering (TL,TR,BR,BL) avoids ID-to-corner folding artifacts.
+        if homography is None and len(image_points_center) >= 4:
+            image_center_np = np.asarray(image_points_center, dtype=np.float32)
+            sums = image_center_np[:, 0] + image_center_np[:, 1]
+            diffs = image_center_np[:, 0] - image_center_np[:, 1]
+            tl_idx = int(np.argmin(sums))
+            br_idx = int(np.argmax(sums))
+            tr_idx = int(np.argmax(diffs))
+            bl_idx = int(np.argmin(diffs))
+            if len({tl_idx, tr_idx, br_idx, bl_idx}) == 4:
+                ordered_img = np.zeros((4, 2), dtype=np.float32)
+                ordered_img[0] = image_center_np[tl_idx]  # top-left
+                ordered_img[2] = image_center_np[br_idx]  # bottom-right
+                ordered_img[1] = image_center_np[tr_idx]  # top-right
+                ordered_img[3] = image_center_np[bl_idx]  # bottom-left
+
+                board_center_np = np.array(
+                    [
+                        [edge, edge],
+                        [w - edge, edge],
+                        [w - edge, d - edge],
+                        [edge, d - edge],
+                    ],
+                    dtype=np.float32,
+                )
+                h_center, _ = cv2.findHomography(board_center_np, ordered_img, 0)
+                if h_center is not None:
+                    projected_center = cv2.perspectiveTransform(
+                        board_center_np.reshape(1, -1, 2), h_center
+                    ).reshape(-1, 2)
+                    reproj_err_center = float(
+                        np.mean(np.linalg.norm(projected_center - ordered_img, axis=1))
+                    )
+                    if (
+                        reproj_err_center <= self.workspace_outline_max_reproj_error_px
+                        and _homography_projects_valid_outline(h_center)
+                    ):
+                        homography = h_center
+
+        # Fallback path: legacy 2-tag-corner homography from front tags.
+        left_det = self._find_tag_detection(self.workspace_left_tag_id)
+        right_det = self._find_tag_detection(self.workspace_right_tag_id)
+        if homography is None and left_det is None and right_det is None:
+            return
 
         board_points = []
         image_points = []
@@ -1427,25 +1557,26 @@ class DepthTrackerNode(Node):
                 )
                 image_points.extend(right.tolist())
 
-        if len(board_points) < 4 or len(image_points) < 4:
-            return
-
-        board_tag_points = np.asarray(board_points, dtype=np.float32)
-        image_tag_points = np.asarray(image_points, dtype=np.float32)
-        homography, _ = cv2.findHomography(board_tag_points, image_tag_points, 0)
         if homography is None:
-            return
+            if len(board_points) < 4 or len(image_points) < 4:
+                return
 
-        projected = cv2.perspectiveTransform(
-            board_tag_points.reshape(1, -1, 2), homography
-        ).reshape(-1, 2)
-        reproj_err = float(np.mean(np.linalg.norm(projected - image_tag_points, axis=1)))
-        if reproj_err > self.workspace_outline_max_reproj_error_px:
-            return
+            board_tag_points = np.asarray(board_points, dtype=np.float32)
+            image_tag_points = np.asarray(image_points, dtype=np.float32)
+            homography, _ = cv2.findHomography(board_tag_points, image_tag_points, 0)
+            if homography is None:
+                return
 
-        board_outline = np.array(
-            [[[0.0, 0.0], [w, 0.0], [w, d], [0.0, d]]], dtype=np.float32
-        )
+            projected = cv2.perspectiveTransform(
+                board_tag_points.reshape(1, -1, 2), homography
+            ).reshape(-1, 2)
+            reproj_err = float(np.mean(np.linalg.norm(projected - image_tag_points, axis=1)))
+            if (
+                reproj_err > self.workspace_outline_max_reproj_error_px
+                or not _homography_projects_valid_outline(homography)
+            ):
+                return
+
         front_edge = np.array([[[0.0, 0.0], [w, 0.0]]], dtype=np.float32)
         outline_px = cv2.perspectiveTransform(board_outline, homography).reshape(-1, 2)
         front_px = cv2.perspectiveTransform(front_edge, homography).reshape(-1, 2)

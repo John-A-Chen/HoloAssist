@@ -458,6 +458,8 @@ class WorkspacePerceptionNode(Node):
         self.declare_parameter("marker_alpha", 0.35)
         self.declare_parameter("marker_lifetime_s", 0.8)
         self.declare_parameter("plane_marker_thickness_m", 0.006)
+        self.declare_parameter("plane_marker_from_four_tags_enabled", True)
+        self.declare_parameter("plane_marker_four_tags_edge_offset_m", 0.05)
         self.declare_parameter("axes_marker_length_m", 0.12)
         self.declare_parameter("axes_marker_radius_m", 0.01)
         self.declare_parameter("axes_marker_lift_m", 0.0)
@@ -735,6 +737,12 @@ class WorkspacePerceptionNode(Node):
         self.plane_marker_thickness_m = float(
             self.get_parameter("plane_marker_thickness_m").value
         )
+        self.plane_marker_from_four_tags_enabled = bool(
+            self.get_parameter("plane_marker_from_four_tags_enabled").value
+        )
+        self.plane_marker_four_tags_edge_offset_m = float(
+            self.get_parameter("plane_marker_four_tags_edge_offset_m").value
+        )
         self.axes_marker_length_m = float(
             self.get_parameter("axes_marker_length_m").value
         )
@@ -795,6 +803,9 @@ class WorkspacePerceptionNode(Node):
             max(self.roi_from_tags_smoothing_alpha, 0.0), 1.0
         )
         self.below_plane_tolerance_m = max(0.0, self.below_plane_tolerance_m)
+        self.plane_marker_four_tags_edge_offset_m = max(
+            0.0, self.plane_marker_four_tags_edge_offset_m
+        )
 
         self.plane_fit_max_points = max(200, self.plane_fit_max_points)
         self.plane_fit_near_depth_quantile = min(
@@ -1142,7 +1153,9 @@ class WorkspacePerceptionNode(Node):
                 if self.tag_markers_use_projected_points
                 else tag_marker_points_c_raw
             )
-            self._publish_plane_marker(msg.header.stamp)
+            self._publish_plane_marker(
+                msg.header.stamp, tag_marker_points_c, origin_c, basis_c
+            )
             self._publish_axes_markers(msg.header.stamp)
             self._publish_tag_markers(
                 msg.header.stamp,
@@ -2193,12 +2206,17 @@ class WorkspacePerceptionNode(Node):
         half_depth_w = 0.5 * float(
             max(0.02, self._active_roi_y_max - self._active_roi_y_min)
         )
-        base_radius_m = 0.5 * float(self.robot_base_diameter_m)
         far_sign = self._infer_robot_far_side_sign(center_y_w)
 
         robot_x_w = center_x_w + float(self.robot_pose_x_offset_m)
+        # Fallback when tag-pair anchoring is unavailable:
+        # keep the same "offset from board edge" semantics as tag-pair mode,
+        # rather than half-depth + base-radius (which causes ~64 mm back-edge bias).
+        edge_offset_m = float(self.robot_tag_pair_edge_offset_m) + float(
+            self.robot_edge_clearance_m
+        )
         robot_y_w = center_y_w + far_sign * (
-            half_depth_w + base_radius_m + float(self.robot_edge_clearance_m)
+            half_depth_w + edge_offset_m
         )
         return (
             float(robot_x_w),
@@ -2586,7 +2604,75 @@ class WorkspacePerceptionNode(Node):
             axis.action = Marker.DELETE
             self.axes_marker_pub.publish(axis)
 
-    def _publish_plane_marker(self, stamp) -> None:
+    def _plane_marker_bounds_from_four_tags(
+        self,
+        tag_points_c: Dict[str, np.ndarray],
+        origin_c: np.ndarray,
+        basis_c: np.ndarray,
+    ) -> Optional[Tuple[float, float, float, float]]:
+        """Return workspace x/y bounds for the bench marker from the first 4 tag centres.
+
+        The four-tag board layout has known physical geometry, so when all four
+        marker tag centres are visible we can draw the bench plane marker from
+        those centres plus the configured centre-to-edge offset. This prevents
+        the bench marker from shrinking to a 2-tag front-edge estimate.
+        """
+        if not self.plane_marker_from_four_tags_enabled:
+            return None
+        if len(self.tag_marker_frames) < 4:
+            return None
+
+        points_w: List[np.ndarray] = []
+        for frame in self.tag_marker_frames[:4]:
+            point_c = tag_points_c.get(frame)
+            if point_c is None:
+                return None
+            point_w = self._to_workspace(point_c.reshape(1, 3), origin_c, basis_c)[0]
+            if not np.isfinite(point_w).all():
+                return None
+            points_w.append(point_w)
+
+        tag_arr = np.asarray(points_w, dtype=np.float32)
+        if tag_arr.shape != (4, 3):
+            return None
+
+        edge = float(self.plane_marker_four_tags_edge_offset_m)
+        x_min = float(np.min(tag_arr[:, 0]) - edge)
+        x_max = float(np.max(tag_arr[:, 0]) + edge)
+        y_min = float(np.min(tag_arr[:, 1]) - edge)
+        y_max = float(np.max(tag_arr[:, 1]) + edge)
+
+        if not all(np.isfinite([x_min, x_max, y_min, y_max])):
+            return None
+        if x_max <= x_min or y_max <= y_min:
+            return None
+        return x_min, x_max, y_min, y_max
+
+    def _publish_plane_marker(
+        self,
+        stamp,
+        tag_points_c: Optional[Dict[str, np.ndarray]] = None,
+        origin_c: Optional[np.ndarray] = None,
+        basis_c: Optional[np.ndarray] = None,
+    ) -> None:
+        bounds = None
+        if (
+            tag_points_c is not None
+            and origin_c is not None
+            and basis_c is not None
+        ):
+            bounds = self._plane_marker_bounds_from_four_tags(
+                tag_points_c, origin_c, basis_c
+            )
+
+        if bounds is None:
+            x_min = float(self._active_roi_x_min)
+            x_max = float(self._active_roi_x_max)
+            y_min = float(self._active_roi_y_min)
+            y_max = float(self._active_roi_y_max)
+        else:
+            x_min, x_max, y_min, y_max = bounds
+
         marker = Marker()
         marker.header.frame_id = self.workspace_frame
         marker.header.stamp = stamp
@@ -2594,12 +2680,12 @@ class WorkspacePerceptionNode(Node):
         marker.id = 0
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
-        marker.pose.position.x = float((self._active_roi_x_min + self._active_roi_x_max) * 0.5)
-        marker.pose.position.y = float((self._active_roi_y_min + self._active_roi_y_max) * 0.5)
+        marker.pose.position.x = float((x_min + x_max) * 0.5)
+        marker.pose.position.y = float((y_min + y_max) * 0.5)
         marker.pose.position.z = 0.0
         marker.pose.orientation.w = 1.0
-        marker.scale.x = float(max(0.02, self._active_roi_x_max - self._active_roi_x_min))
-        marker.scale.y = float(max(0.02, self._active_roi_y_max - self._active_roi_y_min))
+        marker.scale.x = float(max(0.02, x_max - x_min))
+        marker.scale.y = float(max(0.02, y_max - y_min))
         marker.scale.z = float(max(0.001, self.plane_marker_thickness_m))
         marker.color.r = 0.2
         marker.color.g = 0.4
