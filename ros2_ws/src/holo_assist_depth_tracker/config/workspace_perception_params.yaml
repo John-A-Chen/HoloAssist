@@ -1,0 +1,206 @@
+holoassist_workspace_perception:
+  ros__parameters:
+    input_pointcloud_topic: /holo_assist_depth_tracker/pointcloud
+    workspace_frame: workspace_frame
+
+    use_tag_refinement: true
+    tag_family: 36h11
+    # Physical placement:
+    # - tag id 1 = left front corner
+    # - tag id 0 = right front corner
+    # - tag ids 2 and 3 = rear corners (used for visualization markers)
+    # +X in workspace will follow tag1 -> tag0 (left to right on the 700 mm edge).
+    # All AprilTags use a 32 mm printed edge size.
+    # Front-edge layout for flush-corner tags: [32 mm tag] + [636 mm gap] + [32 mm tag] = 700 mm.
+    tag_ids: [1, 0, 2, 3]
+    tag_frame_names: ["tag36h11:1", "tag36h11:0", "tag36h11:2", "tag36h11:3"]
+    tag_size_m: 0.032
+    # Hold last valid tag transform longer to avoid mode flapping/jitter
+    # when detections momentarily drop.
+    tag_timeout_s: 1.5
+    # Front tag center-to-center is expected near 0.668 m in this layout.
+    tag_min_separation_m: 0.60
+    # Tags are mounted on the board; snap tag centers onto fitted plane.
+    project_tags_to_plane: true
+    # Use tag poses as the primary bench-plane source (normal + anchor).
+    # Falls back to point-cloud RANSAC only if tags are not available.
+    bench_plane_from_tags_only: true
+    # 0.0 means always project tags onto fitted plane (no distance cap).
+    tag_plane_projection_max_distance_m: 0.0
+    # Keep marker centers at raw tag TF centers for visual alignment in RViz.
+    tag_markers_use_projected_points: false
+    # Keep both tag markers on a common bench-plane Z while preserving raw TF X/Y.
+    tag_markers_flatten_z_to_plane: true
+    # Applies only when tag_markers_use_projected_points=false.
+    # 0.0 keeps marker center exactly at tag TF position in Z.
+    tag_markers_raw_z_offset_m: 0.0
+    # Single-tag fallback:
+    # - Use in-plane tag local X axis for workspace +X estimate.
+    # - Sign per side keeps +X consistent as left->right (tag1 -> tag0).
+    single_tag_axis_preference: x
+    single_tag_left_axis_sign: 1.0
+    single_tag_right_axis_sign: 1.0
+
+    # Increase sampled points and RANSAC iterations for a steadier plane estimate.
+    plane_fit_max_points: 30000
+    # Prefer the closest depth slice for plane fitting (1.0 = no depth preference).
+    plane_fit_near_depth_quantile: 0.60
+    plane_ransac_iterations: 140
+    plane_inlier_threshold_m: 0.015
+    plane_min_inlier_ratio: 0.35
+    plane_min_inliers: 600
+    # Lower alpha = stronger temporal smoothing (less jiggle, more lag).
+    plane_smoothing_alpha: 0.05
+    # Disable periodic auto-resnap; use manual service call instead:
+    #   ros2 service call /holoassist/perception/realign_workspace std_srvs/srv/Trigger "{}"
+    resnap_interval_s: 0.0
+    # Background reset is optional; keep false so object foreground model
+    # remains stable while only the plane/ROI frame re-locks.
+    resnap_clear_background: false
+    resnap_clear_tracks: false
+    lock_workspace_after_initial_two_tag_snap: true
+    workspace_realign_service_name: /holoassist/perception/realign_workspace
+
+    # Bench dimensions (board):
+    #   width (x): 0.700 m  -> [-0.350, +0.350]
+    #   depth (y): 0.500 m  -> [-0.250, +0.250]
+    # Front edge is the tagged wide side; +X aligns tag1->tag0.
+    roi_x_min: -0.35
+    roi_x_max: 0.35
+    roi_y_min: -0.25
+    roi_y_max: 0.25
+    roi_z_min: 0.005
+    roi_z_max: 0.35
+    # Dynamic ROI from detected tags; board span stays 700x500.
+    roi_from_tags_enabled: true
+    # Keep zero margin so bench marker corners stay at exact board corners.
+    roi_from_tags_margin_m: 0.0
+    # If detected tag span collapses, fall back to configured board span.
+    roi_from_tags_min_span_m: 0.50
+    roi_from_tags_smoothing_alpha: 0.45
+    # Treat tag line as front edge of board and extend crop inward.
+    roi_from_tags_use_front_edge: true
+    # Hard reject anything under the fitted bench plane.
+    enforce_above_plane_cull: true
+    # Set >0.0 only if depth noise causes clipping at the plane boundary.
+    below_plane_tolerance_m: 0.0
+
+    # Robot pedestal exclusion (optional hard mask in workspace frame).
+    # Pose publishing below now computes robot center from detected board geometry.
+    pedestal_exclusion_enabled: false
+    pedestal_center_x: 0.00
+    pedestal_center_y: 0.314
+    pedestal_radius: 0.09
+    pedestal_z_min: -0.05
+    pedestal_z_max: 0.50
+
+    # Slightly higher point budget for steadier geometry while keeping interactivity.
+    max_points_per_frame: 30000
+
+    background_voxel_size: 0.015
+    background_increment: 0.04
+    background_decay: 0.01
+    background_threshold: 0.65
+    background_warmup_frames: 20
+    background_max_points: 14000
+
+    cluster_voxel_size: 0.02
+    min_foreground_points: 80
+    min_cluster_points: 80
+    max_cluster_points: 50000
+    object_candidate_max_extent_x_m: 0.18
+    object_candidate_max_extent_y_m: 0.18
+    object_candidate_max_extent_z_m: 0.18
+    object_candidate_max_volume_m3: 0.0035
+    # Do not mark clusters that stay too close to the bench plane.
+    # Points still remain visible in cropped/foreground clouds.
+    object_candidate_min_top_height_m: 0.025
+    persistence_distance_m: 0.09
+    persistence_gain: 0.25
+    persistence_decay: 0.85
+    # Publish-stability gate: only move published centroid if object gets
+    # noticeably closer to camera.
+    centroid_update_closer_only: true
+    centroid_min_closer_m: 0.03
+    centroid_smoothing_alpha: 0.25
+    max_tracked_objects: 6
+    track_match_distance_m: 0.12
+    track_spawn_deadzone_m: 0.08
+    track_smoothing_alpha: 0.35
+    track_max_missed_frames: 8
+
+    cropped_cloud_topic: /holoassist/perception/cropped_pointcloud
+    cropped_cloud_workspace_topic: /holoassist/perception/cropped_pointcloud_workspace
+    foreground_cloud_topic: /holoassist/perception/foreground_pointcloud
+    foreground_cloud_workspace_topic: /holoassist/perception/foreground_pointcloud_workspace
+
+    object_pose_topic: /holoassist/perception/object_pose
+    object_pose_workspace_topic: /holoassist/perception/object_pose_workspace
+    object_marker_topic: /holoassist/perception/object_marker
+    object_source_mode: apriltag
+    apriltag_object_pose_topic: /holoassist/perception/april_cube_pose
+    apriltag_object_timeout_s: 0.8
+    apriltag_object_size_m: 0.075
+    robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
+    robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
+    publish_robot_pose_marker: true
+    publish_robot_tf: true
+    robot_tf_child_frame: ur3e_base_link0
+    robot_pose_publish_hz: 10.0
+    # Align workspace frame origin with the blue bench marker center each update.
+    workspace_origin_snap_to_bench_center: true
+    # UR3e base placement (board: 0.700 m x 0.500 m, centered workspace frame):
+    # - Robot centre is 450 mm from board left edge  -> x = +0.100 m
+    # - Robot centre is 64 mm beyond board back edge -> y = +0.314 m
+    #   (back edge is +0.250 m in centered frame, so +0.250 + 0.064 = +0.314 m).
+    # - Robot base diameter is 128 mm.
+    # - robot_pose_z_m is the UR3e joint frame origin relative to board plane.
+    # Dynamic mode still measures Y from board back edge of the active blue plane.
+    robot_pose_follow_workspace: true
+    robot_pose_from_tag_pair: true
+    robot_tag_pair_edge_offset_m: 0.064
+    robot_edge_clearance_m: 0.0
+    # Keep UR3e base from snapping to workspace center:
+    # +0.10 m = 0.45 m from left edge on a 0.70 m board when centered.
+    robot_pose_x_offset_m: 0.10
+    # Manual fallback (used only when robot_pose_follow_workspace=false):
+    robot_pose_x_m: 0.100
+    robot_pose_y_m: 0.314
+    # UR3e base joint frame is 15 mm below the blue plane surface.
+    robot_pose_z_m: -0.015
+    robot_pose_yaw_deg: 0.0
+    robot_base_diameter_m: 0.128
+    robot_marker_height_m: 0.01
+
+    plane_marker_topic: /holoassist/perception/bench_plane_marker
+    tag_marker_topic: /holoassist/perception/workspace_tag_markers
+    axes_marker_topic: /holoassist/perception/workspace_axes_marker
+    plane_coeff_topic: /holoassist/perception/bench_plane_coefficients
+    workspace_mode_topic: /holoassist/perception/workspace_mode
+    workspace_diag_topic: /holoassist/perception/workspace_diagnostics
+    object_metrics_topic: /holoassist/perception/object_metrics
+
+    publish_workspace_clouds: true
+    publish_foreground_clouds: true
+    publish_debug_markers: true
+    publish_tf: true
+
+    marker_alpha: 0.35
+    marker_lifetime_s: 0.8
+    plane_marker_thickness_m: 0.006
+    # Build the bench plane marker from the first 4 workspace tag centres.
+    # AprilTag printed size is 0.032 m. If tags are flush with board edges,
+    # tag-centre-to-board-edge offset is 0.016 m (=0.032/2).
+    # Keep this enabled for the 4-tag board layout so the plane marker is
+    # generated from deterministic board geometry instead of a folded/ambiguous
+    # 2-tag corner estimate.
+    plane_marker_from_four_tags_enabled: true
+    plane_marker_four_tags_edge_offset_m: 0.016
+    axes_marker_length_m: 0.12
+    axes_marker_radius_m: 0.01
+    # 0.0 = auto-lift above plane by (plane thickness + axis radius).
+    axes_marker_lift_m: 0.0
+    object_marker_min_extent_m: 0.02
+    object_marker_max_extent_m: 0.18
+
+    random_seed: 42
