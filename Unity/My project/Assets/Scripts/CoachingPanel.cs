@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using TMPro;
 using System.Collections.Generic;
 
@@ -47,6 +49,12 @@ public class CoachingPanel : MonoBehaviour
     private TextMeshPro nextButtonText;
     private InputAction selectAction;
     private Transform rightController;
+
+    [Header("Page Nav")]
+    [Tooltip("Time (seconds) to hover on a button to activate it")]
+    public float hoverDwellTime = 0.6f;
+    private float prevHoverTime = 0f;
+    private float nextHoverTime = 0f;
 
     [Header("Controllers")]
     public Transform rightControllerOverride;
@@ -262,10 +270,12 @@ public class CoachingPanel : MonoBehaviour
         float btnSize = rowHeight * 1.4f;
         float halfW = panelWidth / 2f;
 
-        // Prev button (left)
+        // Prev button (left) — push slightly forward of panel for ray priority
+        float btnZ = zQuad - 0.05f;
         prevButton = CreateQuad("PrevBtn",
-            new Vector3(-halfW + padding + btnSize / 2f, bottomY, zQuad),
+            new Vector3(-halfW + padding + btnSize / 2f, bottomY, btnZ),
             new Vector2(btnSize, btnSize), accentColor * 0.7f);
+        AddPageNavInteractable(prevButton, btnSize, () => PrevPage());
         prevButtonText = CreateText("PrevText", "<",
             new Vector3(-halfW + padding + btnSize / 2f, bottomY, zText),
             fontSize, labelColor, TextAlignmentOptions.Center, btnSize);
@@ -273,8 +283,9 @@ public class CoachingPanel : MonoBehaviour
 
         // Next button (right)
         nextButton = CreateQuad("NextBtn",
-            new Vector3(halfW - padding - btnSize / 2f, bottomY, zQuad),
+            new Vector3(halfW - padding - btnSize / 2f, bottomY, btnZ),
             new Vector2(btnSize, btnSize), accentColor * 0.7f);
+        AddPageNavInteractable(nextButton, btnSize, () => NextPage());
         nextButtonText = CreateText("NextText", ">",
             new Vector3(halfW - padding - btnSize / 2f, bottomY, zText),
             fontSize, labelColor, TextAlignmentOptions.Center, btnSize);
@@ -340,6 +351,36 @@ public class CoachingPanel : MonoBehaviour
         return tmp;
     }
 
+    void AddPageNavInteractable(GameObject btn, float btnSize, System.Action onClick)
+    {
+        // Add a small box collider so XR ray can hit the button
+        var col = btn.AddComponent<BoxCollider>();
+        col.size = new Vector3(1f, 1f, 0.1f); // local space (quad scale already btnSize)
+        col.isTrigger = false;
+
+        // Add XRSimpleInteractable so XR ray + trigger selects it
+        var interactable = btn.AddComponent<XRSimpleInteractable>();
+        interactable.colliders.Add(col);
+        interactable.selectMode = InteractableSelectMode.Single;
+
+        // Hover highlight (gold while hovered)
+        interactable.hoverEntered.AddListener(args =>
+        {
+            var rend = btn.GetComponent<Renderer>();
+            if (rend != null)
+                rend.material.SetColor("_BaseColor", new Color(1f, 0.85f, 0.2f, 1f));
+        });
+        interactable.hoverExited.AddListener(args =>
+        {
+            var rend = btn.GetComponent<Renderer>();
+            if (rend != null)
+                rend.material.SetColor("_BaseColor", accentColor * 0.7f);
+        });
+
+        // Trigger select to fire the click
+        interactable.selectEntered.AddListener(args => onClick?.Invoke());
+    }
+
     GameObject CreateQuad(string name, Vector3 localPos, Vector2 size, Color color)
     {
         var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -376,44 +417,8 @@ public class CoachingPanel : MonoBehaviour
 
     void HandlePageNav()
     {
-        if (rightController == null) FindController();
-        if (rightController == null || prevButton == null || nextButton == null) return;
-
-        // Raycast from right controller forward onto panel plane
-        Ray ray = new Ray(rightController.position, rightController.forward);
-        Plane panelPlane = new Plane(-transform.forward, transform.position);
-        if (!panelPlane.Raycast(ray, out float dist) || dist > 15f) return;
-
-        Vector3 hitWorld = ray.GetPoint(dist);
-
-        // Distance to each button in world space — generous radius
-        float distToPrev = Vector3.Distance(hitWorld, prevButton.transform.position);
-        float distToNext = Vector3.Distance(hitWorld, nextButton.transform.position);
-        float btnRadius = Mathf.Max(prevButton.transform.lossyScale.x, prevButton.transform.lossyScale.y) * 1.0f;
-
-        bool overPrev = distToPrev < btnRadius;
-        bool overNext = distToNext < btnRadius;
-
-        // Highlight hovered button
-        if (prevButton != null)
-        {
-            var rend = prevButton.GetComponent<Renderer>();
-            if (rend != null)
-                rend.material.SetColor("_BaseColor", overPrev ? accentColor : accentColor * 0.7f);
-        }
-        if (nextButton != null)
-        {
-            var rend = nextButton.GetComponent<Renderer>();
-            if (rend != null)
-                rend.material.SetColor("_BaseColor", overNext ? accentColor : accentColor * 0.7f);
-        }
-
-        // Click on press
-        if (selectAction != null && selectAction.WasPressedThisFrame())
-        {
-            if (overPrev) PrevPage();
-            else if (overNext) NextPage();
-        }
+        // Page navigation is now handled by XRSimpleInteractable hover/select on the buttons.
+        // Hovering shows gold highlight, pulling trigger advances/retreats pages.
     }
 
     void OnDestroy()

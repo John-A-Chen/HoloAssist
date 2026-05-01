@@ -1,59 +1,9 @@
 fileFormatVersion: 2
-guid: c792db6083b0aacbca3d5a7f6b7d0592
+guid: e2937aa62270946708e04288dd693ba4
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(165,158,150)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(175,175,175)
-    second: {fileID: 2100000, guid: 2033a2b85c0b3313084dd0b769e8cbc6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(191,191,191)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(192,192,192)
-    second: {fileID: 2100000, guid: 2033a2b85c0b3313084dd0b769e8cbc6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(202,209,238)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(255,255,255)
-    second: {fileID: 2100000, guid: 2033a2b85c0b3313084dd0b769e8cbc6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(255,43,43)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(26,26,26)
-    second: {fileID: 2100000, guid: 2033a2b85c0b3313084dd0b769e8cbc6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(76,76,76)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Opaque(96,96,96)
-    second: {fileID: 2100000, guid: 9b2b3844f889c1274bbed3fb0e4e96e4, type: 2}
+  externalObjects: {}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -91,8 +41,8 @@ ModelImporter:
     importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
-    importCameras: 0
-    importLights: 0
+    importCameras: 1
+    importLights: 1
     nodeNameCollisionStrategy: 1
     fileIdsGeneration: 2
     swapUVChannels: 0
@@ -148,7 +98,7 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 0
+  animationType: 2
   humanoidOversampling: 1
   avatarSetup: 0
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
