@@ -1,3 +1,4 @@
 *.dae filter=lfs diff=lfs merge=lfs -text
 *.apk filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
+Old[[:space:]]Documents/ros2_ws.zip filter=lfs diff=lfs merge=lfs -text
