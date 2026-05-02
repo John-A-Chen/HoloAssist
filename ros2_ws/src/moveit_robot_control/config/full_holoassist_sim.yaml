@@ -1,0 +1,39 @@
+holoassist_workspace_frame_tf:
+  ros__parameters:
+    parent_frame: base_link
+    child_frame: workspace_frame
+    # base_link -> workspace_frame
+    # Derived from existing board geometry where robot center is at
+    # (x=0.450, y=0.564, z=-0.015) in board-corner coordinates.
+    # Converted to board-center coordinates gives robot at
+    # (x=0.100, y=0.314, z=-0.015), so workspace in base becomes:
+    # (-0.100, -0.314, +0.015).
+    x_m: -0.100
+    y_m: -0.314
+    z_m: 0.015
+    roll_rad: 0.0
+    pitch_rad: 0.0
+    yaw_rad: 0.0
+
+workspace_scene_manager:
+  ros__parameters:
+    frame_id: base_link
+    publish_table_mesh: true
+    apply_table_collision: false
+    table_mesh_resource: package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae
+    table_mesh_xyz: [0.0, 0.0, 0.0]
+    table_mesh_rpy_deg: [0.0, 0.0, 0.0]
+    table_mesh_scale: [1.0, 1.0, 1.0]
+    table_collision_xyz: [0.0, 0.0, 1.04]
+    table_collision_rpy_deg: [0.0, 0.0, 0.0]
+    table_collision_size: [0.80, 0.70, 0.04]
+
+holoassist_selected_cube_to_moveit_target:
+  ros__parameters:
+    target_frame: base_link
+    target_x_offset_m: 0.0
+    target_y_offset_m: 0.0
+    target_z_offset_m: 0.10
+    target_roll_rad: 3.141592653589793
+    target_pitch_rad: 0.0
+    target_yaw_rad: 0.0

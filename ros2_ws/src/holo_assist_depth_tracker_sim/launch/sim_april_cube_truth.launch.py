@@ -19,6 +19,14 @@ def generate_launch_description() -> LaunchDescription:
 
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="false")
+    publish_scene_state_publisher_arg = DeclareLaunchArgument(
+        "publish_scene_state_publisher",
+        default_value="true",
+        description=(
+            "Publish the standalone holoassist scene robot_description. "
+            "Set false when a MoveIt robot_description is already running."
+        ),
+    )
     urdf_model_arg = DeclareLaunchArgument("urdf_model", default_value=default_model)
     rviz_config_arg = DeclareLaunchArgument("rviz_config", default_value=default_rviz)
     sim_scene_arg = DeclareLaunchArgument("sim_scene_config", default_value=sim_scene_default)
@@ -44,6 +52,7 @@ def generate_launch_description() -> LaunchDescription:
             {"robot_description": ParameterValue(robot_description, value_type=str)},
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
         ],
+        condition=IfCondition(LaunchConfiguration("publish_scene_state_publisher")),
     )
 
     truth_node = Node(
@@ -72,6 +81,7 @@ def generate_launch_description() -> LaunchDescription:
         [
             use_rviz_arg,
             use_sim_time_arg,
+            publish_scene_state_publisher_arg,
             urdf_model_arg,
             rviz_config_arg,
             sim_scene_arg,

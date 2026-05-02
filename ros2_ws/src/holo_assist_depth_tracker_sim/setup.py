@@ -28,6 +28,7 @@ setup(
             "sim_cube_truth_node = holo_assist_depth_tracker_sim.sim_cube_truth_node:main",
             "sim_cube_perception_node = holo_assist_depth_tracker_sim.sim_cube_perception_node:main",
             "sim_cube_moveit_bridge_node = holo_assist_depth_tracker_sim.sim_cube_moveit_bridge_node:main",
+            "selected_cube_to_moveit_target_node = holo_assist_depth_tracker_sim.selected_cube_to_moveit_target_node:main",
         ],
     },
 )

@@ -231,6 +231,45 @@ Visualization Manager:
       Show Descriptions: true
       Show Visual Aids: false
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Trolley Mesh MarkerArray
+      Namespaces:
+        workspace_blocks: true
+        workspace_table: true
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /workspace_scene/markers
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Workspace Board Marker
+      Namespaces:
+        holoassist_sim_workspace: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/sim/workspace/board_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Workspace Tag Marker
+      Namespaces:
+        holoassist_sim_workspace: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/sim/workspace/tags_marker
+      Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Cube1 Truth Marker
@@ -377,7 +416,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 34; 39; 43
-    Fixed Frame: world
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -409,7 +448,7 @@ Visualization Manager:
       Name: Current View
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.6550005078315735
-      Target Frame: world
+      Target Frame: base_link
       Value: Orbit (rviz_default_plugins)
       Yaw: 4.515012264251709
     Saved: ~

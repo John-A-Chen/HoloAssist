@@ -8,7 +8,7 @@ from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
 import rclpy
-from geometry_msgs.msg import Pose, PoseStamped, TransformStamped
+from geometry_msgs.msg import Point, Pose, PoseStamped, TransformStamped
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -37,6 +37,8 @@ class SimCubeTruthNode(Node):
         self.declare_parameter("board_width_m", 0.700)
         self.declare_parameter("board_depth_m", 0.500)
         self.declare_parameter("board_thickness_m", 0.010)
+        self.declare_parameter("board_tag_size_m", 0.032)
+        self.declare_parameter("board_tag_center_edge_offset_m", 0.016)
         self.declare_parameter("cube_size_m", 0.040)
         self.declare_parameter("min_cube_spacing_m", 0.080)
         self.declare_parameter("randomise_yaw", True)
@@ -72,7 +74,7 @@ class SimCubeTruthNode(Node):
         self.declare_parameter("camera_imu_frame", "camera_imu_frame")
         self.declare_parameter("camera_accel_frame", "camera_accel_frame")
         self.declare_parameter("camera_gyro_frame", "camera_gyro_frame")
-        self.declare_parameter("camera_default_xyzrpy", [0.0, -0.550, 0.650, 0.0, 0.85, 1.575])
+        self.declare_parameter("camera_default_xyzrpy", [0.0, -0.600, 0.700, 0.0, 0.0, 0.0])
         self.declare_parameter("camera_body_size_xyz", [0.090, 0.025, 0.025])
         self.declare_parameter("publish_workspace_realign_service", True)
 
@@ -81,6 +83,10 @@ class SimCubeTruthNode(Node):
         self.board_width_m = float(self.get_parameter("board_width_m").value)
         self.board_depth_m = float(self.get_parameter("board_depth_m").value)
         self.board_thickness_m = float(self.get_parameter("board_thickness_m").value)
+        self.board_tag_size_m = float(self.get_parameter("board_tag_size_m").value)
+        self.board_tag_center_edge_offset_m = float(
+            self.get_parameter("board_tag_center_edge_offset_m").value
+        )
         self.cube_size_m = float(self.get_parameter("cube_size_m").value)
         self.min_cube_spacing_m = float(self.get_parameter("min_cube_spacing_m").value)
         self.randomise_yaw = bool(self.get_parameter("randomise_yaw").value)
@@ -118,6 +124,8 @@ class SimCubeTruthNode(Node):
         self._camera_pose_pub = self.create_publisher(PoseStamped, "/holoassist/sim/truth/camera_pose", 10)
         self._camera_body_marker_pub = self.create_publisher(Marker, "/holoassist/sim/camera/body_marker", 10)
         self._camera_axis_marker_pub = self.create_publisher(Marker, "/holoassist/sim/camera/optical_axis_marker", 10)
+        self._board_marker_pub = self.create_publisher(Marker, "/holoassist/sim/workspace/board_marker", 10)
+        self._tags_marker_pub = self.create_publisher(Marker, "/holoassist/sim/workspace/tags_marker", 10)
         self._camera_info_pub = self.create_publisher(String, "/holoassist/sim/camera/info", 10)
 
         self._tf_broadcaster = TransformBroadcaster(self)
@@ -319,6 +327,7 @@ class SimCubeTruthNode(Node):
 
         self._publish_camera_tf(now)
         self._publish_camera_markers(now)
+        self._publish_workspace_markers(now)
 
     def _publish_camera_tf(self, stamp) -> None:
         x, y, z, roll, pitch, yaw = self.camera_pose_xyzrpy
@@ -459,6 +468,54 @@ class SimCubeTruthNode(Node):
         axis.color.b = 0.9
         axis.color.a = 0.95
         self._camera_axis_marker_pub.publish(axis)
+
+    def _publish_workspace_markers(self, stamp) -> None:
+        board = Marker()
+        board.header.stamp = stamp
+        board.header.frame_id = self.workspace_frame
+        board.ns = "holoassist_sim_workspace"
+        board.id = 300
+        board.type = Marker.CUBE
+        board.action = Marker.ADD
+        board.pose.position.z = -0.5 * self.board_thickness_m
+        board.pose.orientation.w = 1.0
+        board.scale.x = self.board_width_m
+        board.scale.y = self.board_depth_m
+        board.scale.z = self.board_thickness_m
+        board.color.r = 0.05
+        board.color.g = 0.05
+        board.color.b = 0.05
+        board.color.a = 0.95
+        self._board_marker_pub.publish(board)
+
+        edge = self.board_tag_center_edge_offset_m
+        x_min = -self.board_width_m * 0.5 + edge
+        x_max = self.board_width_m * 0.5 - edge
+        y_min = -self.board_depth_m * 0.5 + edge
+        y_max = self.board_depth_m * 0.5 - edge
+
+        tags = Marker()
+        tags.header.stamp = stamp
+        tags.header.frame_id = self.workspace_frame
+        tags.ns = "holoassist_sim_workspace"
+        tags.id = 301
+        tags.type = Marker.CUBE_LIST
+        tags.action = Marker.ADD
+        tags.pose.orientation.w = 1.0
+        tags.scale.x = self.board_tag_size_m
+        tags.scale.y = self.board_tag_size_m
+        tags.scale.z = max(0.001, self.board_thickness_m * 0.15)
+        tags.color.r = 1.0
+        tags.color.g = 1.0
+        tags.color.b = 1.0
+        tags.color.a = 0.98
+        tags.points = [
+            Point(x=x_min, y=y_min, z=0.0005),
+            Point(x=x_max, y=y_min, z=0.0005),
+            Point(x=x_min, y=y_max, z=0.0005),
+            Point(x=x_max, y=y_max, z=0.0005),
+        ]
+        self._tags_marker_pub.publish(tags)
 
     def _update_interactive_marker_pose(self, name: str) -> None:
         self._im_server.setPose(name, cube_state_to_pose(self.cubes[name]))
