@@ -119,6 +119,11 @@ def generate_launch_description():
                 default_value="0.0",
                 description="RG2 closing width in meters.",
             ),
+            DeclareLaunchArgument(
+                "gripper_action_name",
+                default_value="/finger_width_trajectory_controller/follow_joint_trajectory",
+                description="FollowJointTrajectory action used for gripper commands.",
+            ),
             Node(
                 package="moveit_robot_control",
                 executable="pick_place_sequencer",
@@ -170,6 +175,9 @@ def generate_launch_description():
                         "close_width": ParameterValue(
                             LaunchConfiguration("close_width"),
                             value_type=float,
+                        ),
+                        "gripper_action_name": LaunchConfiguration(
+                            "gripper_action_name"
                         ),
                     }
                 ],
