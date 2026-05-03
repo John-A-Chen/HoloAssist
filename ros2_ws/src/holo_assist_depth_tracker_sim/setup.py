@@ -15,6 +15,7 @@ setup(
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
         (os.path.join("share", package_name, "rviz"), glob("rviz/*.rviz")),
+        (os.path.join("share", package_name, "worlds"), glob("worlds/*.world")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -29,6 +30,7 @@ setup(
             "sim_cube_perception_node = holo_assist_depth_tracker_sim.sim_cube_perception_node:main",
             "sim_cube_moveit_bridge_node = holo_assist_depth_tracker_sim.sim_cube_moveit_bridge_node:main",
             "selected_cube_to_moveit_target_node = holo_assist_depth_tracker_sim.selected_cube_to_moveit_target_node:main",
+            "pick_place_service_node = holo_assist_depth_tracker_sim.pick_place_service_node:main",
         ],
     },
 )

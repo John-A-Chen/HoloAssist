@@ -19,6 +19,7 @@ setup(
             [
                 "launch/coordinate_listener.launch.py",
                 "launch/full_holoassist_moveit_sim.launch.py",
+                "launch/full_holoassist_gazebo_sim.launch.py",
                 "launch/pick_place_system.launch.py",
                 "launch/pick_place.launch.py",
                 "launch/workspace_scene.launch.py",

@@ -1,0 +1,5 @@
+string cube_name    # "april_cube_1" .. "april_cube_4", or short "1" .. "4"
+string bin_id       # "bin_1" .. "bin_4", or short "1" .. "4"
+---
+bool success
+string message

@@ -705,6 +705,7 @@ class MoveItRobotControl(Node):
         self.declare_parameter("move_group_name", MOVE_GROUP_NAME)
         self.declare_parameter("trajectory_topic", TRAJECTORY_TOPIC)
         self.declare_parameter("require_robot_status", True)
+        self.declare_parameter("require_controller_check", True)
         self.declare_parameter("joint_goal_tolerance", JOINT_SETTLE_TOLERANCE)
         self.declare_parameter("execution_timeout_scale", EXECUTION_TIMEOUT_SCALE)
         self.declare_parameter("execution_timeout_padding", EXECUTION_TIMEOUT_PADDING)
@@ -712,6 +713,9 @@ class MoveItRobotControl(Node):
         trajectory_topic = str(self.get_parameter("trajectory_topic").value)
         self.require_robot_status = bool(
             self.get_parameter("require_robot_status").value
+        )
+        self.require_controller_check = bool(
+            self.get_parameter("require_controller_check").value
         )
         self.joint_goal_tolerance = float(
             self.get_parameter("joint_goal_tolerance").value
@@ -1129,16 +1133,17 @@ class MoveItRobotControl(Node):
             )
 
     def assert_robot_ready(self) -> None:
-        self.refresh_controller_status()
-
-        if not self.controller_active:
-            self.get_logger().info(
-                "scaled_joint_trajectory_controller is inactive, trying to activate it"
-            )
-            self.activate_scaled_controller()
+        if self.require_controller_check:
             self.refresh_controller_status()
+
             if not self.controller_active:
-                raise RuntimeError("scaled_joint_trajectory_controller is not active")
+                self.get_logger().info(
+                    "scaled_joint_trajectory_controller is inactive, trying to activate it"
+                )
+                self.activate_scaled_controller()
+                self.refresh_controller_status()
+                if not self.controller_active:
+                    raise RuntimeError("scaled_joint_trajectory_controller is not active")
 
         if not self.require_robot_status:
             self.get_logger().info("Skipping robot status checks")

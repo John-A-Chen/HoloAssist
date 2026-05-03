@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CubePerceptionStatus.msg"
   "srv/SetAprilCubePose.srv"
   "srv/SetCameraPose.srv"
+  "srv/PickCubeToBin.srv"
   DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
 )
 

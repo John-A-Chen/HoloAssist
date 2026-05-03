@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Cube Truth Controls1
+        - /Trolley Mesh MarkerArray1
       Splitter Ratio: 0.5
     Tree Height: 500
   - Class: rviz_common/Selection
@@ -57,44 +58,126 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        board_link:
+        base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_link_inertia:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        tag0_visual:
+        cable_connector_0:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        tag1_visual:
+        cable_connector_1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        tag2_visual:
+        finger_width_mock_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        flange:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        forearm_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        tag3_visual:
+        ft_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        gripper_tcp:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        left_finger_tip:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        left_inner_finger:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ur3e_base_link0:
+        left_inner_knuckle:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        workspace_frame:
+        left_outer_knuckle:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
+        onrobot_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_finger_tip:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        right_inner_finger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_inner_knuckle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_outer_knuckle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        shoulder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tool0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        upper_arm_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         world:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        wrist_1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wrist_2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wrist_3_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -104,124 +187,19 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz_default_plugins/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        april_cube_1:
-          Value: true
-        april_cube_2:
-          Value: true
-        april_cube_3:
-          Value: true
-        april_cube_4:
-          Value: true
-        apriltag_cube_1_sim:
-          Value: true
-        apriltag_cube_1_sim_truth:
-          Value: true
-        apriltag_cube_2_sim:
-          Value: true
-        apriltag_cube_2_sim_truth:
-          Value: true
-        apriltag_cube_3_sim:
-          Value: true
-        apriltag_cube_3_sim_truth:
-          Value: true
-        apriltag_cube_4_sim:
-          Value: true
-        apriltag_cube_4_sim_truth:
-          Value: true
-        board_link:
-          Value: true
-        camera_accel_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_gyro_frame:
-          Value: true
-        camera_imu_frame:
-          Value: true
-        camera_link:
-          Value: true
-        tag0_visual:
-          Value: true
-        tag1_visual:
-          Value: true
-        tag2_visual:
-          Value: true
-        tag3_visual:
-          Value: true
-        ur3e_base_link0:
-          Value: true
-        workspace_frame:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 0.20000000298023224
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          workspace_frame:
-            april_cube_1:
-              {}
-            april_cube_2:
-              {}
-            april_cube_3:
-              {}
-            april_cube_4:
-              {}
-            apriltag_cube_1_sim:
-              {}
-            apriltag_cube_1_sim_truth:
-              {}
-            apriltag_cube_2_sim:
-              {}
-            apriltag_cube_2_sim_truth:
-              {}
-            apriltag_cube_3_sim:
-              {}
-            apriltag_cube_3_sim_truth:
-              {}
-            apriltag_cube_4_sim:
-              {}
-            apriltag_cube_4_sim_truth:
-              {}
-            board_link:
-              {}
-            camera_link:
-              camera_color_frame:
-                camera_color_optical_frame:
-                  {}
-              camera_depth_frame:
-                camera_depth_optical_frame:
-                  {}
-              camera_imu_frame:
-                camera_accel_frame:
-                  {}
-                camera_gyro_frame:
-                  {}
-            tag0_visual:
-              {}
-            tag1_visual:
-              {}
-            tag2_visual:
-              {}
-            tag3_visual:
-              {}
-            ur3e_base_link0:
-              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/InteractiveMarkers
       Enable Transparency: true
       Enabled: true
@@ -235,7 +213,6 @@ Visualization Manager:
       Enabled: true
       Name: Trolley Mesh MarkerArray
       Namespaces:
-        workspace_blocks: true
         workspace_table: true
       Topic:
         Depth: 5
@@ -401,10 +378,10 @@ Visualization Manager:
         Value: /holoassist/sim/camera/optical_axis_marker
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Camera Frustum Marker
       Namespaces:
-        holoassist_sim_camera: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -412,7 +389,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /holoassist/sim/camera/frustum_marker
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 34; 39; 43
@@ -432,25 +409,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.825421094894409
+      Distance: 2.1351146697998047
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.07705332338809967
-        Y: -0.3530891537666321
-        Z: 0.008873610757291317
+        X: 0.17442138493061066
+        Y: -0.1585758924484253
+        Z: -0.012192336842417717
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6550005078315735
+      Pitch: 0.20979662239551544
       Target Frame: base_link
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.515012264251709
+      Yaw: 4.156805515289307
     Saved: ~
 Window Geometry:
   Displays:
