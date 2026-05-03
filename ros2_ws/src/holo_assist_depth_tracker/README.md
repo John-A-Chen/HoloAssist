@@ -2,6 +2,12 @@
 
 AprilTag-first perception stack for HoloAssist workspace tracking.
 
+Additional architecture docs:
+
+- [docs/PERCEPTION_PIPELINE_REFERENCE.md](./docs/PERCEPTION_PIPELINE_REFERENCE.md)
+- [../../docs/POSE_HANDOFF_CONTRACT.md](../../docs/POSE_HANDOFF_CONTRACT.md)
+- [../../docs/J0HN_MERGED_ARCHITECTURE.md](../../docs/J0HN_MERGED_ARCHITECTURE.md)
+
 ## Overview
 
 This package uses one AprilTag detector configuration and one tag family/size.

@@ -5,6 +5,9 @@
 Detailed integration + merge guide:
 
 - [INTEGRATION_AND_MERGE.md](./INTEGRATION_AND_MERGE.md)
+- [docs/MOTION_EXECUTION_REFERENCE.md](./docs/MOTION_EXECUTION_REFERENCE.md)
+- [../../docs/POSE_HANDOFF_CONTRACT.md](../../docs/POSE_HANDOFF_CONTRACT.md)
+- [../../docs/J0HN_MERGED_ARCHITECTURE.md](../../docs/J0HN_MERGED_ARCHITECTURE.md)
 
 ## Full Sim + MoveIt (single launch)
 
