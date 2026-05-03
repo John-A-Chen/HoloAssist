@@ -323,6 +323,7 @@ def generate_launch_description() -> LaunchDescription:
         name="holoassist_pick_place_service",
         output="screen",
         condition=IfCondition(LaunchConfiguration("start_pick_place")),
+        parameters=[{"cube_pose_topic_prefix": "/holoassist/sim/truth"}],
     )
 
     # ── RViz ─────────────────────────────────────────────────────────────────

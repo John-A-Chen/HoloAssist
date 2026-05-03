@@ -1,236 +1,207 @@
-# HoloAssist MoveIt Sim Integration and Merge Guide
+# HoloAssist Integration Reference
 
-This document describes:
+This document covers the `j0hn` branch integration: the full sim + hardware launch architecture, parameter tuning reference, and merge guide.
 
-1. The integrated simulation + MoveIt architecture on branch `j0hn`
-2. How to run and validate the full pipeline end-to-end
-3. Where to tune scene placement and targeting parameters
-4. How to merge this branch safely into `main`
+---
 
-## 1. Integration scope
+## 1. Integration state
 
-The integration goal is one coherent run sequence where a single RViz session shows:
+The `j0hn` branch is a complete integration of:
 
-- UR3e + MoveIt robot model
-- Trolley/workspace scene mesh
-- Workspace board + 4 tags
-- Fake D435i camera + optical axis + frustum
-- Truth cubes + perceived cubes
-- Selected perceived target driving MoveIt target topics
+- **John's perception side** (`holo_assist_depth_tracker`): AprilTag board solver, 4-cube tracker, camera self-localisation
+- **Ollie's motion side** (`moveit_robot_control`): topic-driven MoveIt planner, trajectory executor, workspace scene manager
+- **Extended layers** (integrated on `j0hn`): pick-place sequencer, pick-place service (PickCubeToBin), hardware launch, XR rosbridge streaming
 
-Motion targeting uses:
+All three operational modes are functional:
 
-- `/moveit_robot_control/target_pose` as the primary command path
-- `/moveit_robot_control/target_point` retained for compatibility/debugging
+| Mode | Launch | Status |
+|---|---|---|
+| Full simulation | `full_holoassist_moveit_sim.launch.py` | Working — fake HW + full pick-place |
+| Hardware XR only | `holoassist_full_xr.launch.py` | Built — needs hardware test with RealSense |
+| Full hardware | `full_holoassist_hardware.launch.py robot_ip:=<ip>` | Built — needs hardware test |
 
-Planning reference remains `base_link`.
+---
 
-## 2. Top-level launch
+## 2. Full simulation stack
 
-Primary launch entry point:
-
-- `moveit_robot_control/launch/full_holoassist_moveit_sim.launch.py`
-
-Run:
+### Run
 
 ```bash
-cd /home/john/git/RS2-HoloAssist/j0hn/ros2_ws
 source /opt/ros/humble/setup.bash
 colcon build --symlink-install
 source install/setup.bash
-
 ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py
 ```
 
-Key behavior:
+### What starts (with timing)
 
-- Starts MoveIt bringup from `ur_onrobot_moveit_config` (fake-hardware defaults)
-- Starts workspace scene manager (trolley mesh marker)
-- Starts static `base_link -> workspace_frame` TF publisher
-- Starts coordinate listener with `require_robot_status:=false` default
-- Starts sim truth/perception/cube bridge stack
-- Starts one RViz config for the full integrated view
-
-## 3. Frame model and placement
-
-### Planning root
-
-- `base_link` is the planning frame for MoveIt targets.
-
-### Workspace TF owner
-
-- Node: `holoassist_workspace_frame_tf`
-- File: `moveit_robot_control_node/workspace_frame_tf.py`
-- Parameters are loaded from:
-  - `moveit_robot_control/config/full_holoassist_sim.yaml`
-
-Default transform:
-
-- `base_link -> workspace_frame`
-  - `x_m: -0.100`
-  - `y_m: -0.314`
-  - `z_m: 0.015`
-  - `roll_rad: 0.0`
-  - `pitch_rad: 0.0`
-  - `yaw_rad: 0.0`
-
-These defaults are chosen so workspace board/camera/cubes are placed relative to the robot base rather than identity overlay.
-
-## 4. Parameter ownership (single source map)
-
-## A. Integrated stack tuning
-
-File: `moveit_robot_control/config/full_holoassist_sim.yaml`
-
-- `holoassist_workspace_frame_tf.ros__parameters.parent_frame`
-  - Parent frame for static TF (default `base_link`)
-- `holoassist_workspace_frame_tf.ros__parameters.child_frame`
-  - Child frame for static TF (default `workspace_frame`)
-- `holoassist_workspace_frame_tf.ros__parameters.x_m|y_m|z_m|roll_rad|pitch_rad|yaw_rad`
-  - Robot-to-workspace placement
-
-- `workspace_scene_manager.ros__parameters.table_mesh_resource`
-  - Trolley mesh URI
-- `workspace_scene_manager.ros__parameters.table_mesh_xyz`
-  - Trolley mesh translation in `base_link`
-- `workspace_scene_manager.ros__parameters.table_mesh_rpy_deg`
-  - Trolley mesh orientation in `base_link`
-- `workspace_scene_manager.ros__parameters.table_mesh_scale`
-  - Trolley mesh scale
-- `workspace_scene_manager.ros__parameters.table_collision_*`
-  - Optional collision box tuning
-
-- `holoassist_selected_cube_to_moveit_target.ros__parameters.target_x_offset_m|target_y_offset_m|target_z_offset_m`
-  - Hover/pre-grasp position offsets
-- `holoassist_selected_cube_to_moveit_target.ros__parameters.target_roll_rad|target_pitch_rad|target_yaw_rad`
-  - Pose orientation sent on `/moveit_robot_control/target_pose`
-
-## B. Workspace board/cube geometry
-
-File: `holo_assist_depth_tracker_sim/config/sim_scene.yaml`
-
-- `workspace_frame`
-- `board_width_m`
-- `board_depth_m`
-- `board_thickness_m`
-- `cube_size_m`
-
-## C. Fake camera model and visibility
-
-File: `holo_assist_depth_tracker_sim/config/sim_camera.yaml`
-
-- `camera_default_xyzrpy`
-- `camera_frame`
-- `horizontal_fov_deg`
-- `vertical_fov_deg`
-- `near_clip_m`
-- `far_clip_m`
-- `max_range_m`
-- `frustum_color_rgba`
-- `frustum_line_width`
-
-## D. Cube default spawn and spacing
-
-File: `holo_assist_depth_tracker_sim/config/sim_cubes.yaml`
-
-- `default_cube_centers_xyz_yaw`
-- `min_cube_spacing_m`
-- `randomise_yaw`
-
-## 5. Perception-to-motion data flow
-
-1. `sim_cube_truth_node`
-   - Publishes draggable truth cubes
-   - Publishes camera TF tree and camera markers
-
-2. `sim_cube_perception_node`
-   - Computes visibility in `camera_color_optical_frame`
-   - Publishes perceived cube poses only when visible
-   - Preserves last-seen memory when hidden
-
-3. `sim_cube_moveit_bridge_node`
-   - Publishes perceived cubes to MoveIt planning scene
-   - Publishes selected perceived cube pose to `/holoassist/teleop/selected_cube_pose`
-
-4. `selected_cube_to_moveit_target_node`
-   - Transforms selected perceived pose into `base_link`
-   - Publishes `/moveit_robot_control/target_pose` and `/moveit_robot_control/target_point`
-
-5. `coordinate_listener`
-   - Consumes pose/point target topics
-   - Plans and executes via MoveIt
-
-No truth pose is used for robot target generation.
-
-## 6. Legacy message robustness
-
-`coordinate_listener` conditionally enables the legacy subscription:
-
-- Topic: `/moveit_robot_control/target`
-- Type: `moveit_robot_control_msgs/msg/TargetRPY`
-
-If `moveit_robot_control_msgs` is absent:
-
-- Node does not crash
-- Warning is logged
-- `Point` and `Pose` subscriptions remain active
-
-## 7. RViz expectations
-
-RViz config:
-
-- `holo_assist_depth_tracker_sim/rviz/holoassist_moveit_full.rviz`
-
-Included displays:
-
-- RobotModel
-- TF
-- `/workspace_scene/markers` (trolley marker array)
-- Workspace board marker
-- Workspace tag marker
-- Camera body / optical axis / frustum markers
-- Truth cube markers
-- Perceived cube markers
-- Interactive markers for truth cube dragging
-
-## 8. Validation checklist
-
-After launching, verify:
-
-```bash
-ros2 topic list | egrep "workspace_scene/markers|moveit_robot_control/target_pose|moveit_robot_control/target_point|moveit_robot_control/state|moveit_robot_control/status"
-
-ros2 topic echo /workspace_scene/markers --once
-ros2 topic echo /moveit_robot_control/target_pose --once
-ros2 topic echo /moveit_robot_control/target_point --once
-ros2 topic echo /moveit_robot_control/state --once
-ros2 topic echo /moveit_robot_control/status --once
-
-ros2 topic echo /holoassist/sim/camera/frustum_marker --once
+```
+t=0s   robot_bringup      ros2_control_node (fake HW) + RSP + controller spawner
+t=0s   moveit_stack       move_group + OMPL + SRDF
+t=3s   workspace_tf       static base_link → workspace_frame TF
+t=3s   workspace_scene    trolley mesh visual in RViz
+t=4s   coordinate_listener
+t=4s   pick_place_sequencer
+t=5s   perception_stack   sim truth cubes + fake camera + visibility perception
+t=6s   moveit_bridge      perceived cubes → MoveIt planning scene
+t=6s   selected_cube_adapter   perception → MoveIt goal topics
+t=6s   pick_place_service /holoassist/pick_cube_to_bin service
+t=7s   RViz
 ```
 
-TF checks:
+### Trigger a pick
 
 ```bash
+source install/setup.bash
+ros2 service call /holoassist/pick_cube_to_bin \
+  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
+```
+
+---
+
+## 3. Frame model (simulation)
+
+```
+base_link
+  └─ workspace_frame   [static TF from workspace_frame_tf node]
+       └─ camera_link  [sim_cube_truth_node]
+            └─ camera_color_frame → camera_color_optical_frame
+       └─ apriltag_cube_1 ... apriltag_cube_4  [sim_cube_truth_node]
+```
+
+MoveIt planning frame: `base_link`
+
+---
+
+## 4. Parameter ownership — single source map
+
+### A. Integrated sim config
+
+**File:** `moveit_robot_control/config/full_holoassist_sim.yaml`
+
+| Parameter | Value | Meaning |
+|---|---|---|
+| `holoassist_workspace_frame_tf.x_m` | 0.0 | Workspace centred on robot X axis |
+| `holoassist_workspace_frame_tf.y_m` | -0.315 | 315 mm in front of robot |
+| `holoassist_workspace_frame_tf.z_m` | 0.02 | 20 mm above base_link origin |
+| `workspace_scene_manager.table_mesh_xyz` | [0.031, -0.210, -1.05] | Trolley mesh placement in base_link |
+| `workspace_scene_manager.table_mesh_scale` | [1.0, 1.0, 1.0] | No scale adjustment |
+| `holoassist_selected_cube_to_moveit_target.target_z_offset_m` | 0.10 | Hover 10 cm above cube centre |
+| `holoassist_selected_cube_to_moveit_target.target_roll_rad` | π | Gripper facing down |
+
+### B. Hardware config
+
+**File:** `moveit_robot_control/config/full_holoassist_hw.yaml`
+
+Same as sim config but without `holoassist_workspace_frame_tf` section (workspace TF is solved by the board node on hardware).
+
+### C. Pick-place sequencer params (set in launch file)
+
+| Parameter | Value | Notes |
+|---|---|---|
+| `pregrasp_z_offset` | 0.10 | Approach above cube centre |
+| `grasp_z_offset` | 0.0 | Descend to cube centre (both sim and hardware report centres) |
+| `place_above_z_offset` | 0.15 | Height above bin before descent |
+| `place_z_offset` | 0.05 | Final place height |
+| `place_descent_enabled` | true | Gripper descends before releasing |
+
+**Z offset calibration note:** Both `sim_cube_truth_node` and `cube_pose_node` (hardware) report cube **centres** at Z ≈ +0.020 m above the workspace surface (half of a 4 cm cube). `grasp_z_offset = 0.0` places the gripper at cube centre height. If hardware consistently misses, adjust this parameter rather than the cube pose pipeline.
+
+### D. Workspace board / cube geometry (hardware)
+
+**File:** `holo_assist_depth_tracker/config/workspace.yaml`
+
+- `board_width_m: 0.700`, `board_depth_m: 0.500`
+- `board_tag_center_edge_offset_m: 0.016`
+- `robot_x_m: 0.450`, `robot_y_m: 0.564`, `robot_z_m: -0.015`
+
+### E. Sim scene geometry
+
+**File:** `holo_assist_depth_tracker_sim/config/sim_scene.yaml`
+
+Board and workspace dimensions used by sim nodes.
+
+### F. Sim cubes
+
+**File:** `holo_assist_depth_tracker_sim/config/sim_cubes.yaml`
+
+Default cube spawn positions in workspace_frame.
+
+### G. Fake camera
+
+**File:** `holo_assist_depth_tracker_sim/config/sim_camera.yaml`
+
+Camera default pose in workspace_frame (XYZ + RPY). Default: `[0.0, -0.55, 0.45, 0.0, 0.68, 1.575]`.
+
+---
+
+## 5. Key integration fixes (history)
+
+These were addressed during the j0hn integration pass:
+
+| Issue | Fix |
+|---|---|
+| `scaled_joint_trajectory_controller` not found in sim | Added `require_controller_check` param (default true; set false for sim) |
+| Robot goes to wrong height (too high for grasp) | `grasp_z_offset: 0.0` — sim reports cube centres, not top face |
+| Robot drops cube at bin without descending | `place_descent_enabled: true` |
+| Robot appeared slightly left of workspace board in RViz | `x_m: 0.0` in workspace_frame_tf (was 0.0275) |
+| pick_place_service_node hardcoded to sim truth topics | Added `cube_pose_topic_prefix` param; hardware default = `/holoassist/perception` |
+
+---
+
+## 6. Validation checklist
+
+After launching sim:
+
+```bash
+# Topics present?
+ros2 topic list | grep -E "workspace_scene/markers|moveit_robot_control|pick_place|holoassist/sim"
+
+# Workspace TF?
 ros2 run tf2_ros tf2_echo base_link workspace_frame
-ros2 run tf2_ros tf2_echo workspace_frame camera_link
-```
 
-Selection check:
-
-```bash
-ros2 topic pub --once /holoassist/teleop/selected_cube std_msgs/msg/String "{data: 'april_cube_1'}"
-ros2 topic echo /holoassist/teleop/selected_cube_pose --once
+# Target topics receiving data?
 ros2 topic echo /moveit_robot_control/target_pose --once
-ros2 topic echo /moveit_robot_control/target_point --once
+ros2 topic echo /moveit_robot_control/state --once
+
+# Pick service working?
+source install/setup.bash
+ros2 service call /holoassist/pick_cube_to_bin \
+  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
+
+# Watch execution
+ros2 topic echo /moveit_robot_control/state
 ```
 
-## 9. Merge strategy (`j0hn` -> `main`)
-
-Recommended sequence:
+After launching hardware XR:
 
 ```bash
-# Ensure local branch is up to date
+# Board locked?
+ros2 topic echo /holoassist/perception/workspace_mode --once
+
+# Cube poses present?
+ros2 topic echo /holoassist/perception/april_cube_1_pose --once
+
+# rosbridge running?
+ros2 topic list | grep rosbridge
+```
+
+---
+
+## 7. Merge guide (`j0hn` → `main`)
+
+### Prerequisites
+
+- All three modes validated on target machine
+- Hardware XR launch tested with real RealSense + board
+- No uncommitted changes on `j0hn`
+
+### Merge sequence
+
+```bash
+# Ensure j0hn is current
 git checkout j0hn
 git fetch origin
 git pull --ff-only origin j0hn
@@ -239,56 +210,36 @@ git pull --ff-only origin j0hn
 git checkout main
 git pull --ff-only origin main
 
-# Merge integration branch
+# Merge
 git merge --no-ff j0hn
 
-# Resolve conflicts if any, then
-colcon build --packages-select moveit_robot_control holo_assist_depth_tracker_sim --symlink-install
+# Rebuild integration packages
+colcon build --symlink-install \
+  --packages-select moveit_robot_control holo_assist_depth_tracker holo_assist_depth_tracker_sim
 
-# Push main
+# Verify
+source install/setup.bash
+ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py
+
+# Push
 git push origin main
 ```
 
-Alternative if you prefer rebased history before merge:
-
-```bash
-git checkout j0hn
-git fetch origin
-git rebase origin/main
-# resolve conflicts
-
-git checkout main
-git merge --ff-only j0hn
-git push origin main
-```
-
-## 10. Conflict hot spots during merge
+### Conflict hot spots
 
 Watch these paths first:
 
-- `holo_assist_depth_tracker_sim/launch/*.launch.py`
-- `holo_assist_depth_tracker_sim/rviz/*.rviz`
-- `holo_assist_depth_tracker_sim/holo_assist_depth_tracker_sim/sim_cube_truth_node.py`
-- `moveit_robot_control/moveit_robot_control_node/moveit_robot_control.py`
-- `moveit_robot_control/README.md`
+- `holo_assist_depth_tracker_sim/launch/*.launch.py` — new pick-place nodes and sim topic prefix
+- `moveit_robot_control/moveit_robot_control_node/moveit_robot_control.py` — `require_controller_check` param
+- `moveit_robot_control/launch/coordinate_listener.launch.py` — `require_controller_check` arg
+- `moveit_robot_control/launch/full_holoassist_moveit_sim.launch.py` — pick-place nodes, sim topic prefix
+- `moveit_robot_control/setup.py` — new launch files (hardware, gazebo) must remain in explicit list
 
-If conflicts appear in launch files, preserve:
+### Post-merge sanity checks
 
-- Full-stack launch entry point
-- `publish_scene_state_publisher` integration flag
-- `require_robot_status:=false` fake-hardware path
-- `base_link` planning frame
-
-## 11. Post-merge sanity checks
-
-After merge to `main`:
-
-1. Build succeeds for integration packages
-2. Full launch starts without missing-node errors
+1. Build succeeds for all integration packages
+2. `full_holoassist_moveit_sim.launch.py` starts without missing-node errors
 3. RViz shows trolley + robot + workspace + camera + cubes
-4. Selecting a perceived cube updates target pose/point topics
-5. Coordinate listener remains functional when legacy `TargetRPY` package is unavailable
-
----
-
-Maintainer note: this document intentionally centralizes parameter ownership to make future scene tuning and grasp-stage extension easier.
+4. PickCubeToBin service responds and robot executes pick
+5. `holoassist_full_xr.launch.py` starts without errors (rosbridge on port 9090)
+6. `coordinate_listener` works when legacy `TargetRPY` package is unavailable

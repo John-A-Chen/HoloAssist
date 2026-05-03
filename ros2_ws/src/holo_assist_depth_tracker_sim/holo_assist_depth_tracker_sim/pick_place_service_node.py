@@ -38,14 +38,22 @@ class PickPlaceServiceNode(Node):
         self._tf_buffer = tf2_ros.Buffer()
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
+        self.declare_parameter(
+            "cube_pose_topic_prefix",
+            "/holoassist/perception",
+        )
+        prefix = str(self.get_parameter("cube_pose_topic_prefix").value).rstrip("/")
+
         self._cube_poses: dict[str, Optional[PoseStamped]] = {n: None for n in CUBE_NAMES}
         for name in CUBE_NAMES:
+            topic = f"{prefix}/{name}_pose"
             self.create_subscription(
                 PoseStamped,
-                f"/holoassist/sim/truth/{name}_pose",
+                topic,
                 lambda msg, n=name: self._on_cube_pose(n, msg),
                 10,
             )
+        self.get_logger().info(f"Subscribing to cube poses under prefix: {prefix}")
 
         self._command_pub = self.create_publisher(String, "/pick_place/command", 10)
         self._mode_pub = self.create_publisher(String, "/pick_place/mode", 10)
