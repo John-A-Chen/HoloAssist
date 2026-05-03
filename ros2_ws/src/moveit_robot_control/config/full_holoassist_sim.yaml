@@ -21,12 +21,20 @@ workspace_scene_manager:
     publish_table_mesh: true
     apply_table_collision: false
     table_mesh_resource: package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae
-    table_mesh_xyz: [0.0, 0.0, 0.0]
+    # Trolley mesh placement in base_link frame:
+    #   Z=-1.061: sinks mesh so its top surface (Blender Z=106.05cm, scaled 0.01) aligns with z=0
+    #   Y=-0.210: shifts back edge from +0.356m to +0.146m (146mm from robot base centre)
+    #   X=+0.031: recentres trolley under robot (mesh centre was 31mm off in X)
+    table_mesh_xyz: [0.031, -0.210, -1.061]
     table_mesh_rpy_deg: [0.0, 0.0, 0.0]
     table_mesh_scale: [1.0, 1.0, 1.0]
-    table_collision_xyz: [0.0, 0.0, 1.04]
+    # Collision plane: board surface is at base_link z≈+0.015 m (robot base joint is
+    # 15 mm below the board surface per workspace.yaml robot_z_m=-0.015).
+    # Box center at z=0.0 with thickness 0.030 covers the table top without intruding
+    # into the cube workspace above. Enable apply_table_collision when needed.
+    table_collision_xyz: [0.0, 0.0, 0.0]
     table_collision_rpy_deg: [0.0, 0.0, 0.0]
-    table_collision_size: [0.80, 0.70, 0.04]
+    table_collision_size: [0.80, 0.70, 0.030]
 
 holoassist_selected_cube_to_moveit_target:
   ros__parameters:

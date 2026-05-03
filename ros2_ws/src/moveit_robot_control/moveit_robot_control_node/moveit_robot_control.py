@@ -703,11 +703,13 @@ class MoveItRobotControl(Node):
     def __init__(self) -> None:
         super().__init__("moveit_robot_control")
         self.declare_parameter("move_group_name", MOVE_GROUP_NAME)
+        self.declare_parameter("trajectory_topic", TRAJECTORY_TOPIC)
         self.declare_parameter("require_robot_status", True)
         self.declare_parameter("joint_goal_tolerance", JOINT_SETTLE_TOLERANCE)
         self.declare_parameter("execution_timeout_scale", EXECUTION_TIMEOUT_SCALE)
         self.declare_parameter("execution_timeout_padding", EXECUTION_TIMEOUT_PADDING)
         self.move_group_name = str(self.get_parameter("move_group_name").value)
+        trajectory_topic = str(self.get_parameter("trajectory_topic").value)
         self.require_robot_status = bool(
             self.get_parameter("require_robot_status").value
         )
@@ -742,7 +744,8 @@ class MoveItRobotControl(Node):
         transient_status_qos.reliability = ReliabilityPolicy.RELIABLE
         transient_status_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
 
-        self.trajectory_pub = self.create_publisher(JointTrajectory, TRAJECTORY_TOPIC, 10)
+        self.trajectory_pub = self.create_publisher(JointTrajectory, trajectory_topic, 10)
+        self.get_logger().info("trajectory_topic=%s" % trajectory_topic)
         self.create_subscription(JointState, JOINT_STATES_TOPIC, self.joint_state_cb, 10)
         self.create_subscription(
             Bool,

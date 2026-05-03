@@ -14,7 +14,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 from tf2_ros import TransformBroadcaster
-from tf_transformations import quaternion_from_euler
+from tf_transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback, Marker
 
 from holo_assist_depth_tracker_sim.common import (
@@ -133,6 +133,8 @@ class SimCubeTruthNode(Node):
 
         for name in CUBE_NAMES:
             self._insert_cube_marker(name)
+
+        self._insert_camera_marker()
 
         self._randomise_srv = self.create_service(
             Trigger,
@@ -268,6 +270,89 @@ class SimCubeTruthNode(Node):
 
         self._im_server.insert(marker, feedback_callback=self._on_marker_feedback)
         self._im_server.applyChanges()
+
+    def _insert_camera_marker(self) -> None:
+        x, y, z, roll, pitch, yaw = self.camera_pose_xyzrpy
+        q = quaternion_from_euler(roll, pitch, yaw)
+
+        marker = InteractiveMarker()
+        marker.header.frame_id = self.workspace_frame
+        marker.name = "camera"
+        marker.description = "sim camera"
+        marker.scale = 0.15
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = z
+        marker.pose.orientation.x = float(q[0])
+        marker.pose.orientation.y = float(q[1])
+        marker.pose.orientation.z = float(q[2])
+        marker.pose.orientation.w = float(q[3])
+
+        cam_visual = Marker()
+        cam_visual.type = Marker.CUBE
+        cam_visual.scale.x = self.camera_body_size_xyz[0]
+        cam_visual.scale.y = self.camera_body_size_xyz[1]
+        cam_visual.scale.z = self.camera_body_size_xyz[2]
+        cam_visual.color.r = 0.15
+        cam_visual.color.g = 0.15
+        cam_visual.color.b = 0.85
+        cam_visual.color.a = 0.9
+
+        visual_control = InteractiveMarkerControl()
+        visual_control.always_visible = True
+        visual_control.markers.append(cam_visual)
+        marker.controls.append(visual_control)
+
+        # XY horizontal movement — same ring as cubes (plane perpendicular to world Z)
+        move_xy = InteractiveMarkerControl()
+        move_xy.name = "move_xy"
+        move_xy.orientation.w = 1.0
+        move_xy.orientation.y = 1.0
+        move_xy.interaction_mode = InteractiveMarkerControl.MOVE_PLANE
+        marker.controls.append(move_xy)
+
+        # Z height adjustment — arrow along world Z
+        move_z = InteractiveMarkerControl()
+        move_z.name = "move_z"
+        move_z.orientation.w = 1.0
+        move_z.orientation.y = 1.0
+        move_z.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
+        marker.controls.append(move_z)
+
+        # Pitch (tilt up/down to re-aim after moving)
+        rotate_pitch = InteractiveMarkerControl()
+        rotate_pitch.name = "pitch"
+        rotate_pitch.orientation.w = 1.0
+        rotate_pitch.orientation.x = 1.0
+        rotate_pitch.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
+        marker.controls.append(rotate_pitch)
+
+        self._im_server.insert(marker, feedback_callback=self._on_camera_marker_feedback)
+        self._im_server.applyChanges()
+
+    def _update_camera_interactive_marker(self) -> None:
+        x, y, z, roll, pitch, yaw = self.camera_pose_xyzrpy
+        q = quaternion_from_euler(roll, pitch, yaw)
+        pose = Pose()
+        pose.position.x = x
+        pose.position.y = y
+        pose.position.z = z
+        pose.orientation.x = float(q[0])
+        pose.orientation.y = float(q[1])
+        pose.orientation.z = float(q[2])
+        pose.orientation.w = float(q[3])
+        self._im_server.setPose("camera", pose)
+        self._im_server.applyChanges()
+
+    def _on_camera_marker_feedback(self, feedback: InteractiveMarkerFeedback) -> None:
+        x = float(feedback.pose.position.x)
+        y = float(feedback.pose.position.y)
+        z = max(0.10, float(feedback.pose.position.z))
+        q = feedback.pose.orientation
+        roll, pitch, yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])
+        self.camera_pose_xyzrpy = (x, y, z, float(roll), float(pitch), float(yaw))
+        if z != float(feedback.pose.position.z):
+            self._update_camera_interactive_marker()
 
     def _on_marker_feedback(self, feedback: InteractiveMarkerFeedback) -> None:
         name = feedback.marker_name
@@ -588,6 +673,7 @@ class SimCubeTruthNode(Node):
         now = self.get_clock().now().to_msg()
         self._publish_camera_tf(now)
         self._publish_camera_markers(now)
+        self._update_camera_interactive_marker()
 
         q_cam = quaternion_from_euler(request.roll, request.pitch, request.yaw)
         response.success = True
@@ -608,6 +694,7 @@ class SimCubeTruthNode(Node):
         now = self.get_clock().now().to_msg()
         self._publish_camera_tf(now)
         self._publish_camera_markers(now)
+        self._update_camera_interactive_marker()
         response.success = True
         response.message = (
             "camera pose reset to default " f"{tuple(round(v, 3) for v in self.camera_default_pose_xyzrpy)}"

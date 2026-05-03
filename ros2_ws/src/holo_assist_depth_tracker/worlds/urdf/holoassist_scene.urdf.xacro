@@ -168,10 +168,14 @@
     </collision>
   </link>
 
+  <!-- Robot base in workspace_frame coords:
+       board left edge=0, right=0.700  → robot at x=0.450 → board-centre x=0.450-0.350=+0.100
+       board front edge=0, back=0.500 → robot at y=0.564 → board-centre y=0.564-0.250=+0.314
+       Robot base joint is 15 mm below board surface (z=-0.015). -->
   <joint name="workspace_to_ur3e_base" type="fixed">
     <parent link="workspace_frame"/>
     <child link="ur3e_base_link0"/>
-    <origin xyz="0.000 0.314 -0.015" rpy="0 0 0"/>
+    <origin xyz="0.100 0.314 -0.015" rpy="0 0 0"/>
   </joint>
 
   <xacro:if value="$(arg enable_camera)">
