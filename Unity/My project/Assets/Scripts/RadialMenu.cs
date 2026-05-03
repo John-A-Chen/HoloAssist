@@ -41,6 +41,7 @@ public class RadialMenu : MonoBehaviour
     public PassthroughToggle passthroughToggle;
     public RobotController robotController;
     public RobotHUD robotHUD;
+    public OperatingModeController modeController;
 
     [Header("Controllers (auto-detected if left blank)")]
     [Tooltip("Drag the left controller transform here for reliable anchoring")]
@@ -259,6 +260,19 @@ public class RadialMenu : MonoBehaviour
             {
                 robotController.mode = RobotController.ControlMode.HandGuide;
                 Debug.Log("[RadialMenu] Switched to HandGuide mode");
+            }
+        }, 1);
+
+        AddButton("Auto\nMode", false, () =>
+        {
+            if (modeController != null)
+            {
+                modeController.ToggleMode();
+                Debug.Log($"[RadialMenu] Toggled operating mode");
+            }
+            else
+            {
+                Debug.LogWarning("[RadialMenu] OperatingModeController not assigned");
             }
         }, 1);
 

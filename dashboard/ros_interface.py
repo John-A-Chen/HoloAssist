@@ -180,6 +180,12 @@ class RosInterface:
         self._vel_pub = self._node.create_publisher(
             Float64MultiArray, TOPIC_DEFAULTS["velocity_cmd"], 10
         )
+        self._mode_status_pub = self._node.create_publisher(
+            String, "/holoassist/mode_status", 10
+        )
+        self._pick_place_mode_pub = self._node.create_publisher(
+            String, "/pick_place/mode", 10
+        )
 
         # ── Subscribers ──
 
@@ -261,9 +267,16 @@ class RosInterface:
             self._session_event_cb, 10,
         )
 
+        # Mode commands from Quest 3 (OperatingModeController.cs)
+        self._node.create_subscription(
+            String, "/holoassist/mode_command",
+            self._mode_command_cb, 10,
+        )
+
         # Sampling timers for rolling graph data
         self._node.create_timer(0.1, self._sample_velocities)   # 10Hz
         self._node.create_timer(0.5, self._sample_rates)        # 2Hz
+        self._node.create_timer(0.5, self._publish_mode_status) # 2Hz
 
         self._running = True
         with self._lock:
@@ -382,6 +395,27 @@ class RosInterface:
         self._tick_rate("velocity_cmd")
         self._last_vel_cmd_time = time.time()
 
+    def _mode_command_cb(self, msg):
+        """Handle mode switch requests from Quest 3 OperatingModeController."""
+        requested = msg.data.upper()
+        with self._lock:
+            current = self._operating_mode.name
+        if requested == current:
+            return
+        if requested == "TELEOP":
+            self.switch_to_teleop()
+        elif requested == "MOVEIT":
+            self.switch_to_moveit()
+
+    def _publish_mode_status(self):
+        """Broadcast current operating mode at 2Hz so Quest 3 stays in sync."""
+        if self._node is None:
+            return
+        msg = String()
+        with self._lock:
+            msg.data = self._operating_mode.name
+        self._mode_status_pub.publish(msg)
+
     def _session_status_cb(self, msg):
         try:
             info = json.loads(msg.data)
@@ -430,15 +464,22 @@ class RosInterface:
                 return
             self._status.robot_state = RobotState.ESTOPPED
             self._status.estop_zero_count = 0
+            mode = self._operating_mode
 
         self._add_event("EMERGENCY STOP TRIGGERED")
-        self._publish_zeros(count=10)
 
-        self._safety_stop.clear()
-        self._safety_thread = threading.Thread(target=self._safety_publish_loop, daemon=True)
-        self._safety_thread.start()
+        # Pause pick-place sequencer (safe in both modes)
+        self._publish_pick_place_pause()
 
-        threading.Thread(target=self._deactivate_controller, daemon=True).start()
+        if mode == OperatingMode.TELEOP:
+            self._publish_zeros(count=10)
+            self._safety_stop.clear()
+            self._safety_thread = threading.Thread(target=self._safety_publish_loop, daemon=True)
+            self._safety_thread.start()
+        else:
+            self._publish_zeros(count=10)
+
+        threading.Thread(target=self._deactivate_all_controllers, daemon=True).start()
 
     def _publish_zeros(self, count=1):
         if not ROS_AVAILABLE or self._node is None:
@@ -456,15 +497,30 @@ class RosInterface:
             self._publish_zeros(count=1)
             self._safety_stop.wait(timeout=interval)
 
-    def _deactivate_controller(self):
+    def _publish_pick_place_pause(self):
+        """Pause the pick-place sequencer (safe to call in any mode)."""
+        if not ROS_AVAILABLE or self._node is None:
+            return
+        msg = String()
+        msg.data = "pause"
+        self._pick_place_mode_pub.publish(msg)
+
+    def _deactivate_all_controllers(self):
+        """Deactivate both velocity and trajectory controllers on e-stop."""
+        controllers_to_deactivate = [
+            "forward_velocity_controller",
+            "finger_width_controller",
+            "scaled_joint_trajectory_controller",
+            "finger_width_trajectory_controller",
+        ]
         try:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
-                 "--deactivate", "forward_velocity_controller", "finger_width_controller"],
+                 "--deactivate"] + controllers_to_deactivate,
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                self._add_event("forward_velocity_controller deactivated")
+                self._add_event("All controllers deactivated")
                 with self._lock:
                     self._status.controller_active = False
             else:
@@ -479,25 +535,38 @@ class RosInterface:
             if self._status.robot_state != RobotState.ESTOPPED:
                 return
             self._status.robot_state = RobotState.RESUMING
+            mode = self._operating_mode
 
-        self._add_event("Resuming - reactivating controller...")
+        self._add_event(f"Resuming in {mode.name} mode — reactivating controllers...")
         self._safety_stop.set()
-        threading.Thread(target=self._activate_controller, daemon=True).start()
+        threading.Thread(target=self._activate_for_mode, args=(mode,), daemon=True).start()
 
-    def _activate_controller(self):
+    def _activate_for_mode(self, mode: OperatingMode):
+        if mode == OperatingMode.TELEOP:
+            activate = ["forward_velocity_controller", "finger_width_controller"]
+            deactivate = ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"]
+            label = "TELEOP (velocity controllers)"
+        else:
+            activate = ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"]
+            deactivate = ["forward_velocity_controller", "finger_width_controller"]
+            label = "MOVEIT (trajectory controllers)"
+
         try:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
-                 "--activate", "forward_velocity_controller", "finger_width_controller",
-                 "--deactivate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
+                 "--activate"] + activate + ["--deactivate"] + deactivate,
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                self._add_event("forward_velocity_controller reactivated - ROBOT LIVE")
+                self._add_event(f"{label} reactivated — ROBOT LIVE")
                 with self._lock:
                     self._status.robot_state = RobotState.RUNNING
                     self._status.controller_active = True
                     self._status.estop_zero_count = 0
+                if mode == OperatingMode.MOVEIT:
+                    msg = String()
+                    msg.data = "run"
+                    self._pick_place_mode_pub.publish(msg)
             else:
                 self._add_event(f"Controller activation failed: {result.stderr.strip()}")
                 with self._lock:
