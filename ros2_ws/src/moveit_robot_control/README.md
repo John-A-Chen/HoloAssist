@@ -2,6 +2,34 @@
 
 `moveit_robot_control` is the ROS 2 package in this workspace that sits between MoveIt and the higher-level pick-and-place workflow.
 
+Detailed integration + merge guide:
+
+- [INTEGRATION_AND_MERGE.md](./INTEGRATION_AND_MERGE.md)
+- [docs/MOTION_EXECUTION_REFERENCE.md](./docs/MOTION_EXECUTION_REFERENCE.md)
+- [../../docs/POSE_HANDOFF_CONTRACT.md](../../docs/POSE_HANDOFF_CONTRACT.md)
+- [../../docs/J0HN_MERGED_ARCHITECTURE.md](../../docs/J0HN_MERGED_ARCHITECTURE.md)
+
+## Full Sim + MoveIt (single launch)
+
+For the integrated fake-hardware stack (trolley + MoveIt robot + workspace + camera + truth/perceived cubes + target forwarding):
+
+```bash
+ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py
+```
+
+This launch starts:
+
+- MoveIt bringup from `ur_onrobot_moveit_config`
+- `workspace_scene_manager` (trolley mesh marker on `/workspace_scene/markers`)
+- `holoassist_workspace_frame_tf` (`base_link -> workspace_frame` static TF)
+- `coordinate_listener` with `require_robot_status:=false` by default
+- sim truth/perception stack and selected-cube MoveIt target adapter
+- one RViz session preconfigured for robot + TF + trolley + workspace/camera/cubes
+
+Main scene-placement tuning file:
+
+- `config/full_holoassist_sim.yaml`
+
 It provides three main pieces:
 
 1. `coordinate_listener`
@@ -73,7 +101,7 @@ Output topics:
 
 - `/pick_place/status` - JSON string describing the current step and target coordinates
 - `/moveit_robot_control/target_point` or `/moveit_robot_control/target_pose` - motion goals sent to the coordinate listener
-- `/finger_width_trajectory_controller/follow_joint_trajectory` - gripper command action
+- `/finger_width_trajectory_controller/joint_trajectory` - gripper commands
 - `/workspace_scene/command` - optional block add/remove scene updates
 
 ### 3. Workspace scene manager
@@ -178,58 +206,42 @@ bin_config_path:=/full/path/to/bin_poses.json
 
 ## Build
 
-From the workspace root, build this package with:
+From the workspace root:
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-colcon build --packages-up-to moveit_robot_control --symlink-install
+cd /home/ollie/RS2_workspace/ros2_ws
+colcon build --packages-select moveit_robot_control --symlink-install
 source install/setup.bash
 ```
 
-For the full UR + OnRobot run stack, build the robot control package, the MoveIt config package, and their local dependencies too:
+## Typical run order
+
+The important thing to remember is that `pick_place.launch.py` is not the whole robot stack by itself. It expects the robot driver, controllers, MoveIt, and the coordinate listener to already be available.
+
+### Real robot with UR + OnRobot
+
+Open a separate terminal for each long-running launch.
+
+### Terminal 1 - Robot driver and gripper
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-colcon build --packages-up-to moveit_robot_control ur_onrobot_control ur_onrobot_moveit_config --symlink-install
-source install/setup.bash
-```
-
-ROS 2 launch commands only see packages that have been built into `install/` and then sourced. A package folder existing under `src/` is not enough by itself.
-
-## Typical run order of real robot
-
-Use this when you are connected to the physical UR robot and the physical OnRobot gripper. Open a separate terminal for each long-running launch.
-
-For the real gripper, the UR teach pendant must have the RS485/tool communication forwarder set up and running so the robot accepts connections on TCP port `54321`. The driver exposes that tool connection locally as `/tmp/ttyUR` for the OnRobot serial driver.
-
-You can check the tool bridge with:
-
-```bash
-nc -vz <robot_ip> 54321
-```
-
-### Real Terminal 1 - Robot driver and gripper
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
 ros2 launch ur_onrobot_control start_robot.launch.py \
   ur_type:=ur3e \
   onrobot_type:=rg2 \
   robot_ip:=<robot_ip> \
-  launch_tool_communication:=true \
   gripper_target_force:=5.0
 ```
 
-### Real Terminal 2 - MoveIt
+### Terminal 2 - MoveIt
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
 ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py \
@@ -237,11 +249,11 @@ ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py \
   onrobot_type:=rg2
 ```
 
-### Real Terminal 3 - Optional workspace scene
+### Terminal 3 - Optional workspace scene
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
 ros2 launch moveit_robot_control workspace_scene.launch.py \
@@ -250,16 +262,16 @@ ros2 launch moveit_robot_control workspace_scene.launch.py \
   apply_table_collision:=false
 ```
 
-### Real Terminal 4 - Coordinate listener
+### Terminal 4 - Coordinate listener
 
 Use the UR + OnRobot planning group and TCP:
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
-ros2 launch moveit_robot_control coordinate_listener.launch.py \
+ros2 launch moveit_robot_control_node coordinate_listener.launch.py \
   move_group_name:=ur_onrobot_manipulator \
   ee_link:=gripper_tcp \
   frame:=base_link \
@@ -268,11 +280,11 @@ ros2 launch moveit_robot_control coordinate_listener.launch.py \
   avoid_flange_forearm_clamp:=true
 ```
 
-### Real Terminal 5 - Pick and place
+### Terminal 5 - Pick and place
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
 ros2 launch moveit_robot_control pick_place.launch.py \
@@ -282,13 +294,13 @@ ros2 launch moveit_robot_control pick_place.launch.py \
   block_id:=block_1
 ```
 
-### Real one-command version
+### One-command version of those three launches
 
 If you want the workspace scene, coordinate listener, and pick-place sequencer together, use:
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+cd /home/ollie/RS2_workspace/ros2_ws
 source install/setup.bash
 
 ros2 launch moveit_robot_control pick_place_system.launch.py \
@@ -307,134 +319,20 @@ ros2 launch moveit_robot_control pick_place_system.launch.py \
 
 This combined launch does not start the robot driver or MoveIt. Those still need to be running already.
 
-## Typical run order for fake hardware in sim
-
-Use this when you are running against URSim/Polyscope simulation. The UR side connects to `192.168.56.101`, but the OnRobot gripper is fake and tool communication is disabled. This avoids errors such as `Connection refused` on `192.168.56.101:54321` and `Cannot open serial port /tmp/ttyUR`.
-
-### Sim Terminal 0 - Start URSim
-
-Keep this terminal running.
+If you start the sequencer with `initial_mode:=stop`, it will queue the request but will not move until you publish:
 
 ```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-
-ros2 run ur_client_library start_ursim.sh -m ur3e
+ros2 topic pub --once /pick_place/mode std_msgs/msg/String "{data: run}"
 ```
 
-### Sim Terminal 1 - Robot driver with fake gripper
+### Fake hardware or simulation
 
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
+For fake hardware testing, the key changes are:
 
-ros2 launch ur_onrobot_control start_robot.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2 \
-  robot_ip:=192.168.56.101 \
-  onrobot_use_fake_hardware:=true \
-  launch_tool_communication:=false
-```
+- start the robot bringup with `use_fake_hardware:=true`
+- start the coordinate listener with `require_robot_status:=false`
 
-### Sim Terminal 2 - MoveIt
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2
-```
-
-### Sim Terminal 3 - Optional workspace scene
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control workspace_scene.launch.py \
-  frame_id:=base_link \
-  publish_table_mesh:=true \
-  apply_table_collision:=false
-```
-
-### Sim Terminal 4 - Coordinate listener
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control coordinate_listener.launch.py \
-  move_group_name:=ur_onrobot_manipulator \
-  ee_link:=gripper_tcp \
-  frame:=base_link \
-  allow_pose_goal_fallback:=true \
-  orientation_mode:=auto \
-  avoid_flange_forearm_clamp:=true
-```
-
-### Sim Terminal 5 - Pick and place
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control pick_place.launch.py \
-  frame_id:=base_link \
-  initial_mode:=run \
-  orientation_mode:=auto \
-  block_id:=block_1
-```
-
-### Sim one-command version (terminal 3-5 combined)
-
-If you want the workspace scene, coordinate listener, and pick-place sequencer together, use:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control pick_place_system.launch.py \
-  frame_id:=base_link \
-  publish_table_mesh:=true \
-  apply_table_collision:=false \
-  move_group_name:=ur_onrobot_manipulator \
-  ee_link:=gripper_tcp \
-  frame:=base_link \
-  allow_pose_goal_fallback:=true \
-  orientation_mode:=auto \
-  avoid_flange_forearm_clamp:=true \
-  initial_mode:=run \
-  block_id:=block_1
-```
-
-This combined launch does not start URSim, the robot driver, or MoveIt. Those still need to be running already.
-
-### Pure fake hardware without URSim
-
-Use this variant only when you want a local ROS-only test with no physical robot and no URSim connection:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-source install/setup.bash
-
-ros2 launch ur_onrobot_control start_robot.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2 \
-  use_fake_hardware:=true \
-  onrobot_use_fake_hardware:=true \
-  launch_tool_communication:=false
-```
-
-For pure fake hardware, start the coordinate listener with `require_robot_status:=false`:
+Example coordinate listener launch for fake hardware:
 
 ```bash
 ros2 launch moveit_robot_control coordinate_listener.launch.py \
@@ -444,12 +342,6 @@ ros2 launch moveit_robot_control coordinate_listener.launch.py \
   require_robot_status:=false \
   allow_pose_goal_fallback:=true \
   orientation_mode:=auto
-```
-
-If you start the sequencer with `initial_mode:=stop`, it will queue the request but will not move until you publish:
-
-```bash
-ros2 topic pub --once /pick_place/mode std_msgs/msg/String "{data: run}"
 ```
 
 ## Quick tests
@@ -546,7 +438,6 @@ ros2 topic echo /moveit_robot_control/debug
 - `initial_mode`
 - `open_width`
 - `close_width`
-- `gripper_action_name`
 
 ### Workspace scene manager
 
@@ -568,72 +459,6 @@ The normal flow is:
 7. The sequencer optionally removes and re-adds the block in the planning scene
 
 ## Troubleshooting
-
-### `Package 'ur_onrobot_control' not found`
-
-If the files are visible under `src/ur_onrobot/ur_onrobot_control` but `ros2 launch` cannot find the package, the package has not been built into the active ROS environment yet.
-
-Run:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
-colcon build --packages-up-to ur_onrobot_control --symlink-install
-source install/setup.bash
-```
-
-Then check:
-
-```bash
-ros2 pkg list | grep ur_onrobot_control
-```
-
-If the next launch reports `Package 'ur_onrobot_moveit_config' not found`, build the full UR + OnRobot stack from the Build section instead.
-
-### `Cannot open serial port /tmp/ttyUR` or `Connection refused`
-
-This means the OnRobot gripper serial bridge did not come up. The launch creates `/tmp/ttyUR` by connecting to TCP port `54321` on the UR robot.
-
-For the real robot, check that the teach pendant has the RS485/tool communication forwarder installed and running, then check:
-
-```bash
-nc -vz <robot_ip> 54321
-```
-
-For URSim or any setup without the real OnRobot tool bridge, use the command from Sim Terminal 1:
-
-```bash
-ros2 launch ur_onrobot_control start_robot.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2 \
-  robot_ip:=192.168.56.101 \
-  onrobot_use_fake_hardware:=true \
-  launch_tool_communication:=false
-```
-
-### Gripper commands run but the gripper does not move
-
-The pick-place sequencer sends gripper commands through:
-
-```bash
-/finger_width_trajectory_controller/follow_joint_trajectory
-```
-
-Check that the gripper controller is active:
-
-```bash
-ros2 control list_controllers | grep finger_width
-```
-
-If `finger_width_trajectory_controller` is `inactive`, activate it:
-
-```bash
-ros2 control switch_controllers \
-  --activate finger_width_trajectory_controller \
-  --activate-asap
-```
-
-For sim/fake gripper runs, this changes the `finger_width` joint state/RViz model only. It will not move a physical gripper unless the real OnRobot hardware and tool bridge are connected.
 
 ### `pick_place.launch.py` starts but nothing moves
 

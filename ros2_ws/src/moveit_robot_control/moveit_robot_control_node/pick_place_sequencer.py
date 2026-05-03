@@ -9,7 +9,6 @@ from typing import Any, Optional, Sequence
 import rclpy
 from ament_index_python.packages import PackageNotFoundError
 from ament_index_python.packages import get_package_share_directory
-from control_msgs.action import FollowJointTrajectory
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
@@ -17,7 +16,6 @@ from geometry_msgs.msg import Quaternion
 from moveit_msgs.msg import CollisionObject
 from moveit_msgs.msg import PlanningScene
 from moveit_msgs.srv import ApplyPlanningScene
-from rclpy.action import ActionClient
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import String
@@ -34,9 +32,7 @@ DEFAULT_TARGET_POSE_TOPIC = "/moveit_robot_control/target_pose"
 DEFAULT_TARGET_POINT_TOPIC = "/moveit_robot_control/target_point"
 DEFAULT_MOVE_STATE_TOPIC = "/moveit_robot_control/state"
 DEFAULT_MOVE_COMPLETE_TOPIC = "/moveit_robot_control/complete"
-DEFAULT_GRIPPER_ACTION_NAME = (
-    "/finger_width_trajectory_controller/follow_joint_trajectory"
-)
+DEFAULT_GRIPPER_TOPIC = "/finger_width_trajectory_controller/joint_trajectory"
 DEFAULT_WORKSPACE_COMMAND_TOPIC = "/workspace_scene/command"
 DEFAULT_APPLY_PLANNING_SCENE_SERVICE = "/apply_planning_scene"
 PACKAGE_NAME = "moveit_robot_control"
@@ -187,7 +183,7 @@ class PickPlaceSequencer(Node):
         self.declare_parameter("target_point_topic", DEFAULT_TARGET_POINT_TOPIC)
         self.declare_parameter("move_state_topic", DEFAULT_MOVE_STATE_TOPIC)
         self.declare_parameter("move_complete_topic", DEFAULT_MOVE_COMPLETE_TOPIC)
-        self.declare_parameter("gripper_action_name", DEFAULT_GRIPPER_ACTION_NAME)
+        self.declare_parameter("gripper_topic", DEFAULT_GRIPPER_TOPIC)
         self.declare_parameter(
             "workspace_command_topic", DEFAULT_WORKSPACE_COMMAND_TOPIC
         )
@@ -242,7 +238,7 @@ class PickPlaceSequencer(Node):
         target_point_topic = str(self.get_parameter("target_point_topic").value)
         move_state_topic = str(self.get_parameter("move_state_topic").value)
         move_complete_topic = str(self.get_parameter("move_complete_topic").value)
-        self.gripper_action_name = str(self.get_parameter("gripper_action_name").value)
+        gripper_topic = str(self.get_parameter("gripper_topic").value)
         self.workspace_command_topic = str(
             self.get_parameter("workspace_command_topic").value
         )
@@ -323,11 +319,7 @@ class PickPlaceSequencer(Node):
 
         self.target_pose_pub = self.create_publisher(Pose, target_pose_topic, 10)
         self.target_point_pub = self.create_publisher(Point, target_point_topic, 10)
-        self.gripper_action_client = ActionClient(
-            self,
-            FollowJointTrajectory,
-            self.gripper_action_name,
-        )
+        self.gripper_pub = self.create_publisher(JointTrajectory, gripper_topic, 10)
         self.workspace_command_pub = self.create_publisher(
             String, self.workspace_command_topic, 10
         )
@@ -349,7 +341,7 @@ class PickPlaceSequencer(Node):
             mode_topic=mode_topic,
             target_pose_topic=target_pose_topic,
             target_point_topic=target_point_topic,
-            gripper_action_name=self.gripper_action_name,
+            gripper_topic=gripper_topic,
             place_xyz=[
                 self.default_place_pose.position.x,
                 self.default_place_pose.position.y,
@@ -851,51 +843,14 @@ class PickPlaceSequencer(Node):
 
         point = JointTrajectoryPoint()
         point.positions = [float(width)]
-        point.velocities = [0.0]
         point.time_from_start.sec = int(self.gripper_motion_sec)
         point.time_from_start.nanosec = int(
             round((self.gripper_motion_sec - point.time_from_start.sec) * 1e9)
         )
         trajectory.points.append(point)
 
-        if not self.gripper_action_client.wait_for_server(timeout_sec=5.0):
-            raise RuntimeError(
-                "gripper action server is not available: "
-                f"{self.gripper_action_name}"
-            )
-
-        goal = FollowJointTrajectory.Goal()
-        goal.trajectory = trajectory
-
-        send_goal_future = self.gripper_action_client.send_goal_async(goal)
-        goal_handle = self.wait_for_future(
-            send_goal_future,
-            5.0,
-            f"{label} goal acceptance",
-        )
-        if goal_handle is None or not goal_handle.accepted:
-            raise RuntimeError(f"{label} was rejected by the gripper controller")
-
-        result_future = goal_handle.get_result_async()
-        result_response = self.wait_for_future(
-            result_future,
-            max(5.0, self.gripper_motion_sec + 5.0),
-            f"{label} result",
-        )
-        result = result_response.result
-        if result.error_code != 0:
-            detail = result.error_string or f"error_code={result.error_code}"
-            raise RuntimeError(f"{label} failed in gripper controller: {detail}")
-
-    def wait_for_future(self, future, timeout_sec: float, label: str):
-        deadline = time.monotonic() + timeout_sec
-        while rclpy.ok() and not future.done():
-            if time.monotonic() >= deadline:
-                raise RuntimeError(f"Timed out waiting for {label}")
-            time.sleep(0.05)
-        if not future.done():
-            raise RuntimeError(f"Interrupted while waiting for {label}")
-        return future.result()
+        self.gripper_pub.publish(trajectory)
+        time.sleep(max(0.0, self.gripper_motion_sec))
 
     def remove_block_from_scene(self, block_id: str, frame_id: str) -> None:
         self.publish_workspace_command({"action": "remove", "id": block_id})

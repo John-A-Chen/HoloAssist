@@ -18,6 +18,9 @@ setup(
             "share/" + package_name + "/launch",
             [
                 "launch/coordinate_listener.launch.py",
+                "launch/full_holoassist_moveit_sim.launch.py",
+                "launch/full_holoassist_gazebo_sim.launch.py",
+                "launch/full_holoassist_hardware.launch.py",
                 "launch/pick_place_system.launch.py",
                 "launch/pick_place.launch.py",
                 "launch/workspace_scene.launch.py",
@@ -29,7 +32,7 @@ setup(
         ),
         (
             "share/" + package_name + "/config",
-            glob("config/*.json"),
+            glob("config/*.json") + glob("config/*.yaml"),
         ),
         (
             "share/" + package_name + "/meshes",
@@ -57,6 +60,10 @@ setup(
             (
                 "pick_place_sequencer = "
                 "moveit_robot_control_node.pick_place_sequencer:main"
+            ),
+            (
+                "workspace_frame_tf = "
+                "moveit_robot_control_node.workspace_frame_tf:main"
             ),
         ],
     },

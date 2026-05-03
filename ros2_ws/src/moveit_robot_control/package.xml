@@ -10,7 +10,6 @@
   <buildtool_depend>ament_python</buildtool_depend>
 
   <exec_depend>ament_index_python</exec_depend>
-  <exec_depend>control_msgs</exec_depend>
   <exec_depend>controller_manager_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>moveit_robot_control_msgs</exec_depend>
@@ -21,6 +20,7 @@
   <exec_depend>shape_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
   <exec_depend>ur_dashboard_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>

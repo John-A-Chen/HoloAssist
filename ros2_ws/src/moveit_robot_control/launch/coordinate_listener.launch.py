@@ -10,7 +10,7 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 "move_group_name",
-                default_value="ur_manipulator",
+                default_value="ur_onrobot_manipulator",
                 description="MoveIt planning group used for coordinate goals.",
             ),
             DeclareLaunchArgument(
@@ -22,6 +22,14 @@ def generate_launch_description():
                 "ee_link",
                 default_value="tool0",
                 description="End-effector link to move to coordinate goals.",
+            ),
+            DeclareLaunchArgument(
+                "trajectory_topic",
+                default_value="/scaled_joint_trajectory_controller/joint_trajectory",
+                description=(
+                    "JointTrajectory topic to publish planned trajectories on. "
+                    "Use /joint_trajectory_controller/joint_trajectory for fake hardware."
+                ),
             ),
             DeclareLaunchArgument(
                 "pose_topic",
@@ -44,6 +52,14 @@ def generate_launch_description():
                 description=(
                     "Require UR driver status topics before executing. Set false "
                     "for fake hardware simulation."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "require_controller_check",
+                default_value="true",
+                description=(
+                    "Check and activate scaled_joint_trajectory_controller before "
+                    "executing. Set false for fake hardware simulation."
                 ),
             ),
             DeclareLaunchArgument(
@@ -200,6 +216,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "move_group_name": LaunchConfiguration("move_group_name"),
+                        "trajectory_topic": LaunchConfiguration("trajectory_topic"),
                         "frame": LaunchConfiguration("frame"),
                         "ee_link": LaunchConfiguration("ee_link"),
                         "coordinate_topic": LaunchConfiguration("coordinate_topic"),
@@ -207,6 +224,10 @@ def generate_launch_description():
                         "pose_topic": LaunchConfiguration("pose_topic"),
                         "require_robot_status": LaunchConfiguration(
                             "require_robot_status"
+                        ),
+                        "require_controller_check": ParameterValue(
+                            LaunchConfiguration("require_controller_check"),
+                            value_type=bool,
                         ),
                         "allow_pose_goal_fallback": LaunchConfiguration(
                             "allow_pose_goal_fallback"

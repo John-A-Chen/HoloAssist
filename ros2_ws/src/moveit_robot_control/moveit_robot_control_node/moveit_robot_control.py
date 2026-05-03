@@ -18,7 +18,12 @@ from controller_manager_msgs.srv import SwitchController
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Quaternion
-from moveit_robot_control_msgs.msg import TargetRPY
+try:
+    from moveit_robot_control_msgs.msg import TargetRPY
+    HAVE_TARGET_RPY = True
+except ImportError:
+    TargetRPY = None
+    HAVE_TARGET_RPY = False
 from moveit_msgs.msg import BoundingVolume
 from moveit_msgs.msg import Constraints
 from moveit_msgs.msg import CollisionObject
@@ -698,13 +703,19 @@ class MoveItRobotControl(Node):
     def __init__(self) -> None:
         super().__init__("moveit_robot_control")
         self.declare_parameter("move_group_name", MOVE_GROUP_NAME)
+        self.declare_parameter("trajectory_topic", TRAJECTORY_TOPIC)
         self.declare_parameter("require_robot_status", True)
+        self.declare_parameter("require_controller_check", True)
         self.declare_parameter("joint_goal_tolerance", JOINT_SETTLE_TOLERANCE)
         self.declare_parameter("execution_timeout_scale", EXECUTION_TIMEOUT_SCALE)
         self.declare_parameter("execution_timeout_padding", EXECUTION_TIMEOUT_PADDING)
         self.move_group_name = str(self.get_parameter("move_group_name").value)
+        trajectory_topic = str(self.get_parameter("trajectory_topic").value)
         self.require_robot_status = bool(
             self.get_parameter("require_robot_status").value
+        )
+        self.require_controller_check = bool(
+            self.get_parameter("require_controller_check").value
         )
         self.joint_goal_tolerance = float(
             self.get_parameter("joint_goal_tolerance").value
@@ -737,7 +748,8 @@ class MoveItRobotControl(Node):
         transient_status_qos.reliability = ReliabilityPolicy.RELIABLE
         transient_status_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
 
-        self.trajectory_pub = self.create_publisher(JointTrajectory, TRAJECTORY_TOPIC, 10)
+        self.trajectory_pub = self.create_publisher(JointTrajectory, trajectory_topic, 10)
+        self.get_logger().info("trajectory_topic=%s" % trajectory_topic)
         self.create_subscription(JointState, JOINT_STATES_TOPIC, self.joint_state_cb, 10)
         self.create_subscription(
             Bool,
@@ -1121,16 +1133,17 @@ class MoveItRobotControl(Node):
             )
 
     def assert_robot_ready(self) -> None:
-        self.refresh_controller_status()
-
-        if not self.controller_active:
-            self.get_logger().info(
-                "scaled_joint_trajectory_controller is inactive, trying to activate it"
-            )
-            self.activate_scaled_controller()
+        if self.require_controller_check:
             self.refresh_controller_status()
+
             if not self.controller_active:
-                raise RuntimeError("scaled_joint_trajectory_controller is not active")
+                self.get_logger().info(
+                    "scaled_joint_trajectory_controller is inactive, trying to activate it"
+                )
+                self.activate_scaled_controller()
+                self.refresh_controller_status()
+                if not self.controller_active:
+                    raise RuntimeError("scaled_joint_trajectory_controller is not active")
 
         if not self.require_robot_status:
             self.get_logger().info("Skipping robot status checks")
@@ -2178,16 +2191,26 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.status_pub = self.create_publisher(String, status_topic, 10)
         self.state_pub = self.create_publisher(String, state_topic, state_qos)
         self.debug_pub = self.create_publisher(String, debug_topic, state_qos)
-        self.create_subscription(TargetRPY, coordinate_topic, self.target_rpy_cb, 10)
+        accepted_goal_inputs = []
+        if HAVE_TARGET_RPY:
+            self.create_subscription(TargetRPY, coordinate_topic, self.target_rpy_cb, 10)
+            accepted_goal_inputs.append(
+                f"moveit_robot_control_msgs/msg/TargetRPY goals to {coordinate_topic}"
+            )
+        else:
+            self.get_logger().warning(
+                "moveit_robot_control_msgs not found, disabling "
+                f"{coordinate_topic} TargetRPY input"
+            )
+        accepted_goal_inputs.append(f"geometry_msgs/msg/Point goals to {point_topic}")
+        accepted_goal_inputs.append(f"geometry_msgs/msg/Pose goals to {pose_topic}")
         self.create_subscription(Point, point_topic, self.coordinate_cb, 10)
         self.create_subscription(Pose, pose_topic, self.pose_cb, 10)
 
         self.publish_status(
             "Coordinate listener starting. Send "
-            f"moveit_robot_control_msgs/msg/TargetRPY goals to {coordinate_topic}, "
-            f"geometry_msgs/msg/Point goals to {point_topic}, or "
-            f"geometry_msgs/msg/Pose goals to {pose_topic}; completion publishes "
-            f"to {complete_topic}."
+            + ", or ".join(accepted_goal_inputs)
+            + f"; completion publishes to {complete_topic}."
         )
         self.publish_state(
             "STARTING",

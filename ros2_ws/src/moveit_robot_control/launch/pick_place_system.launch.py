@@ -43,7 +43,6 @@ def generate_launch_description():
             "initial_mode": LaunchConfiguration("initial_mode"),
             "orientation_mode": LaunchConfiguration("orientation_mode"),
             "block_id": LaunchConfiguration("block_id"),
-            "gripper_action_name": LaunchConfiguration("gripper_action_name"),
         }.items(),
     )
 
@@ -103,11 +102,6 @@ def generate_launch_description():
                 "block_id",
                 default_value="block_1",
                 description="Collision/marker object id for the block.",
-            ),
-            DeclareLaunchArgument(
-                "gripper_action_name",
-                default_value="/finger_width_trajectory_controller/follow_joint_trajectory",
-                description="FollowJointTrajectory action used for gripper commands.",
             ),
             workspace_scene_launch,
             coordinate_listener_launch,
