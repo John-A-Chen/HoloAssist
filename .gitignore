@@ -1,4 +1,7 @@
 # ROS workspace build artifacts
+/build/
+/install/
+/log/
 /ros2_ws/build/
 /ros2_ws/install/
 /ros2_ws/log/
@@ -65,3 +68,38 @@ Thumbs.db
 holoassist-dashboard/node_modules/
 holoassist-dashboard/dist/
 holoassist-dashboard/.vite/
+
+# Unity (track source-of-truth files, ignore generated/local noise)
+Unity/**/[Ll]ibrary/
+Unity/**/[Tt]emp/
+Unity/**/[Oo]bj/
+Unity/**/[Bb]uild/
+Unity/**/[Bb]uilds/
+Unity/**/[Ll]ogs/
+Unity/**/[Uu]ser[Ss]ettings/
+Unity/**/.vscode/
+Unity/**/.vs/
+Unity/**/.idea/
+Unity/**/.gradle/
+Unity/**/.utmp/
+Unity/**/.plastic/
+Unity/**/MemoryCaptures/
+Unity/**/Recordings/
+Unity/**/*_BurstDebugInformation_DoNotShip/
+Unity/**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+Unity/**/*.csproj
+Unity/**/*.sln
+Unity/**/*.suo
+Unity/**/*.tmp
+Unity/**/*.user
+Unity/**/*.userprefs
+Unity/**/*.pidb
+Unity/**/*.booproj
+Unity/**/*.svd
+Unity/**/*.slnx
+Unity/**/*.apk
+Unity/**/ignore.conf
+
+# Local cloned Unity dependency repos (not part of this repo history)
+ROS-TCP-Connector/
+URDF-Importer/

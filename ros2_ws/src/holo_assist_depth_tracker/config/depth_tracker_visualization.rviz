@@ -1,86 +1,442 @@
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 70
     Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 435
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
+    Expanded: ~
     Name: Tool Properties
+    Splitter Ratio: 0.5
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
 Visualization Manager:
   Class: ""
-  Global Options:
-    Background Color: 30; 30; 30
-    Fixed Frame: camera_depth_optical_frame
-    Frame Rate: 30
   Displays:
-    - Class: rviz_default_plugins/Grid
-      Name: Grid
+    - Alpha: 0.4000000059604645
+      Cell Size: 0.10000000149011612
+      Class: rviz_default_plugins/Grid
+      Color: 120; 120; 120
       Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
       Plane: XY
       Plane Cell Count: 20
-      Cell Size: 0.1
-      Color: 120; 120; 120
-      Alpha: 0.4
-      Line Style:
-        Value: Lines
-        Line Width: 0.03
       Reference Frame: <Fixed Frame>
-    - Class: rviz_default_plugins/PointCloud2
-      Name: Depth PointCloud
-      Enabled: true
-      Topic:
-        Value: /holo_assist_depth_tracker/pointcloud
-      Style: Points
-      Size (Pixels): 3
-      Size (m): 0.01
-      Alpha: 1
-      Decay Time: 0
-      Queue Size: 10
-      Color Transformer: AxisColor
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 0.2335716187953949
+        Min Value: -1.0896834135055542
+        Value: true
       Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Depth PointCloud
       Position Transformer: XYZ
       Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holo_assist_depth_tracker/pointcloud
       Use Fixed Frame: true
       Use rainbow: true
-    - Class: rviz_default_plugins/Marker
-      Name: Obstacle Marker
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: -9999
+        Min Value: 9999
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 0
       Enabled: true
-      Marker Topic:
-        Value: /holo_assist_depth_tracker/obstacle_marker
-      Queue Size: 100
-      Namespaces:
-        holo_assist_depth_tracker_obstacle: true
-    - Class: rviz_default_plugins/Image
-      Name: Tracker Debug Image
-      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Workspace Cropped PointCloud
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Points
       Topic:
-        Value: /holo_assist_depth_tracker/debug_image
-      Queue Size: 2
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/cropped_pointcloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 140; 60
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Foreground PointCloud
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 4
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/foreground_pointcloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Obstacle Marker
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holo_assist_depth_tracker/obstacle_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Bench Plane Marker
+      Namespaces:
+        holoassist_bench_plane: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/bench_plane_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Workspace Tag Markers
+      Namespaces:
+        holoassist_workspace_tags: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/workspace_tag_markers
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Workspace Axes Marker
+      Namespaces:
+        holoassist_workspace_axes: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/workspace_axes_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Object Marker
+      Namespaces:
+        holoassist_object: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/object_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Robot Pose Marker
+      Namespaces:
+        holoassist_robot_pose: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/ur3e_base_link0_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 1 Marker
+      Namespaces:
+        holoassist_april_cube_1: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_1_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 2 Marker
+      Namespaces:
+        holoassist_april_cube_2: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_2_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 3 Marker
+      Namespaces:
+        holoassist_april_cube_3: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_3_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 4 Marker
+      Namespaces:
+        holoassist_april_cube_4: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_4_marker
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        apriltag_cube_1:
+          Value: true
+        apriltag_cube_2:
+          Value: true
+        apriltag_cube_3:
+          Value: true
+        apriltag_cube_4:
+          Value: true
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
+        tag36h11:0:
+          Value: true
+        tag36h11:1:
+          Value: true
+        tag36h11:10:
+          Value: true
+        tag36h11:16:
+          Value: true
+        tag36h11:2:
+          Value: true
+        tag36h11:24:
+          Value: true
+        tag36h11:3:
+          Value: true
+        tag36h11:33:
+          Value: true
+        ur3e_base_link0:
+          Value: true
+        workspace_frame:
+          Value: true
+      Marker Scale: 0.11999999731779099
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        camera_link:
+          camera_color_frame:
+            camera_color_optical_frame:
+              tag36h11:0:
+                {}
+              tag36h11:1:
+                {}
+              tag36h11:10:
+                {}
+              tag36h11:16:
+                {}
+              tag36h11:2:
+                {}
+              tag36h11:24:
+                {}
+              tag36h11:3:
+                {}
+              tag36h11:33:
+                {}
+          camera_depth_frame:
+            camera_depth_optical_frame:
+              {}
+        workspace_frame:
+          apriltag_cube_1:
+            {}
+          apriltag_cube_2:
+            {}
+          apriltag_cube_3:
+            {}
+          apriltag_cube_4:
+            {}
+          ur3e_base_link0:
+            {}
+      Update Interval: 0
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
       Max Value: 1
-      Min Value: 0
-      Normalize Range: true
       Median window: 5
-      Transport Hint: raw
+      Min Value: 0
+      Name: Tracker RGB Overlay
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holo_assist_depth_tracker/debug_image
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: false
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Camera Color Raw
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /camera/camera/color/image_raw
+      Value: false
   Enabled: true
+  Global Options:
+    Background Color: 30; 30; 30
+    Fixed Frame: workspace_frame
+    Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
       Hide Inactive Objects: true
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 1.4
+      Distance: 4.730434417724609
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 1.0
-      Pitch: 0.65
-      Yaw: 0.75
+        X: 0.1618371158838272
+        Y: 0.11709396541118622
+        Z: 0.23696738481521606
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.30500108003616333
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 5.21319055557251
+    Saved: ~
 Window Geometry:
-  Width: 1500
-  Height: 900
-  X: 100
-  Y: 80
+  Camera Color Raw:
+    collapsed: false
+  Displays:
+    collapsed: false
+  Height: 1136
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000002fe00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff0000047c0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Tracker RGB Overlay:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1920
+  X: 0
+  Y: 27

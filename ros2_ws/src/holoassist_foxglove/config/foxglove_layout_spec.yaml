@@ -1,0 +1,125 @@
+layout_name: holoassist_operations_default
+description: >
+  Recommended Foxglove panel mapping for runtime operations, debugging, and demos.
+  This is a topic/panel specification intended as a reproducible baseline when
+  building a Foxglove layout in Studio.
+
+sections:
+  - name: primary_camera_views
+    panels:
+      - panel: Image
+        topic: /holo_assist_depth_tracker/debug_image
+        notes: Primary perception debug image.
+      - panel: Image
+        topic: /headset/image_compressed
+        notes: Headset feed when available.
+
+  - name: robot_scene_3d
+    panels:
+      - panel: 3D
+        topic: /tf
+        notes: Robot model and transform tree.
+      - panel: 3D
+        topic: /holo_assist_depth_tracker/pointcloud
+        notes: Depth point cloud overlay.
+      - panel: 3D
+        topic: /holoassist/perception/cropped_pointcloud
+        notes: Workspace ROI-cropped point cloud.
+      - panel: 3D
+        topic: /holoassist/perception/foreground_pointcloud
+        notes: Foreground-only cloud after background subtraction.
+      - panel: 3D
+        topic: /holo_assist_depth_tracker/obstacle_marker
+        notes: Detected obstacle marker.
+      - panel: 3D
+        topic: /holoassist/perception/object_marker
+        notes: Normalized object marker topic for downstream apps.
+      - panel: 3D
+        topic: /holoassist/perception/ur3e_base_link0_marker
+        notes: Hardcoded UR3e base_link0 pose marker in workspace frame.
+      - panel: 3D
+        topic: /holoassist/perception/bench_plane_marker
+        notes: Bench plane marker in workspace frame.
+      - panel: 3D
+        topic: /holoassist/perception/workspace_tag_markers
+        notes: Detected AprilTag corner markers.
+      - panel: 3D
+        topic: /holoassist/perception/workspace_axes_marker
+        notes: Workspace frame axis arrows.
+      - panel: 3D
+        topic: /clicked_goal_marker
+        notes: Planner target marker.
+      - panel: 3D
+        topic: /unity_markers
+        notes: Unity-linked TF marker overlays.
+
+  - name: teleop_and_planner
+    panels:
+      - panel: Raw Messages
+        topic: /holoassist/state/teleop
+      - panel: Raw Messages
+        topic: /holoassist/state/planner
+      - panel: Raw Messages
+        topic: /ur3_keyboard/command_text
+      - panel: Plot
+        topic: /holoassist/metrics/target_transport_latency_ms
+      - panel: Plot
+        topic: /holoassist/metrics/twist_transport_latency_ms
+      - panel: Raw Messages
+        topic: /holoassist/perception/object_pose
+      - panel: Raw Messages
+        topic: /holoassist/perception/object_pose_workspace
+      - panel: Raw Messages
+        topic: /holoassist/perception/ur3e_base_link0_pose
+      - panel: Raw Messages
+        topic: /holoassist/perception/workspace_mode
+      - panel: Raw Messages
+        topic: /holoassist/perception/workspace_diagnostics
+      - panel: Raw Messages
+        topic: /holoassist/perception/bench_plane_coefficients
+      - panel: Plot
+        topic: /holoassist/perception/object_metrics
+
+  - name: safety_and_runtime
+    panels:
+      - panel: Raw Messages
+        topic: /holoassist/state/safety
+      - panel: Raw Messages
+        topic: /holoassist/state/runtime
+      - panel: Diagnostics
+        topic: /holoassist/diagnostics
+      - panel: Raw Messages
+        topic: /holoassist_manager/mode
+      - panel: Raw Messages
+        topic: /holoassist_manager/diagnostics
+
+  - name: performance_and_network
+    panels:
+      - panel: Plot
+        topic: /holoassist/metrics/joint_states_hz
+      - panel: Plot
+        topic: /holoassist/metrics/pointcloud_hz
+      - panel: Plot
+        topic: /holoassist/metrics/debug_image_hz
+      - panel: Plot
+        topic: /holoassist/metrics/bbox_hz
+      - panel: Plot
+        topic: /holoassist/metrics/pointcloud_points
+      - panel: Plot
+        topic: /holoassist/metrics/debug_image_age_s
+      - panel: Plot
+        topic: /holoassist/metrics/pointcloud_age_s
+      - panel: Plot
+        topic: /holoassist/metrics/perception_pipeline_ok
+      - panel: Plot
+        topic: /holoassist/metrics/unity_tcp_latency_ms
+      - panel: Plot
+        topic: /holoassist/metrics/foxglove_tcp_latency_ms
+
+  - name: event_stream
+    panels:
+      - panel: Log
+        topic: /holoassist/events
+      - panel: Raw Messages
+        topic: /rosout
+        notes: Native ROS logs for subsystem debugging.

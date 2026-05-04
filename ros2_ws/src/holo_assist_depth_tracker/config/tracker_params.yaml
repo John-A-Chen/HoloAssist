@@ -4,17 +4,76 @@ holo_assist_depth_tracker:
     camera_info_topic: /camera/camera/depth/camera_info
 
     min_depth_m: 0.3
-    max_depth_m: 10.0
-    min_area_px: 100
-    morph_kernel: 3
+    # Camera-space depth gate for raw depth tracker cloud.
+    # Tighten this to remove distant clutter; adjust per rig.
+    max_depth_m: 1.4
+    min_area_px: 350
+    morph_kernel: 5
 
     publish_pointcloud: true
     pointcloud_topic: /holo_assist_depth_tracker/pointcloud
-    point_stride_px: 2
+    # Increase stride to reduce CPU + RViz load.
+    point_stride_px: 3
     temporal_alpha: 0.35
-    max_points: 120000
+    # Keep this moderate for interactive RViz performance.
+    max_points: 40000
 
-    publish_obstacle_marker: true
+    # Disable legacy single obstacle cube (often captures bench/background).
+    # Use /holoassist/perception/object_marker from workspace perception instead.
+    publish_obstacle_marker: false
     obstacle_topic: /holo_assist_depth_tracker/obstacle_marker
     obstacle_padding_m: 0.05
     obstacle_min_size_m: 0.08
+
+    # RGB debug overlay (boxes + distance + pose text).
+    use_rgb_debug_image: true
+    rgb_topic: /camera/camera/color/image_raw
+    rgb_topic_fallback: /camera/color/image_raw
+    rgb_timeout_s: 0.6
+    object_pose_topic: /holoassist/perception/object_pose
+    object_pose_timeout_s: 0.8
+
+    # Centroid stability: only update when the blob is noticeably closer,
+    # with a force-update fallback for large lateral motion.
+    centroid_update_closer_only: true
+    centroid_min_closer_m: 0.03
+    centroid_smoothing_alpha: 0.25
+    centroid_force_update_px: 80.0
+    centroid_reset_after_missed_frames: 8
+    max_debug_boxes: 2
+    max_component_area_ratio: 0.18
+
+    enable_apriltag_overlay: true
+    apriltag_topic: /detections_all
+    apriltag_topic_fallback: /detections
+    apriltag_timeout_s: 1.0
+    # Track only AprilTag targets (no depth blob centroid tracking).
+    apriltag_distance_tracking_only: true
+    apriltag_track_tag_ids: [0, 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+    apriltag_bbox_padding_px: 8
+
+    # Workspace overlay on RGB debug image from workspace tags.
+    enable_workspace_overlay: true
+    # Physical placement:
+    # - id 1 = left front
+    # - id 0 = right front
+    # - id 2 = left rear
+    # - id 3 = right rear
+    workspace_left_tag_id: 1
+    workspace_right_tag_id: 0
+    workspace_rear_left_tag_id: 2
+    workspace_rear_right_tag_id: 3
+    workspace_width_m: 0.70
+    workspace_depth_m: 0.50
+    # All AprilTags use a 32 mm printed edge size.
+    workspace_tag_size_m: 0.032
+    # Board tag center-to-edge placement (measured): 16 mm.
+    workspace_tag_center_edge_offset_m: 0.016
+    # If outline appears twisted, tune per-tag corner mapping:
+    #  - index_offset: 0..3
+    #  - reverse: true/false
+    workspace_left_corner_index_offset: 0
+    workspace_right_corner_index_offset: 0
+    workspace_left_corner_reverse: false
+    workspace_right_corner_reverse: false
+    workspace_outline_max_reproj_error_px: 24.0
