@@ -94,7 +94,7 @@ namespace UnityEngine.XR.Templates.MR
                 if (m_AROcclusionManager == null)
                 {
                     Debug.LogWarning("No AROcclusionManager found, yet Use Occlusion is enabled. Disabling Object.", this);
-                    m_UIToggleObject.SetActive(false);
+                    if (m_UIToggleObject != null) m_UIToggleObject.SetActive(false);
                     return false;
                 }
                 else
@@ -130,26 +130,32 @@ namespace UnityEngine.XR.Templates.MR
             switch (XRPlatformUnderstanding.CurrentPlatform)
             {
                 case XRPlatformType.OpenXRMeta:
-                    m_QuestSettings.SetActive(true);
-                    m_AndroidXRSettings.SetActive(false);
+                    if (m_QuestSettings != null) m_QuestSettings.SetActive(true);
+                    if (m_AndroidXRSettings != null) m_AndroidXRSettings.SetActive(false);
 #if META_OCCLUSION_AVAILABLE
-                    var subsystem = m_AROcclusionManager.subsystem as MetaOpenXROcclusionSubsystem;
-                    m_HandRemovalEnabled = (subsystem != null && subsystem.isHandRemovalSupported == Supported.Supported && subsystem.isHandRemovalEnabled);
-                    if (m_OnHandOcclusionChanged != null)
+                    if (m_AROcclusionManager != null)
                     {
-                        m_OnHandOcclusionChanged.Invoke(m_HandRemovalEnabled);
+                        var subsystem = m_AROcclusionManager.subsystem as MetaOpenXROcclusionSubsystem;
+                        m_HandRemovalEnabled = (subsystem != null && subsystem.isHandRemovalSupported == Supported.Supported && subsystem.isHandRemovalEnabled);
+                        if (m_OnHandOcclusionChanged != null)
+                        {
+                            m_OnHandOcclusionChanged.Invoke(m_HandRemovalEnabled);
+                        }
                     }
 #endif
                     break;
                 case XRPlatformType.OpenXRAndroidXR:
-                    m_QuestSettings.SetActive(false);
-                    m_AndroidXRSettings.SetActive(true);
-                    m_AROcclusionManager.environmentDepthTemporalSmoothingRequested = true;
-                    SetShaderMode(AROcclusionShaderMode.HardOcclusion);
+                    if (m_QuestSettings != null) m_QuestSettings.SetActive(false);
+                    if (m_AndroidXRSettings != null) m_AndroidXRSettings.SetActive(true);
+                    if (m_AROcclusionManager != null)
+                    {
+                        m_AROcclusionManager.environmentDepthTemporalSmoothingRequested = true;
+                        SetShaderMode(AROcclusionShaderMode.HardOcclusion);
+                    }
                     break;
                 default:
-                    m_QuestSettings.SetActive(false);
-                    m_AndroidXRSettings.SetActive(false);
+                    if (m_QuestSettings != null) m_QuestSettings.SetActive(false);
+                    if (m_AndroidXRSettings != null) m_AndroidXRSettings.SetActive(false);
                     break;
             }
         }

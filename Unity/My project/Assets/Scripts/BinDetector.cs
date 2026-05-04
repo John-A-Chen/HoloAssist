@@ -26,6 +26,19 @@ public class BinDetector : MonoBehaviour
     [Tooltip("Vertical offset of trigger zone (positive = up)")]
     public float triggerYOffset = 0.05f;
 
+    [Header("Container Colliders (physical walls + floor)")]
+    [Tooltip("Auto-generate box colliders along bin walls + floor so dropped objects stay inside.")]
+    public bool buildContainerColliders = true;
+
+    [Tooltip("Wall / floor thickness in metres.")]
+    public float wallThickness = 0.01f;
+
+    [Tooltip("Distance to inset walls toward the bin centre (m). Bring flush with the inside of the mesh if needed.")]
+    public float wallInset = 0.0f;
+
+    [Tooltip("Disable any existing convex MeshCollider on the bin mesh — convex meshes block objects from entering the bin.")]
+    public bool disableBlockingMeshColliders = true;
+
     // Current objects inside the bin
     private HashSet<Collider> objectsInBin = new HashSet<Collider>();
 
@@ -45,21 +58,29 @@ public class BinDetector : MonoBehaviour
                 Debug.LogWarning($"[BinDetector] {binName}: no BinStatusPanel in scene");
         }
 
+        Bounds worldBounds = ComputeMeshBounds();
+
         // Always create a separate trigger collider sized to bin mesh bounds
         // This avoids conflicts with any existing physics colliders on the bin
-        SetupTriggerZone();
+        SetupTriggerZone(worldBounds);
+
+        if (disableBlockingMeshColliders)
+            DisableBlockingMeshColliders();
+
+        if (buildContainerColliders)
+            BuildContainerColliders(worldBounds);
     }
 
-    void SetupTriggerZone()
+    Bounds ComputeMeshBounds()
     {
-        // Get mesh bounds from any renderer (in self or children)
         Bounds worldBounds = new Bounds(transform.position, Vector3.one * 0.3f); // fallback
         var renderers = GetComponentsInChildren<Renderer>();
         bool hasBounds = false;
         foreach (var r in renderers)
         {
-            // Skip our own trigger and any axis cylinders we added
+            // Skip our own helper objects
             if (r.gameObject.name.Contains("BinTrigger") ||
+                r.gameObject.name.Contains("BinContainerColliders") ||
                 r.gameObject.name.StartsWith("TF_")) continue;
 
             if (!hasBounds)
@@ -72,7 +93,11 @@ public class BinDetector : MonoBehaviour
                 worldBounds.Encapsulate(r.bounds);
             }
         }
+        return worldBounds;
+    }
 
+    void SetupTriggerZone(Bounds worldBounds)
+    {
         // Convert world bounds to local space (handle parent scaling)
         Vector3 localCenter = transform.InverseTransformPoint(worldBounds.center);
         Vector3 localSize = transform.InverseTransformVector(worldBounds.size);
@@ -100,6 +125,86 @@ public class BinDetector : MonoBehaviour
         relay.parent = this;
 
         Debug.Log($"[BinDetector] {binName}: trigger zone center={trigger.center} size={trigger.size}");
+    }
+
+    void BuildContainerColliders(Bounds worldBounds)
+    {
+        Vector3 localCenter = transform.InverseTransformPoint(worldBounds.center);
+        Vector3 localSize = transform.InverseTransformVector(worldBounds.size);
+        localSize = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z));
+
+        float wt = Mathf.Max(0.001f, wallThickness);
+        float innerX = Mathf.Max(0.001f, localSize.x - 2f * wallInset);
+        float innerZ = Mathf.Max(0.001f, localSize.z - 2f * wallInset);
+        float halfX = innerX * 0.5f;
+        float halfZ = innerZ * 0.5f;
+        float wallHeight = localSize.y;
+        float bottomY = localCenter.y - localSize.y * 0.5f;
+
+        var container = new GameObject("BinContainerColliders");
+        container.transform.SetParent(transform, false);
+        container.transform.localPosition = Vector3.zero;
+        container.transform.localRotation = Quaternion.identity;
+        container.transform.localScale = Vector3.one;
+        container.layer = gameObject.layer;
+
+        // Floor — sits at the bottom of the bin volume
+        AddWall(container.transform, "Floor",
+            new Vector3(localCenter.x, bottomY + wt * 0.5f, localCenter.z),
+            new Vector3(innerX, wt, innerZ));
+
+        // Side walls — full bin height. Top is open so things can be dropped in.
+        AddWall(container.transform, "Wall_PosX",
+            new Vector3(localCenter.x + halfX - wt * 0.5f, localCenter.y, localCenter.z),
+            new Vector3(wt, wallHeight, innerZ));
+
+        AddWall(container.transform, "Wall_NegX",
+            new Vector3(localCenter.x - halfX + wt * 0.5f, localCenter.y, localCenter.z),
+            new Vector3(wt, wallHeight, innerZ));
+
+        AddWall(container.transform, "Wall_PosZ",
+            new Vector3(localCenter.x, localCenter.y, localCenter.z + halfZ - wt * 0.5f),
+            new Vector3(innerX, wallHeight, wt));
+
+        AddWall(container.transform, "Wall_NegZ",
+            new Vector3(localCenter.x, localCenter.y, localCenter.z - halfZ + wt * 0.5f),
+            new Vector3(innerX, wallHeight, wt));
+
+        Debug.Log($"[BinDetector] {binName}: container colliders built (inner {innerX:F3}×{wallHeight:F3}×{innerZ:F3})");
+    }
+
+    void AddWall(Transform parent, string name, Vector3 localCenter, Vector3 size)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localCenter;
+        go.transform.localRotation = Quaternion.identity;
+        go.layer = gameObject.layer;
+        var box = go.AddComponent<BoxCollider>();
+        box.center = Vector3.zero;
+        box.size = size;
+        box.isTrigger = false;
+    }
+
+    void DisableBlockingMeshColliders()
+    {
+        // A convex MeshCollider on the bin mesh fills the bin's volume — dynamic objects
+        // dropped from above bounce off the top instead of falling inside. Disable any we find.
+        var colliders = GetComponentsInChildren<MeshCollider>();
+        foreach (var mc in colliders)
+        {
+            // Skip helper objects we own.
+            Transform t = mc.transform;
+            if (t.name == "BinTrigger" ||
+                (t.parent != null && t.parent.name == "BinContainerColliders"))
+                continue;
+
+            if (mc.convex && mc.enabled)
+            {
+                mc.enabled = false;
+                Debug.Log($"[BinDetector] {binName}: disabled convex MeshCollider on '{mc.gameObject.name}' (would block bin interior).");
+            }
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -141,6 +246,9 @@ public class BinDetector : MonoBehaviour
     {
         // Don't detect self or children
         if (other.transform.IsChildOf(transform)) return false;
+        // Don't detect any other bin's walls/mesh — adjacent bins' container colliders
+        // can overlap our 1.2× trigger zone otherwise.
+        if (other.GetComponentInParent<BinDetector>() != null) return false;
         // Don't detect trigger colliders
         if (other.isTrigger) return false;
         // Layer check
@@ -173,6 +281,21 @@ public class BinDetector : MonoBehaviour
                 Gizmos.DrawCube(box.center, box.size);
                 Gizmos.color = HasObjects ? Color.green : Color.yellow;
                 Gizmos.DrawWireCube(box.center, box.size);
+            }
+        }
+
+        // Visualize container walls + floor
+        var container = transform.Find("BinContainerColliders");
+        if (container != null)
+        {
+            Gizmos.color = new Color(0.3f, 0.6f, 1f, 0.9f);
+            Gizmos.matrix = transform.localToWorldMatrix;
+            for (int i = 0; i < container.childCount; i++)
+            {
+                var wall = container.GetChild(i);
+                var box = wall.GetComponent<BoxCollider>();
+                if (box == null) continue;
+                Gizmos.DrawWireCube(wall.localPosition + box.center, box.size);
             }
         }
     }

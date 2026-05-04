@@ -100,6 +100,10 @@ public static class HoloAssistSetup
         if (hud != null)
         {
             radial.robotHUD = hud;
+            // Wire all references so HUD mirrors the radial menu state
+            if (controller != null) hud.controller = controller.GetComponent<RobotController>();
+            hud.tfVisualizer = tfVis;
+            hud.passthroughToggle = pt;
             AddPanelPlacer(hud.gameObject, leftCtrl, rightCtrl, 0.55f, 0.14f);
         }
         if (leftCtrl != null) radial.leftControllerOverride = leftCtrl.transform;

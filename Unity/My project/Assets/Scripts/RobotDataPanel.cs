@@ -1,6 +1,8 @@
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Sensor;
 
 /// <summary>
 /// World-space XR panel that displays robot data (joint states, end-effector pose, etc.).
@@ -22,6 +24,9 @@ public class RobotDataPanel : MonoBehaviour
 
     [Tooltip("Drag the JointTFVisualizer to enable toggle button")]
     public JointTFVisualizer tfVisualizer;
+
+    [Tooltip("Drag the PassthroughToggle so the panel can show MR/VR state")]
+    public PassthroughToggle passthroughToggle;
 
     [Header("Layout")]
     [Tooltip("Distance from camera")]
@@ -55,6 +60,18 @@ public class RobotDataPanel : MonoBehaviour
     private Dictionary<string, string> binStatuses = new Dictionary<string, string>();
     private bool built;
 
+    // ROS joint name → index mapping (matches RobotController order)
+    private static readonly string[] rosJointNames =
+    {
+        "shoulder_pan_joint",
+        "shoulder_lift_joint",
+        "elbow_joint",
+        "wrist_1_joint",
+        "wrist_2_joint",
+        "wrist_3_joint",
+    };
+    private bool rosSubscribed = false;
+
     // Data fields — set these from external scripts or ROS subscribers
     [HideInInspector] public string[] jointNames = { "shoulder_pan", "shoulder_lift", "elbow", "wrist_1", "wrist_2", "wrist_3" };
     [HideInInspector] public float[] jointAngles = new float[6];
@@ -79,12 +96,34 @@ public class RobotDataPanel : MonoBehaviour
     void Start()
     {
         Rebuild();
+        if (Application.isPlaying)
+            SubscribeToJointStates();
+    }
+
+    void SubscribeToJointStates()
+    {
+        if (rosSubscribed) return;
+        ROSConnection.GetOrCreateInstance().Subscribe<JointStateMsg>("/joint_states", OnJointState);
+        rosSubscribed = true;
+    }
+
+    void OnJointState(JointStateMsg msg)
+    {
+        for (int i = 0; i < msg.name.Length; i++)
+        {
+            for (int j = 0; j < rosJointNames.Length; j++)
+            {
+                if (msg.name[i] == rosJointNames[j])
+                    jointAngles[j] = (float)(msg.position[i] * Mathf.Rad2Deg);
+            }
+        }
+        connectionStatus = "Connected";
     }
 
     void Rebuild()
     {
         if (built) return;
-        cam = Camera.main != null ? Camera.main.transform : null;
+        cam = FindXRCamera();
         BuildPanel();
         if (cam != null)
             UpdatePosition(true);
@@ -98,10 +137,11 @@ public class RobotDataPanel : MonoBehaviour
         float zQuad = -0.005f;
         float zText = -0.02f;
 
-        // Calculate total height: header + connection + joints section + EE section + toggle + padding
-        int dataRows = 1 + jointNames.Length + 2; // connection + joints + ee_pos + ee_rot
-        int sectionHeaders = 2; // "JOINT ANGLES" + "END EFFECTOR"
-        int separators = 3; // +1 for toggle section
+        // Calculate total height: header + connection + status + joints + EE + toggle + padding
+        int statusRows = 4; // mode, gripper, ee_lock, passthrough
+        int dataRows = 1 + statusRows + jointNames.Length + 2; // connection + status + joints + ee_pos + ee_rot
+        int sectionHeaders = 3; // "STATUS" + "JOINT ANGLES" + "END EFFECTOR"
+        int separators = 4; // connection|status, status|joints, joints|ee, ee|toggle
         int toggleRows = 1;
         float totalHeight = headerHeight + padding * 2  // header + accent line gap
             + (dataRows + sectionHeaders + toggleRows) * rowHeight  // all rows
@@ -131,7 +171,25 @@ public class RobotDataPanel : MonoBehaviour
 
         // Separator
         yPos -= padding;
-        CreateQuad("Sep1", new Vector3(0f, yPos, zQuad),
+        CreateQuad("Sep_Conn", new Vector3(0f, yPos, zQuad),
+            new Vector2(panelWidth - padding * 4, 0.001f),
+            new Color(0.3f, 0.3f, 0.4f, 0.5f), zQuad);
+        yPos -= padding;
+
+        // Section: Status (mirrors RobotHUD)
+        yPos -= rowHeight / 2f;
+        CreateText("status_header", "STATUS", new Vector3(0f, yPos, zText),
+            fontSize * 0.85f, accentColor, TextAlignmentOptions.Center, panelWidth - padding * 2);
+        yPos -= rowHeight;
+
+        CreateRow("mode", "Mode", "RMRC", ref yPos);
+        CreateRow("gripper", "Gripper", "0%", ref yPos);
+        CreateRow("ee_lock", "EE Lock", "OFF", ref yPos);
+        CreateRow("passthrough", "View", "MR", ref yPos);
+
+        // Separator
+        yPos -= padding;
+        CreateQuad("Sep_Status", new Vector3(0f, yPos, zQuad),
             new Vector2(panelWidth - padding * 4, 0.001f),
             new Color(0.3f, 0.3f, 0.4f, 0.5f), zQuad);
         yPos -= padding;
@@ -253,9 +311,45 @@ public class RobotDataPanel : MonoBehaviour
 
         // Only follow camera and update data during Play mode
         if (!Application.isPlaying) return;
-        if (cam == null) return;
-        UpdatePosition(false);
+
+        // Self-healing subscribe — covers edge cases where Start() didn't run in
+        // Play mode (e.g. "Disable Domain Reload" project setting) or where
+        // ROSConnection wasn't ready yet when Start() fired. SubscribeToJointStates
+        // is idempotent (rosSubscribed guard), so calling it every frame is cheap.
+        if (!rosSubscribed) SubscribeToJointStates();
+
+        // Re-acquire the XR camera if the cached ref went null (e.g. scene reload,
+        // XR rig recreated). Camera.main is unreliable in the MR Template because
+        // the eye-anchor camera often isn't tagged MainCamera.
+        if (cam == null) cam = FindXRCamera();
+
+        // Always refresh data text — even if the panel can't currently follow the
+        // camera, the labels themselves should still reflect live state.
         UpdateData();
+
+        if (cam != null) UpdatePosition(false);
+    }
+
+    Transform FindXRCamera()
+    {
+        if (Camera.main != null) return Camera.main.transform;
+
+        // MR Template's XR camera typically isn't tagged MainCamera. Try common names.
+        string[] xrCameraNames = { "Main Camera", "CenterEyeAnchor", "Camera", "XR Camera" };
+        foreach (var n in xrCameraNames)
+        {
+            var obj = GameObject.Find(n);
+            if (obj != null && obj.GetComponent<Camera>() != null)
+                return obj.transform;
+        }
+
+        // Last resort: any active+enabled camera in the scene.
+        foreach (var c in FindObjectsOfType<Camera>())
+        {
+            if (c.enabled && c.gameObject.activeInHierarchy)
+                return c.transform;
+        }
+        return null;
     }
 
     void UpdatePosition(bool snap)
@@ -279,13 +373,18 @@ public class RobotDataPanel : MonoBehaviour
 
     void UpdateData()
     {
-        // Auto-read from RobotController if assigned
-        if (robotController != null)
+        // Joint angles come directly from OnJointState (ROS subscription).
+        // Fall back to RobotController only if not yet subscribed (e.g. in Editor).
+        if (!rosSubscribed && robotController != null && robotController.HasJointState)
         {
-            connectionStatus = robotController.HasJointState ? "Connected" : "Disconnected";
             var positions = robotController.CurrentPositions;
             for (int i = 0; i < jointAngles.Length && i < positions.Length; i++)
                 jointAngles[i] = (float)(positions[i] * Mathf.Rad2Deg);
+            connectionStatus = "Connected";
+        }
+        else if (!rosSubscribed && robotController != null)
+        {
+            connectionStatus = robotController.HasJointState ? "Connected" : "Disconnected";
         }
 
         // Auto-read end-effector pose relative to base_link
@@ -344,6 +443,84 @@ public class RobotDataPanel : MonoBehaviour
             valueTexts["tf_toggle"].color = on
                 ? new Color(0.2f, 1f, 0.4f, 1f)   // green
                 : new Color(1f, 0.4f, 0.4f, 1f);   // red
+        }
+
+        // Status section — mirrors what the floating RobotHUD shows so the data
+        // panel is also a single-glance "where am I" reference.
+        UpdateStatusSection();
+    }
+
+    /// <summary>
+    /// Refresh the data panel's text immediately. Called by RadialMenu after a
+    /// page-2 click so the user doesn't have to wait for the next LateUpdate.
+    /// </summary>
+    public void ForceRefresh()
+    {
+        if (!Application.isPlaying) return;
+        if (!built) return;
+        UpdateData();
+    }
+
+    void UpdateStatusSection()
+    {
+        // Mode row
+        if (valueTexts.ContainsKey("mode") && robotController != null)
+        {
+            string modeText;
+            Color modeColor;
+            switch (robotController.CurrentMode)
+            {
+                case RobotController.ControlMode.HandGuide:
+                    bool tracking = robotController.IsHandGuideActive;
+                    modeText = tracking ? "HAND GUIDE  ●  TRACKING" : "HAND GUIDE  ○  READY";
+                    modeColor = tracking ? new Color(1f, 0.4f, 0.4f) : new Color(0.9f, 0.6f, 0.9f);
+                    break;
+                case RobotController.ControlMode.DirectJoint:
+                    int idx = robotController.SelectedJoint;
+                    string j = (idx >= 0 && idx < jointNames.Length) ? jointNames[idx] : "?";
+                    modeText = $"DIRECT JOINT ({idx + 1}/6 {j})";
+                    modeColor = new Color(1f, 0.8f, 0.3f);
+                    break;
+                default: // RMRC
+                    bool translate = robotController.CurrentRMRCSubMode == RobotController.RMRCSubMode.Translate;
+                    modeText = translate ? "RMRC  TRANSLATE" : "RMRC  ROTATE";
+                    modeColor = translate ? new Color(0.4f, 0.9f, 0.4f) : new Color(0.5f, 0.7f, 1f);
+                    break;
+            }
+            valueTexts["mode"].text = modeText;
+            valueTexts["mode"].color = modeColor;
+        }
+
+        // Gripper percentage
+        if (valueTexts.ContainsKey("gripper") && robotController != null)
+        {
+            float g = robotController.GripperValue;
+            int pct = Mathf.RoundToInt(g * 100f);
+            valueTexts["gripper"].text = $"{pct}%";
+            valueTexts["gripper"].color =
+                  (g < 0.05f) ? new Color(0.5f, 0.8f, 0.5f)
+                : (g > 0.9f)  ? new Color(1f, 0.4f, 0.3f)
+                              : new Color(1f, 0.85f, 0.4f);
+        }
+
+        // EE Lock state
+        if (valueTexts.ContainsKey("ee_lock") && robotController != null)
+        {
+            bool locked = robotController.IsEELockedDown;
+            valueTexts["ee_lock"].text = locked ? "ON" : "OFF";
+            valueTexts["ee_lock"].color = locked
+                ? new Color(0.4f, 0.8f, 1f)
+                : new Color(0.6f, 0.65f, 0.7f);
+        }
+
+        // Passthrough state (MR / VR)
+        if (valueTexts.ContainsKey("passthrough"))
+        {
+            bool mr = passthroughToggle != null && passthroughToggle.PassthroughEnabled;
+            valueTexts["passthrough"].text = mr ? "MR" : "VR";
+            valueTexts["passthrough"].color = mr
+                ? new Color(0.4f, 0.9f, 0.4f)
+                : new Color(0.6f, 0.65f, 0.95f);
         }
     }
 

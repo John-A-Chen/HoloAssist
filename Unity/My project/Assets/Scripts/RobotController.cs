@@ -88,6 +88,34 @@ public class RobotController : MonoBehaviour
         Debug.Log($"[RobotController] EE Lock-Down: {(eeLockedDown ? "ON" : "OFF")}");
     }
 
+    /// <summary>Public API: switch control mode and reset transient input state, matching the menu-button cycle.</summary>
+    public void SetMode(ControlMode newMode)
+    {
+        if (mode == newMode) return;
+        mode = newMode;
+        rmrcSubMode = RMRCSubMode.Translate;
+        smoothedJointInput = 0f;
+        smoothedLeft = Vector2.zero;
+        smoothedRight = Vector2.zero;
+        isGripping = false;
+        for (int i = 0; i < smoothedQDot.Length; i++) smoothedQDot[i] = 0;
+        Debug.Log($"[RobotController] Mode: {mode}");
+    }
+
+    /// <summary>Public API: cycle to next joint in Direct Joint mode (called by RadialMenu).</summary>
+    public void CycleJointForward()
+    {
+        selectedJoint = (selectedJoint + 1) % 6;
+        Debug.Log($"[RobotController] Selected: {jointNames[selectedJoint]}");
+    }
+
+    /// <summary>Public API: cycle to previous joint in Direct Joint mode (called by RadialMenu).</summary>
+    public void CycleJointBackward()
+    {
+        selectedJoint = (selectedJoint + 5) % 6;
+        Debug.Log($"[RobotController] Selected: {jointNames[selectedJoint]}");
+    }
+
     private ROSConnection ros;
     private int selectedJoint = 0;
     private double[] currentPositions = new double[6];
@@ -128,6 +156,9 @@ public class RobotController : MonoBehaviour
     private InputAction gripAction;
     private InputAction controllerPosAction;
     private InputAction gripperTriggerAction;
+    private InputAction gripperTriggerActionLeft;
+    private InputAction gripperPressedAction;
+    private InputAction gripperPressedActionLeft;
     private InputAction lockDownAction;
 
     // Reusable arrays to avoid GC
@@ -196,11 +227,37 @@ public class RobotController : MonoBehaviour
         controllerPosAction = new InputAction("ControllerPos", InputActionType.Value, "<XRController>{RightHand}/devicePosition");
         controllerPosAction.Enable();
 
-        // Right index trigger — analog gripper control
-        // Gripper moved from RIGHT trigger (which Sebastian's UI uses for ray select)
-        // to LEFT trigger to avoid conflict.
-        gripperTriggerAction = new InputAction("GripperTrigger", InputActionType.Value, "<XRController>{LeftHand}/trigger");
+        // Analog gripper control via the index trigger of either hand.
+        //
+        // We register FOUR actions: an analog axis ("trigger") for each hand and
+        // a digital button ("triggerPressed") for each hand. Some Quest firmware /
+        // OpenXR driver combinations only expose the digital path (which is the
+        // path RadialMenu.selectAction uses successfully). UpdateGripper takes
+        // the max of all four reads, so the gripper responds analog where the
+        // axis is exposed and binary (0/1) where only the button is exposed.
+        gripperTriggerAction = new InputAction("GripperTriggerR", InputActionType.Value);
+        gripperTriggerAction.AddBinding("<XRController>{RightHand}/trigger");
+        gripperTriggerAction.AddBinding("<OculusTouchController>{RightHand}/trigger");
+        gripperTriggerAction.AddBinding("<MetaQuestTouchPlusController>{RightHand}/trigger");
         gripperTriggerAction.Enable();
+
+        gripperTriggerActionLeft = new InputAction("GripperTriggerL", InputActionType.Value);
+        gripperTriggerActionLeft.AddBinding("<XRController>{LeftHand}/trigger");
+        gripperTriggerActionLeft.AddBinding("<OculusTouchController>{LeftHand}/trigger");
+        gripperTriggerActionLeft.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/trigger");
+        gripperTriggerActionLeft.Enable();
+
+        gripperPressedAction = new InputAction("GripperPressedR", InputActionType.Button);
+        gripperPressedAction.AddBinding("<XRController>{RightHand}/triggerPressed");
+        gripperPressedAction.AddBinding("<OculusTouchController>{RightHand}/triggerPressed");
+        gripperPressedAction.AddBinding("<MetaQuestTouchPlusController>{RightHand}/triggerPressed");
+        gripperPressedAction.Enable();
+
+        gripperPressedActionLeft = new InputAction("GripperPressedL", InputActionType.Button);
+        gripperPressedActionLeft.AddBinding("<XRController>{LeftHand}/triggerPressed");
+        gripperPressedActionLeft.AddBinding("<OculusTouchController>{LeftHand}/triggerPressed");
+        gripperPressedActionLeft.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/triggerPressed");
+        gripperPressedActionLeft.Enable();
 
         // Y button (left controller) — toggle EE lock-down
         // Disabled — Y button is owned by Sebastian's RadialMenu (open/close menu).
@@ -270,15 +327,18 @@ public class RobotController : MonoBehaviour
 
     void Update()
     {
-        if (inputActions == null) return;
-
-        HandleModeSwitch();
+        // The asset-driven actions (sticks, A/B/Menu) require the InputActionAsset.
+        // The gripper trigger action is created in code and does not, so we keep
+        // the asset gate scoped to HandleModeSwitch only — gripper always polls.
+        if (inputActions != null)
+            HandleModeSwitch();
 
         publishTimer += Time.deltaTime;
         if (publishTimer < 1f / publishRate) return;
         publishTimer = 0f;
 
         UpdateGripper();
+        if (inputActions == null) return;
 
         if (mode == ControlMode.RMRC)
             UpdateRMRC();
@@ -539,9 +599,19 @@ public class RobotController : MonoBehaviour
         ros.Publish(VELOCITY_TOPIC, msg);
     }
 
+    private float gripperDebugTimer = 0f;
+
     void UpdateGripper()
     {
-        float raw = gripperTriggerAction != null ? gripperTriggerAction.ReadValue<float>() : 0f;
+        // Try four input sources and take whichever fires:
+        //   - Analog axis right + left  (gives 0..1 for partial squeeze)
+        //   - Digital button right + left (gives 0 or 1; covers firmware that
+        //     doesn't expose the analog axis at all)
+        float rawAxisR    = gripperTriggerAction      != null ? gripperTriggerAction.ReadValue<float>()      : 0f;
+        float rawAxisL    = gripperTriggerActionLeft  != null ? gripperTriggerActionLeft.ReadValue<float>()  : 0f;
+        float rawButtonR  = (gripperPressedAction     != null && gripperPressedAction.IsPressed())     ? 1f : 0f;
+        float rawButtonL  = (gripperPressedActionLeft != null && gripperPressedActionLeft.IsPressed()) ? 1f : 0f;
+        float raw = Mathf.Max(Mathf.Max(rawAxisR, rawAxisL), Mathf.Max(rawButtonR, rawButtonL));
 
         // Apply dead zone — resting finger = fully open
         float mapped = (raw <= gripperDeadZone) ? 0f : (raw - gripperDeadZone) / (1f - gripperDeadZone);
@@ -550,11 +620,20 @@ public class RobotController : MonoBehaviour
         smoothedGripper = SmoothExp(smoothedGripper, mapped, gripperSmoothTime, dt);
         if (smoothedGripper < 0.005f && mapped < 0.01f) smoothedGripper = 0f;
 
+        // Periodic diagnostic — once per second log raw values so we can see
+        // which path is firing. Remove later if noisy.
+        gripperDebugTimer += dt;
+        if (gripperDebugTimer >= 1f)
+        {
+            gripperDebugTimer = 0f;
+            Debug.Log($"[Gripper] axisR={rawAxisR:F2} axisL={rawAxisL:F2} btnR={rawButtonR:F0} btnL={rawButtonL:F0} smoothed={smoothedGripper:F2}");
+        }
+
         // finger_width_controller expects position in metres: 0 = closed, RG2_MAX_WIDTH = open
         double widthMetres = (1f - smoothedGripper) * RG2_MAX_WIDTH;
         var gripMsg = new Float64MultiArrayMsg();
         gripMsg.data = new double[] { widthMetres };
-        ros.Publish(GRIPPER_TOPIC, gripMsg);
+        if (ros != null) ros.Publish(GRIPPER_TOPIC, gripMsg);
     }
 
     void PublishZero()
@@ -687,6 +766,24 @@ public class RobotController : MonoBehaviour
         {
             gripperTriggerAction.Disable();
             gripperTriggerAction.Dispose();
+        }
+
+        if (gripperTriggerActionLeft != null)
+        {
+            gripperTriggerActionLeft.Disable();
+            gripperTriggerActionLeft.Dispose();
+        }
+
+        if (gripperPressedAction != null)
+        {
+            gripperPressedAction.Disable();
+            gripperPressedAction.Dispose();
+        }
+
+        if (gripperPressedActionLeft != null)
+        {
+            gripperPressedActionLeft.Disable();
+            gripperPressedActionLeft.Dispose();
         }
 
         if (lockDownAction != null)

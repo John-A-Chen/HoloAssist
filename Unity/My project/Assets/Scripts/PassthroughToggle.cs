@@ -3,8 +3,11 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Toggles between MR passthrough and VR (virtual environment).
-/// Switches the camera's clear flags + background, and optionally shows/hides
-/// a virtual environment GameObject (e.g. skybox or room).
+///
+/// The MR Template's AR Passthrough Feature event handles the skybox-dome
+/// fade automatically (via FadeMaterial.FadeSkybox), so this script only
+/// needs to flip the camera's clear flags / background and show or hide
+/// the virtual environment GameObject.
 ///
 /// Attach to any GameObject. Wire up to RadialMenu via RegisterButton.
 /// </summary>
@@ -42,12 +45,23 @@ public class PassthroughToggle : MonoBehaviour
         if (xrCamera == null)
             xrCamera = Camera.main;
 
+        // Fallback — pick the first enabled camera in the scene.
+        if (xrCamera == null)
+        {
+            foreach (var c in FindObjectsOfType<Camera>())
+            {
+                if (c.enabled && c.gameObject.activeInHierarchy) { xrCamera = c; break; }
+            }
+        }
+
         if (xrCamera == null)
         {
             Debug.LogError("[PassthroughToggle] No camera found");
             enabled = false;
             return;
         }
+
+        Debug.Log($"[PassthroughToggle] Bound to camera '{xrCamera.name}' (instance {xrCamera.GetInstanceID()}). Initial clearFlags={xrCamera.clearFlags}, bg={xrCamera.backgroundColor}");
 
         // Save original camera settings
         origClearFlags = xrCamera.clearFlags;
@@ -59,6 +73,7 @@ public class PassthroughToggle : MonoBehaviour
 
     public void Toggle()
     {
+        Debug.Log($"[PassthroughToggle] Toggle() called. passthroughEnabled was {passthroughEnabled}.");
         SetPassthrough(!passthroughEnabled);
     }
 
@@ -68,7 +83,7 @@ public class PassthroughToggle : MonoBehaviour
 
         if (enabled)
         {
-            // MR mode — passthrough on, transparent background
+            // MR mode — passthrough on, transparent background.
             xrCamera.clearFlags = CameraClearFlags.SolidColor;
             xrCamera.backgroundColor = new Color(0, 0, 0, 0); // alpha 0 reveals passthrough
             if (vrSkyboxMaterial != null && origSkybox != vrSkyboxMaterial)
@@ -80,7 +95,6 @@ public class PassthroughToggle : MonoBehaviour
         }
         else
         {
-            // VR mode — solid color or skybox, passthrough off
             if (vrSkyboxMaterial != null)
             {
                 xrCamera.clearFlags = CameraClearFlags.Skybox;
@@ -111,7 +125,6 @@ public class PassthroughToggle : MonoBehaviour
         }
         else
         {
-            // Original behavior: disable everything
             virtualEnvironment.SetActive(visible);
         }
     }

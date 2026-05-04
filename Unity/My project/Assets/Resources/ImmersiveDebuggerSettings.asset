@@ -21,14 +21,13 @@ MonoBehaviour:
     DebugTypes:
     - Meta.XR.MultiplayerBlocks.Shared.CustomMatchmaking
     - Meta.XR.MultiplayerBlocks.Shared.FriendsMatchmaking
-  immersiveDebuggerEnabled: 1
+  immersiveDebuggerEnabled: 0
   immersiveDebuggerDisplayAtStartup: 0
   enableOnlyInDebugBuild: 0
   showInspectors: 0
   showConsole: 0
   followOverride: 1
   rotateOverride: 0
-  recenterOnToggle: 1
   showInfoLog: 0
   showWarningLog: 1
   showErrorLog: 1

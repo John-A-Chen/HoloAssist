@@ -50,6 +50,7 @@ public class RadialMenu : MonoBehaviour
 
     // Menu state
     private bool isOpen = false;
+    public bool IsOpen => isOpen;
     private GameObject menuRoot;
     private Transform leftController;
     private Transform rightController;
@@ -77,6 +78,10 @@ public class RadialMenu : MonoBehaviour
         public TextMeshPro statusText;
         public bool isOn;
         public Action onToggle;
+        // Momentary buttons fire onToggle without latching an on/off state (used for action buttons).
+        public bool isMomentary;
+        // If set, the button's status text is driven by this provider instead of "ON"/"OFF".
+        public Func<string> statusProvider;
     }
 
     void Start()
@@ -95,8 +100,109 @@ public class RadialMenu : MonoBehaviour
         selectAction.Enable();
 
         FindControllers();
+        AutoBindRobotController();
         BuildMenu();
         menuRoot.SetActive(false);
+    }
+
+    void AutoBindRobotController()
+    {
+        var allControllers = FindObjectsOfType<RobotController>(true);
+        RobotController bestActive = null;
+        foreach (var c in allControllers)
+        {
+            if (c.enabled && c.gameObject.activeInHierarchy) { bestActive = c; break; }
+        }
+
+        if (robotController == null || !robotController.enabled || !robotController.gameObject.activeInHierarchy)
+        {
+            if (bestActive != null)
+            {
+                Debug.LogWarning($"[RadialMenu] robotController was {(robotController == null ? "null" : "disabled")} — rebound to enabled '{bestActive.gameObject.name}' (instance {bestActive.GetInstanceID()}).");
+                robotController = bestActive;
+            }
+        }
+        if (allControllers.Length > 1)
+        {
+            Debug.LogWarning($"[RadialMenu] {allControllers.Length} RobotController components in scene. RadialMenu drives instance {robotController?.GetInstanceID()} ('{robotController?.gameObject.name}'). Make sure RobotHUD reads the same one.");
+        }
+
+        // Auto-bind any other references that were left empty in the Inspector.
+        // Pattern: if the scene only has one of these and the Inspector lost the
+        // ref during a merge, just hook it up so the button isn't silently dead.
+        if (passthroughToggle == null)
+            passthroughToggle = FindFirstUsable<PassthroughToggle>("passthroughToggle");
+        if (tfVisualizer == null)
+            tfVisualizer = FindFirstUsable<JointTFVisualizer>("tfVisualizer");
+        if (dataPanel == null)
+            dataPanel = FindFirstUsable<RobotDataPanel>("dataPanel");
+        if (binStatusPanel == null)
+            binStatusPanel = FindFirstUsable<BinStatusPanel>("binStatusPanel");
+        if (coachingPanel == null)
+            coachingPanel = FindFirstUsable<CoachingPanel>("coachingPanel");
+        if (robotHUD == null)
+            robotHUD = FindFirstUsable<RobotHUD>("robotHUD");
+    }
+
+    T FindFirstUsable<T>(string fieldName) where T : Behaviour
+    {
+        foreach (var c in FindObjectsOfType<T>(true))
+        {
+            if (c.enabled && c.gameObject.activeInHierarchy)
+            {
+                Debug.LogWarning($"[RadialMenu] {fieldName} was empty — auto-bound to '{c.gameObject.name}'.");
+                return c;
+            }
+        }
+        return null;
+    }
+
+    // Push an immediate text refresh to the HUD after a Page-2 click so the user
+    // doesn't depend on the HUD's own LateUpdate to notice the controller's state
+    // change. Also re-runs SyncButtonStates so the other mode buttons (Joint Mode /
+    // RMRC Cart / Hand Guide) flip OFF on the same frame the new one flips ON —
+    // gives radio-button feel instead of brief multi-button-on glitch.
+    void RefreshHUD()
+    {
+        SyncButtonStates();
+
+        if (robotHUD == null)
+        {
+            robotHUD = FindFirstUsable<RobotHUD>("robotHUD");
+        }
+        if (robotHUD != null && robotHUD.gameObject.activeInHierarchy)
+        {
+            robotHUD.ForceRefresh();
+        }
+
+        // Push the same instant refresh to the data panel so its Status section
+        // reflects the new mode / sub-mode / EE-lock state on the click frame.
+        if (dataPanel == null)
+        {
+            dataPanel = FindFirstUsable<RobotDataPanel>("dataPanel");
+        }
+        if (dataPanel != null && dataPanel.gameObject.activeInHierarchy)
+        {
+            dataPanel.ForceRefresh();
+        }
+    }
+
+    // Used by every Page-2 button so we always operate on a valid, enabled controller
+    // and emit one trace line per click that shows exactly which RobotController instance
+    // was hit. Pair with [RobotHUD] Mode -> ... in logcat to verify the HUD reads the same one.
+    RobotController ResolveRobotController(string buttonLabel)
+    {
+        if (robotController == null || !robotController.enabled || !robotController.gameObject.activeInHierarchy)
+        {
+            robotController = FindFirstUsable<RobotController>("robotController");
+        }
+        if (robotController == null)
+        {
+            Debug.LogError($"[RadialMenu] '{buttonLabel}' clicked but no enabled RobotController found in scene.");
+            return null;
+        }
+        Debug.Log($"[RadialMenu] '{buttonLabel}' -> RobotController instance {robotController.GetInstanceID()} ('{robotController.gameObject.name}')");
+        return robotController;
     }
 
     void FindControllers()
@@ -212,8 +318,21 @@ public class RadialMenu : MonoBehaviour
 
         AddButton("Pass\nthru", true, () =>
         {
+            // Re-resolve at click time. AutoBind runs in Start, but if a scene-merge
+            // anomaly leaves the field empty there too, this gives us one more shot
+            // at finding the toggle when the user actually presses the button.
+            if (passthroughToggle == null)
+                passthroughToggle = FindFirstUsable<PassthroughToggle>("passthroughToggle");
+
             if (passthroughToggle != null)
+            {
+                Debug.Log($"[RadialMenu] Passthru clicked → calling Toggle on '{passthroughToggle.gameObject.name}' (was {(passthroughToggle.PassthroughEnabled ? "ON" : "OFF")}).");
                 passthroughToggle.Toggle();
+            }
+            else
+            {
+                Debug.LogError("[RadialMenu] Passthru clicked but passthroughToggle is null and none could be found in scene.");
+            }
         });
 
         AddButton("Robot\nHUD", true, () =>
@@ -225,42 +344,54 @@ public class RadialMenu : MonoBehaviour
         // === PAGE 1: Robot Controls (Nic's features) ===
         AddButton("RMRC\nMode", false, () =>
         {
-            if (robotController != null)
-                robotController.ToggleRMRCSubMode();
+            var rc = ResolveRobotController("RMRC Mode");
+            if (rc != null) rc.ToggleRMRCSubMode();
+            RefreshHUD();
         }, 1);
 
         AddButton("EE\nLock", false, () =>
         {
-            if (robotController != null)
-                robotController.ToggleEELockDown();
+            var rc = ResolveRobotController("EE Lock");
+            if (rc != null) rc.ToggleEELockDown();
+            RefreshHUD();
         }, 1);
 
         AddButton("Joint\nMode", false, () =>
         {
-            if (robotController != null)
-            {
-                robotController.mode = RobotController.ControlMode.DirectJoint;
-                Debug.Log("[RadialMenu] Switched to DirectJoint mode");
-            }
+            var rc = ResolveRobotController("Joint Mode");
+            if (rc != null) rc.SetMode(RobotController.ControlMode.DirectJoint);
+            RefreshHUD();
         }, 1);
 
         AddButton("RMRC\nCart", false, () =>
         {
-            if (robotController != null)
-            {
-                robotController.mode = RobotController.ControlMode.RMRC;
-                Debug.Log("[RadialMenu] Switched to RMRC mode");
-            }
+            var rc = ResolveRobotController("RMRC Cart");
+            if (rc != null) rc.SetMode(RobotController.ControlMode.RMRC);
+            RefreshHUD();
         }, 1);
 
         AddButton("Hand\nGuide", false, () =>
         {
-            if (robotController != null)
-            {
-                robotController.mode = RobotController.ControlMode.HandGuide;
-                Debug.Log("[RadialMenu] Switched to HandGuide mode");
-            }
+            var rc = ResolveRobotController("Hand Guide");
+            if (rc != null) rc.SetMode(RobotController.ControlMode.HandGuide);
+            RefreshHUD();
         }, 1);
+
+        // Joint cycling — momentary action buttons. Status text shows the currently
+        // selected joint so both buttons give live feedback after each press.
+        AddButton("Prev\nJoint", false, () =>
+        {
+            var rc = ResolveRobotController("Prev Joint");
+            if (rc != null) rc.CycleJointBackward();
+            RefreshHUD();
+        }, 1, isMomentary: true, statusProvider: GetSelectedJointShort);
+
+        AddButton("Next\nJoint", false, () =>
+        {
+            var rc = ResolveRobotController("Next Joint");
+            if (rc != null) rc.CycleJointForward();
+            RefreshHUD();
+        }, 1, isMomentary: true, statusProvider: GetSelectedJointShort);
 
         // Page nav button — at center, swaps between page 0 and page 1
         CreatePageButton();
@@ -269,14 +400,17 @@ public class RadialMenu : MonoBehaviour
         UpdatePageVisibility();
     }
 
-    void AddButton(string label, bool initialState, Action onToggle, int page = 0)
+    void AddButton(string label, bool initialState, Action onToggle, int page = 0,
+        bool isMomentary = false, Func<string> statusProvider = null)
     {
         var btn = new RadialButton
         {
             label = label,
             page = page,
             isOn = initialState,
-            onToggle = onToggle
+            onToggle = onToggle,
+            isMomentary = isMomentary,
+            statusProvider = statusProvider
         };
 
         // Button background quad — render queue 3030 (on top of rings)
@@ -318,9 +452,22 @@ public class RadialMenu : MonoBehaviour
         statusObj.transform.SetParent(menuRoot.transform, false);
         statusObj.transform.localPosition = new Vector3(0f, -0.015f, Z_STATUS);
         btn.statusText = statusObj.AddComponent<TextMeshPro>();
-        btn.statusText.text = initialState ? "ON" : "OFF";
+        if (statusProvider != null)
+        {
+            btn.statusText.text = statusProvider();
+            btn.statusText.color = new Color(0.7f, 0.85f, 1.0f);
+        }
+        else if (isMomentary)
+        {
+            btn.statusText.text = "";
+            btn.statusText.color = labelColor;
+        }
+        else
+        {
+            btn.statusText.text = initialState ? "ON" : "OFF";
+            btn.statusText.color = initialState ? new Color(0.2f, 1f, 0.4f) : new Color(1f, 0.4f, 0.4f);
+        }
         btn.statusText.fontSize = fontSize * 0.7f;
-        btn.statusText.color = initialState ? new Color(0.2f, 1f, 0.4f) : new Color(1f, 0.4f, 0.4f);
         btn.statusText.alignment = TextAlignmentOptions.Center;
         btn.statusText.enableWordWrapping = false;
         btn.statusText.fontStyle = FontStyles.Bold;
@@ -499,37 +646,44 @@ public class RadialMenu : MonoBehaviour
 
     void SyncButtonStates()
     {
-        // Sync TF Axes (button 0)
-        if (tfVisualizer != null && buttons.Count > 0)
-            SyncButton(0, tfVisualizer.showAxes);
+        // Sync by label (more robust than fixed indices)
+        SyncButtonByLabel("TF Axes", tfVisualizer != null && tfVisualizer.showAxes);
+        SyncButtonByLabel("Data\nPanel", dataPanel != null && dataPanel.gameObject.activeSelf);
+        SyncButtonByLabel("Bin\nStatus", binStatusPanel != null && binStatusPanel.gameObject.activeSelf);
+        SyncButtonByLabel("Coach", coachingPanel != null && coachingPanel.gameObject.activeSelf);
+        SyncButtonByLabel("Pass\nthru", passthroughToggle != null && passthroughToggle.PassthroughEnabled);
+        SyncButtonByLabel("Robot\nHUD", robotHUD != null && robotHUD.gameObject.activeSelf);
 
-        // Sync Data Panel (button 1)
-        if (dataPanel != null && buttons.Count > 1)
-            SyncButton(1, dataPanel.gameObject.activeSelf);
+        // Robot control buttons (page 1)
+        if (robotController != null)
+        {
+            SyncButtonByLabel("RMRC\nMode",
+                robotController.CurrentRMRCSubMode == RobotController.RMRCSubMode.Rotate);
+            SyncButtonByLabel("EE\nLock", robotController.IsEELockedDown);
+            // Mode-set buttons highlight green when their mode is active
+            SyncButtonByLabel("Joint\nMode",
+                robotController.CurrentMode == RobotController.ControlMode.DirectJoint);
+            SyncButtonByLabel("RMRC\nCart",
+                robotController.CurrentMode == RobotController.ControlMode.RMRC);
+            SyncButtonByLabel("Hand\nGuide",
+                robotController.CurrentMode == RobotController.ControlMode.HandGuide);
+        }
 
-        // Sync Bin Status (button 2)
-        if (binStatusPanel != null && buttons.Count > 2)
-            SyncButton(2, binStatusPanel.gameObject.activeSelf);
+        // Refresh dynamic status text (e.g. selected joint name on Prev/Next Joint buttons).
+        foreach (var btn in buttons)
+        {
+            if (btn.statusProvider != null && btn.statusText != null)
+                btn.statusText.text = btn.statusProvider();
+        }
+    }
 
-        // Sync Coaching (button 3)
-        if (coachingPanel != null && buttons.Count > 3)
-            SyncButton(3, coachingPanel.gameObject.activeSelf);
-
-        // Sync Passthrough (button 4)
-        if (passthroughToggle != null && buttons.Count > 4)
-            SyncButton(4, passthroughToggle.PassthroughEnabled);
-
-        // Sync RMRC Mode (button 5) — green when in Rotate mode
-        if (robotController != null && buttons.Count > 5)
-            SyncButton(5, robotController.CurrentRMRCSubMode == RobotController.RMRCSubMode.Rotate);
-
-        // Sync EE Lock (button 6)
-        if (robotController != null && buttons.Count > 6)
-            SyncButton(6, robotController.IsEELockedDown);
-
-        // Sync Robot HUD (button 7)
-        if (robotHUD != null && buttons.Count > 7)
-            SyncButton(7, robotHUD.gameObject.activeSelf);
+    string GetSelectedJointShort()
+    {
+        if (robotController == null) return "—";
+        string n = robotController.SelectedJointName ?? "—";
+        // Trim "_joint" suffix so the name fits under the button.
+        if (n.EndsWith("_joint")) n = n.Substring(0, n.Length - 6);
+        return n;
     }
 
     void SyncButton(int index, bool state)
@@ -543,29 +697,73 @@ public class RadialMenu : MonoBehaviour
         }
     }
 
+    void SyncButtonByLabel(string label, bool state)
+    {
+        foreach (var btn in buttons)
+        {
+            if (btn.label == label)
+            {
+                if (btn.isOn != state)
+                {
+                    btn.isOn = state;
+                    UpdateButtonVisual(btn);
+                }
+                return;
+            }
+        }
+    }
+
     void UpdateButtonVisual(RadialButton btn)
     {
         var renderer = btn.bgQuad.GetComponent<Renderer>();
         if (renderer != null)
-            renderer.material.SetColor("_BaseColor", btn.isOn ? buttonOnColor : buttonOffColor);
+        {
+            Color baseColor = btn.isMomentary
+                ? buttonOffColor
+                : (btn.isOn ? buttonOnColor : buttonOffColor);
+            renderer.material.SetColor("_BaseColor", baseColor);
+        }
 
         if (btn.statusText != null)
         {
-            btn.statusText.text = btn.isOn ? "ON" : "OFF";
-            btn.statusText.color = btn.isOn
-                ? new Color(0.2f, 1f, 0.4f)
-                : new Color(1f, 0.4f, 0.4f);
+            if (btn.statusProvider != null)
+            {
+                btn.statusText.text = btn.statusProvider();
+                btn.statusText.color = new Color(0.7f, 0.85f, 1.0f);
+            }
+            else if (btn.isMomentary)
+            {
+                // Leave whatever was set; momentary buttons without a provider have no status.
+            }
+            else
+            {
+                btn.statusText.text = btn.isOn ? "ON" : "OFF";
+                btn.statusText.color = btn.isOn
+                    ? new Color(0.2f, 1f, 0.4f)
+                    : new Color(1f, 0.4f, 0.4f);
+            }
         }
 
         var ringRenderer = btn.ringQuad.GetComponent<Renderer>();
         if (ringRenderer != null)
-            ringRenderer.material.SetColor("_BaseColor",
-                btn.isOn ? accentColor : accentColor * 0.5f);
+        {
+            Color ringColor = btn.isMomentary
+                ? accentColor * 0.7f
+                : (btn.isOn ? accentColor : accentColor * 0.5f);
+            ringRenderer.material.SetColor("_BaseColor", ringColor);
+        }
     }
 
+    private int lastHoveredIndex = -2;
     void UpdateHighlight()
     {
         int nearest = GetNearestButton();
+        if (nearest != lastHoveredIndex)
+        {
+            string name = (nearest >= 0 && nearest < buttons.Count) ? buttons[nearest].label.Replace("\n", " ") : "<none>";
+            Debug.Log($"[RadialMenu] hover -> '{name}' (idx {nearest})");
+            lastHoveredIndex = nearest;
+        }
         for (int i = 0; i < buttons.Count; i++)
         {
             var btn = buttons[i];
@@ -578,8 +776,10 @@ public class RadialMenu : MonoBehaviour
             }
             else
             {
-                renderer.material.SetColor("_BaseColor",
-                    btn.isOn ? buttonOnColor : buttonOffColor);
+                Color baseColor = btn.isMomentary
+                    ? buttonOffColor
+                    : (btn.isOn ? buttonOnColor : buttonOffColor);
+                renderer.material.SetColor("_BaseColor", baseColor);
             }
         }
     }
@@ -640,7 +840,8 @@ public class RadialMenu : MonoBehaviour
         if (index < 0 || index >= buttons.Count) return;
 
         var btn = buttons[index];
-        btn.isOn = !btn.isOn;
+        if (!btn.isMomentary)
+            btn.isOn = !btn.isOn;
         btn.onToggle?.Invoke();
         UpdateButtonVisual(btn);
     }

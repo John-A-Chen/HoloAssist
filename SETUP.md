@@ -64,6 +64,29 @@ git clone git@github.com:Unity-Technologies/URDF-Importer.git
 
 `Packages/manifest.json` already uses relative paths so no editing needed — Unity will find them automatically.
 
+### Required patch: ROS-TCP-Connector reconnect fix
+
+Upstream `ROS-TCP-Connector` v0.7.0 has a bug where Unity does not re-register subscribers when reconnecting to a freshly-restarted `ros_tcp_endpoint`. Symptom: after restarting the endpoint without rebuilding the APK, topics like `/joint_states` stop arriving in Unity even though the connection is healthy.
+
+Patch `ROS-TCP-Connector/com.unity.robotics.ros-tcp-connector/Runtime/TcpConnector/RosTopicState.cs`. Find `OnConnectionEstablished` and remove the `!SentSubscriberRegistration` guard so registrations are re-sent on every new connection:
+
+```csharp
+internal void OnConnectionEstablished(NetworkStream stream)
+{
+    // Always re-register on every new connection — the endpoint starts fresh
+    // each time, so it must receive all subscriber registrations even if
+    // SentSubscriberRegistration is still true from a previous connection.
+    if (m_SubscriberCallbacks.Count > 0)
+    {
+        m_ConnectionInternal.SendSubscriberRegistration(m_Topic, m_RosMessageName, stream);
+        SentSubscriberRegistration = true;
+    }
+    // ... rest of method unchanged
+}
+```
+
+Apply, then rebuild the Unity APK. The fix lives in a separately-cloned package, so it must be re-applied each time the package is freshly cloned.
+
 ### URDF and meshes
 
 The UR3e URDF and meshes are already in `Unity/My project/Assets/URDF/`:

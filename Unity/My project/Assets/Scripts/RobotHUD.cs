@@ -1,5 +1,7 @@
 using UnityEngine;
 using TMPro;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Sensor;
 
 [ExecuteInEditMode]
 public class RobotHUD : MonoBehaviour
@@ -22,6 +24,12 @@ public class RobotHUD : MonoBehaviour
     public Color titleColor = new Color(0.6f, 0.8f, 1.0f, 1f);
     public Color accentColor = new Color(0.2f, 0.6f, 1.0f, 1f);
 
+    [Header("References — optional, for status display")]
+    [Tooltip("Drag JointTFVisualizer to show TF axes state in HUD")]
+    public JointTFVisualizer tfVisualizer;
+    [Tooltip("Drag PassthroughToggle to show passthrough state in HUD")]
+    public PassthroughToggle passthroughToggle;
+
     private TextMeshPro titleLabel;
     private TextMeshPro controlsLabel;
     private TextMeshPro gripperLabel;
@@ -40,9 +48,35 @@ public class RobotHUD : MonoBehaviour
 
     private bool built = false;
 
+    // Live joint angles (degrees) — updated directly from /joint_states
+    private float[] hudJointAngles = new float[6];
+    private bool hudRosSubscribed = false;
+    private static readonly string[] rosJointNames =
+    {
+        "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint",
+    };
+
     void OnEnable()
     {
-        // Destroy old children to avoid duplicates on recompile/re-enable in editor
+        // If the HUD is already built and its label refs are still alive (typical
+        // SetActive toggle from the radial menu), skip the destroy-and-rebuild and
+        // just refresh the text immediately so the first frame after re-show is
+        // already up-to-date with the controller's current mode / sub-mode.
+        if (built && titleLabel != null && controlsLabel != null && gripperLabel != null)
+        {
+            if (Application.isPlaying)
+            {
+                SubscribeJointStates();
+                RebindControllerIfNeeded();
+                lastSeenModeValid = false;
+                if (controller != null) UpdateText();
+            }
+            return;
+        }
+
+        // Otherwise full rebuild — handles first run, script recompile (labels
+        // become null after domain reload), or scene reload.
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             if (Application.isPlaying)
@@ -54,9 +88,56 @@ public class RobotHUD : MonoBehaviour
         BuildHUD();
     }
 
+    /// <summary>
+    /// Refresh the HUD text immediately (used by RadialMenu after a page-2 click
+    /// so the user doesn't have to wait for the next LateUpdate frame, and so a
+    /// stale or null `controller` reference is repaired before the read).
+    /// </summary>
+    public void ForceRefresh()
+    {
+        if (!Application.isPlaying) return;
+        RebindControllerIfNeeded();
+        if (controller == null) return;
+        if (titleLabel == null || controlsLabel == null || gripperLabel == null) return;
+        UpdateText();
+    }
+
+    void RebindControllerIfNeeded()
+    {
+        if (controller != null && controller.enabled && controller.gameObject.activeInHierarchy)
+            return;
+
+        RobotController newController = null;
+        foreach (var c in FindObjectsOfType<RobotController>(true))
+        {
+            if (c.enabled && c.gameObject.activeInHierarchy) { newController = c; break; }
+        }
+        if (newController != null && newController != controller)
+        {
+            Debug.LogWarning($"[RobotHUD] Rebound controller to '{newController.gameObject.name}' (instance {newController.GetInstanceID()}).");
+            controller = newController;
+        }
+    }
+
     void Start()
     {
         if (!built) BuildHUD();
+        if (Application.isPlaying) SubscribeJointStates();
+    }
+
+    void SubscribeJointStates()
+    {
+        if (hudRosSubscribed) return;
+        ROSConnection.GetOrCreateInstance().Subscribe<JointStateMsg>("/joint_states", OnJointStateHUD);
+        hudRosSubscribed = true;
+    }
+
+    void OnJointStateHUD(JointStateMsg msg)
+    {
+        for (int i = 0; i < msg.name.Length; i++)
+            for (int j = 0; j < rosJointNames.Length; j++)
+                if (msg.name[i] == rosJointNames[j])
+                    hudJointAngles[j] = (float)(msg.position[i] * Mathf.Rad2Deg);
     }
 
     void BuildHUD()
@@ -69,6 +150,37 @@ public class RobotHUD : MonoBehaviour
         {
             Debug.LogError("[RobotHUD] No camera found! HUD will not render.");
             return;
+        }
+
+        // Auto-find / re-bind controller. Scenes often end up with a leftover disabled
+        // RobotController after a branch merge — its mode field stays frozen, which makes
+        // the HUD look unresponsive to radial-menu mode changes. Always prefer an enabled
+        // component on an active GameObject.
+        if (Application.isPlaying)
+        {
+            var allControllers = FindObjectsOfType<RobotController>(true);
+            RobotController bestActive = null;
+            foreach (var c in allControllers)
+            {
+                if (c.enabled && c.gameObject.activeInHierarchy) { bestActive = c; break; }
+            }
+
+            if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+            {
+                if (bestActive != null)
+                {
+                    Debug.LogWarning($"[RobotHUD] controller was {(controller == null ? "null" : "disabled")} — rebound to enabled '{bestActive.gameObject.name}' (instance {bestActive.GetInstanceID()}).");
+                    controller = bestActive;
+                }
+                else
+                {
+                    Debug.LogError("[RobotHUD] No active+enabled RobotController in scene.");
+                }
+            }
+            if (allControllers.Length > 1)
+            {
+                Debug.LogWarning($"[RobotHUD] {allControllers.Length} RobotController components in scene (some may be disabled leftovers from the seb/main merge). HUD reads instance {controller?.GetInstanceID()} ('{controller?.gameObject.name}'). Remove duplicate components for stability.");
+            }
         }
 
         // Cache a TMP font — needed when creating TextMeshPro at runtime
@@ -108,6 +220,10 @@ public class RobotHUD : MonoBehaviour
 
         if (cam != null) UpdatePosition(true);
         built = true;
+
+        // Populate text immediately so the first frame after a rebuild already
+        // shows the correct mode / gripper state instead of empty labels.
+        if (Application.isPlaying && controller != null) UpdateText();
     }
 
     void CreateQuad(string name, Vector3 localPos, Vector2 size, Color color, int renderQueue)
@@ -228,11 +344,38 @@ public class RobotHUD : MonoBehaviour
         return tmp;
     }
 
+    string JointAnglesLine()
+    {
+        return $"P:{hudJointAngles[0]:F0}° L:{hudJointAngles[1]:F0}° E:{hudJointAngles[2]:F0}°  W1:{hudJointAngles[3]:F0}° W2:{hudJointAngles[4]:F0}° W3:{hudJointAngles[5]:F0}°";
+    }
+
+    private RobotController.ControlMode lastSeenMode;
+    private bool lastSeenModeValid = false;
+
     void LateUpdate()
     {
         // Only follow camera and update text in Play mode (so panel stays where placed in editor)
         if (!Application.isPlaying) return;
+
+        // Self-healing subscribe — covers "Disable Domain Reload" + late-ROSConnection cases.
+        if (!hudRosSubscribed) SubscribeJointStates();
+
+        // Continuous self-heal: if controller is null, disabled, or on an inactive
+        // GameObject, rebind to the first active+enabled RobotController in the scene.
+        // This guarantees the title tracks mode changes even if a stale (disabled)
+        // duplicate component is left in the scene from a branch merge.
+        RebindControllerIfNeeded();
+
         if (controller == null || cam == null) return;
+
+        // Log mode transitions so radial-menu page 2 button effects are visible in logcat.
+        if (!lastSeenModeValid || controller.CurrentMode != lastSeenMode)
+        {
+            Debug.Log($"[RobotHUD] Mode -> {controller.CurrentMode} (controller instance {controller.GetInstanceID()})");
+            lastSeenMode = controller.CurrentMode;
+            lastSeenModeValid = true;
+        }
+
         UpdatePosition(false);
         UpdateText();
     }
@@ -263,44 +406,43 @@ public class RobotHUD : MonoBehaviour
             bool active = controller.IsHandGuideActive;
             titleLabel.text = active ? "HAND GUIDE  ●  TRACKING" : "HAND GUIDE  ○  READY";
             titleLabel.color = active ? new Color(1f, 0.4f, 0.4f) : new Color(0.9f, 0.6f, 0.9f);
-
-            controlsLabel.text = "R-Grip: Hold to move robot  |  Y: Options  |  Menu: cycle mode";
+            controlsLabel.text = JointAnglesLine();
         }
         else if (controller.CurrentMode == RobotController.ControlMode.DirectJoint)
         {
             int idx = controller.SelectedJoint;
             string jointName = (idx >= 0 && idx < jointDisplayNames.Length)
                 ? jointDisplayNames[idx] : controller.SelectedJointName;
+            float angle = (idx >= 0 && idx < hudJointAngles.Length) ? hudJointAngles[idx] : 0f;
 
-            titleLabel.text = $"DIRECT JOINT  |  {jointName}  ({idx + 1}/6)";
+            titleLabel.text = $"DIRECT JOINT  |  {jointName}  ({idx + 1}/6)  {angle:F1}°";
             titleLabel.color = new Color(1f, 0.8f, 0.3f);
-
-            controlsLabel.text = "R-Stick Y: Jog  |  A/B: Switch Joint  |  Y: Options";
+            controlsLabel.text = JointAnglesLine();
         }
         else if (controller.CurrentRMRCSubMode == RobotController.RMRCSubMode.Translate)
         {
             titleLabel.text = "RMRC  TRANSLATE";
             titleLabel.color = new Color(0.4f, 0.9f, 0.4f);
-
-            controlsLabel.text = "R-Stick: XY  |  L-Stick: Up/Down + Yaw  |  Y: Options (RMRC Mode)";
+            controlsLabel.text = JointAnglesLine();
         }
         else
         {
             titleLabel.text = "RMRC  ROTATE";
             titleLabel.color = new Color(0.5f, 0.7f, 1f);
-
-            controlsLabel.text = "R-Stick: Pitch/Roll  |  L-Stick X: Yaw  |  Y: Options (RMRC Mode)";
+            controlsLabel.text = JointAnglesLine();
         }
 
-        // Gripper + lock status — shown in all modes
+        // Gripper + lock + radial-menu-toggleable state — shown in all modes
         float g = controller.GripperValue;
         int pct = Mathf.RoundToInt(g * 100f);
-        string bar = new string('|', Mathf.RoundToInt(g * 10f)).PadRight(10, '.');
-        string lockIcon = controller.IsEELockedDown ? "  |  LOCK ▼" : "";
-        gripperLabel.text = $"Gripper [{bar}] {pct}%{lockIcon}";
+        string lockIcon = controller.IsEELockedDown ? "  LOCK" : "";
+        string tfIcon = (tfVisualizer != null && tfVisualizer.showAxes) ? "  TF" : "";
+        string passIcon = (passthroughToggle != null && passthroughToggle.PassthroughEnabled) ? "  MR" : "  VR";
+        gripperLabel.text = $"Grip {pct}%{lockIcon}{tfIcon}{passIcon}";
         Color gripColor = (g < 0.05f) ? new Color(0.5f, 0.8f, 0.5f)
                          : (g > 0.9f)  ? new Color(1f, 0.4f, 0.3f)
                          : new Color(1f, 0.85f, 0.4f);
         gripperLabel.color = controller.IsEELockedDown ? new Color(0.4f, 0.8f, 1f) : gripColor;
+
     }
 }
