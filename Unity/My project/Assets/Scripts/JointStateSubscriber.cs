@@ -5,6 +5,22 @@ using RosMessageTypes.Sensor;
 
 public class JointStateSubscriber : MonoBehaviour
 {
+    // Last arm joint angles received from /joint_states (radians).
+    // Order: shoulder_pan, shoulder_lift, elbow, wrist_1, wrist_2, wrist_3.
+    // Stays at zero until the first ROS message arrives.
+    public float[] LastJointAnglesRad { get; private set; } = new float[6];
+    public bool HasReceivedJointState { get; private set; } = false;
+
+    private static readonly Dictionary<string, int> rosNameToIndex = new Dictionary<string, int>
+    {
+        { "shoulder_pan_joint",  0 },
+        { "shoulder_lift_joint", 1 },
+        { "elbow_joint",         2 },
+        { "wrist_1_joint",       3 },
+        { "wrist_2_joint",       4 },
+        { "wrist_3_joint",       5 },
+    };
+
     private Dictionary<string, Transform> jointMap = new Dictionary<string, Transform>();
     private Dictionary<string, Quaternion> initialRotations = new Dictionary<string, Quaternion>();
     private Dictionary<string, Vector3> jointAxes = new Dictionary<string, Vector3>();
@@ -91,6 +107,12 @@ public class JointStateSubscriber : MonoBehaviour
                 if (jointLimits.TryGetValue(rosName, out var limits))
                 {
                     angle = Mathf.Clamp(angle, limits.lower, limits.upper);
+                }
+
+                if (rosNameToIndex.TryGetValue(rosName, out int idx))
+                {
+                    LastJointAnglesRad[idx] = angle;
+                    HasReceivedJointState = true;
                 }
 
                 float angleDeg = angle * Mathf.Rad2Deg;

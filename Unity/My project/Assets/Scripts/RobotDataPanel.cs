@@ -22,6 +22,9 @@ public class RobotDataPanel : MonoBehaviour
     [Tooltip("Drag base_link to compute end-effector pose relative to robot base")]
     public Transform robotBase;
 
+    [Tooltip("Auto-found at runtime if left empty")]
+    public JointStateSubscriber jointStateSubscriber;
+
     [Tooltip("Drag the JointTFVisualizer to enable toggle button")]
     public JointTFVisualizer tfVisualizer;
 
@@ -95,6 +98,23 @@ public class RobotDataPanel : MonoBehaviour
 
     void Start()
     {
+        if (Application.isPlaying)
+        {
+            if (jointStateSubscriber == null)
+                jointStateSubscriber = FindObjectOfType<JointStateSubscriber>();
+            if (robotController == null)
+                robotController = FindObjectOfType<RobotController>();
+            if (endEffectorTransform == null)
+            {
+                var t = GameObject.Find("tool0");
+                if (t != null) endEffectorTransform = t.transform;
+            }
+            if (robotBase == null)
+            {
+                var b = GameObject.Find("base_link");
+                if (b != null) robotBase = b.transform;
+            }
+        }
         Rebuild();
         if (Application.isPlaying)
             SubscribeToJointStates();
@@ -373,18 +393,23 @@ public class RobotDataPanel : MonoBehaviour
 
     void UpdateData()
     {
-        // Joint angles come directly from OnJointState (ROS subscription).
-        // Fall back to RobotController only if not yet subscribed (e.g. in Editor).
-        if (!rosSubscribed && robotController != null && robotController.HasJointState)
+        // Primary source: JointStateSubscriber caches every angle applied to the
+        // robot transforms, so the panel always reflects the visual robot state.
+        if (jointStateSubscriber != null)
         {
-            var positions = robotController.CurrentPositions;
-            for (int i = 0; i < jointAngles.Length && i < positions.Length; i++)
-                jointAngles[i] = (float)(positions[i] * Mathf.Rad2Deg);
+            var rad = jointStateSubscriber.LastJointAnglesRad;
+            for (int i = 0; i < jointAngles.Length && i < rad.Length; i++)
+                jointAngles[i] = rad[i] * Mathf.Rad2Deg;
+            connectionStatus = jointStateSubscriber.HasReceivedJointState ? "Connected" : "Waiting for ROS";
+        }
+        else if (rosSubscribed)
+        {
+            // jointAngles[] already kept up-to-date by OnJointState callback
             connectionStatus = "Connected";
         }
-        else if (!rosSubscribed && robotController != null)
+        else
         {
-            connectionStatus = robotController.HasJointState ? "Connected" : "Disconnected";
+            connectionStatus = "Disconnected";
         }
 
         // Auto-read end-effector pose relative to base_link
