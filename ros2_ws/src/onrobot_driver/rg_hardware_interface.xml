@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<library path="onrobot_driver_plugin">
+  <class name="onrobot_driver/RGHardwareInterface"
+         type="rg_hardware_interface::RGHardwareInterface"
+         base_class_type="hardware_interface::ActuatorInterface">
+    <description>
+        ROS 2 Control hardware interface for the OnRobot RG gripper.
+    </description>
+  </class>
+</library>
