@@ -1,0 +1,35 @@
+holoassist_workspace_board:
+  ros__parameters:
+    detections_topic: /detections_all
+    workspace_frame: workspace_frame
+    tag_family: 36h11
+    board_tag_ids: [0, 1, 2, 3]
+    board_width_m: 0.700
+    board_depth_m: 0.500
+    # AprilTag printed size is 0.032 m.
+    # If tags are flush with board edges, center-to-edge offset is 0.016 m (=0.032/2).
+    board_tag_center_edge_offset_m: 0.016
+    tag_lookup_timeout_s: 0.05
+    detections_timeout_s: 1.0
+    timer_hz: 20.0
+    geometry_rms_tolerance_m: 0.02
+    dimension_tolerance_m: 0.04
+    workspace_realign_service_name: /holoassist/perception/realign_workspace
+
+    robot_tf_child_frame: ur3e_base_link0
+    publish_robot_tf: true
+    robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
+    robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
+    # Board-frame placement:
+    # - robot center is 0.450 m from board left edge
+    # - robot center is 0.564 m from board front edge (0.500 + 0.064)
+    robot_x_m: 0.450
+    robot_y_m: 0.564
+    # UR3e base joint frame is 15 mm below board/plane surface.
+    robot_z_m: -0.015
+    robot_base_diameter_m: 0.128
+    robot_marker_height_m: 0.01
+
+    workspace_mode_topic: /holoassist/perception/workspace_mode
+    workspace_diag_topic: /holoassist/perception/workspace_diagnostics
+    plane_coeff_topic: /holoassist/perception/bench_plane_coefficients

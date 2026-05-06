@@ -6,6 +6,12 @@ ros2_ws/src/Universal_Robots_ROS2_Driver/
 ros2_ws/src/ur_onrobot/
 ros2_ws/src/onrobot_driver/
 ros2_ws/src/onrobot_description/
+ros2_ws/src/holo_assist_depth_tracker/
+ros2_ws/src/holo_assist_depth_tracker_sim/
+ros2_ws/src/holo_assist_depth_tracker_sim_interfaces/
+ros2_ws/src/moveit_robot_control/
+ros2_ws/src/moveit_robot_control_msgs/
+ros2_ws/src/holoassist_unity_bridge/
 
 # Unity generated files
 Unity/My project/Library/
