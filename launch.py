@@ -2,13 +2,16 @@
 """HoloAssist ROS 2 launcher — starts UR driver, controller switch, and TCP endpoint."""
 
 import argparse
+import os
 import subprocess
 import signal
 import sys
 import time
 import socket
 
-ROS2_WS = "/home/nic/git/RS2-HoloAssist/nic/ros2_ws"
+# Resolve ros2_ws relative to this script so the launcher works on any machine.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROS2_WS = os.path.join(SCRIPT_DIR, "ros2_ws")
 SOURCE_CMD = f"source /opt/ros/humble/setup.bash && source {ROS2_WS}/install/setup.bash"
 
 DEFAULT_WIFI_IP = "172.19.115.104"
@@ -123,10 +126,14 @@ def main():
     time.sleep(8)
 
     # 2. Switch controllers (activate velocity + gripper, deactivate trajectory)
+    # Use `ros2 service call` instead of `ros2 control switch_controllers` so we
+    # don't depend on the ros2controlcli apt package being installed.
     switch_cmd = (
-        "ros2 control switch_controllers"
-        " --activate forward_velocity_controller finger_width_controller"
-        " --deactivate scaled_joint_trajectory_controller finger_width_trajectory_controller"
+        "ros2 service call /controller_manager/switch_controller"
+        " controller_manager_msgs/srv/SwitchController"
+        " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
+        " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
+        " strictness: 2}\""
     )
     switch_proc = subprocess.run(
         ["bash", "-c", f"{SOURCE_CMD} && {switch_cmd}"],

@@ -79,6 +79,11 @@ public class HeadsetStreamPublisher : MonoBehaviour
         captureCamera.targetTexture = renderTexture;
         captureCamera.enabled = false;
 
+        // Detach the capture camera from the XR stereo pipeline so it can't compete
+        // with the main XR camera for the headset's eye buffers / passthrough alpha.
+        // CopyFrom inherits stereoTargetEye = Both, which can blank passthrough.
+        captureCamera.stereoTargetEye = StereoTargetEyeMask.None;
+
         // Force skybox background so the dashboard sees the scene, not transparent black.
         // This only affects the capture camera — the user's XR view is unchanged.
         captureCamera.clearFlags = CameraClearFlags.Skybox;

@@ -74,7 +74,7 @@ namespace UnityEngine.XR.Templates.MR
             {
                 LoadAnchors();
             }
-            else
+            else if (m_AnchorText != null)
             {
                 m_AnchorText.text = "<b><u><align=center>- Currently Saved Objects -</b></u></align>\n\n";
                 if (m_SaveAndLoadAnchorIdsToFile.SavedAnchorsData.Count == 0)

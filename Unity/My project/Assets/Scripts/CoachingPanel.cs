@@ -38,6 +38,16 @@ public class CoachingPanel : MonoBehaviour
     [Header("State")]
     public int currentPage = 0;
 
+    [Header("Custom UI Reveal")]
+    [Tooltip("Custom UI panels (RobotDataPanel, RadialMenu, BinStatusPanel, RobotHUD, etc.) " +
+             "hidden at runtime until the user finishes coaching. Stay active in the Editor " +
+             "so you can still see + edit them in the Scene view.")]
+    public List<GameObject> hiddenUntilCoachingDone = new List<GameObject>();
+
+    [Tooltip("If true, calling NextPage past the last coaching page automatically reveals " +
+             "the UI panels above and hides this coaching panel.")]
+    public bool revealOnLastPageNext = true;
+
     private Transform cam;
     private bool built;
     private float panelHeight;
@@ -68,83 +78,126 @@ public class CoachingPanel : MonoBehaviour
             "GETTING STARTED",
             "",
             "Welcome to HoloAssist!",
-            "This sim controls a UR3e robot arm.",
+            "This sim teleoperates a UR3e robot arm",
+            "with an OnRobot RG2 gripper.",
             "",
-            "Use Quest controllers to move the robot",
-            "and interact with objects in the scene.",
+            "Three control modes: RMRC (Cartesian),",
+            "Direct Joint, and Hand Guide.",
             "",
-            "Press Y to open the Options Menu.",
-            "Navigate pages with A (next) / B (prev)."
+            "Press Next on the right to flip pages.",
+            "Press Y at any time for the radial menu.",
         },
-        // Page 1: Robot Control - Direct Joint
+        // Page 1: Mode switching
+        new string[]
+        {
+            "MODE SWITCHING",
+            "",
+            "Menu Button .... Cycle modes",
+            "  RMRC -> Direct Joint -> Hand Guide",
+            "",
+            "Or open the radial menu (Y), flip to",
+            "Page 2 of 2, and pick:",
+            "  RMRC Cart  /  Joint Mode  /  Hand Guide",
+            "",
+            "Current mode is shown on the Robot HUD.",
+        },
+        // Page 2: RMRC (Cartesian)
+        new string[]
+        {
+            "RMRC - CARTESIAN MODE",
+            "",
+            "Default sub-mode is TRANSLATE:",
+            "  Right Stick   .. EE forward/back + L/R",
+            "  Left Stick Y  .. EE up/down (Z)",
+            "  Left Stick X  .. Yaw",
+            "",
+            "Switch to ROTATE via radial -> RMRC Mode:",
+            "  Right Stick   .. Wrist 1 + Wrist 2",
+            "  Left Stick X  .. Wrist 3",
+        },
+        // Page 3: Direct Joint
         new string[]
         {
             "DIRECT JOINT MODE",
             "",
-            "Right Stick Y ... Jog selected joint",
-            "A Button ....... Next joint",
-            "B Button ....... Previous joint",
-            "Menu Button .... Switch to Servo mode",
+            "Right Stick Y .. Jog selected joint",
+            "A Button ...... Next joint",
+            "B Button ...... Previous joint",
             "",
-            "The selected joint is shown on the HUD.",
-            "Move the stick gently for slow motion.",
+            "Or use radial Page 2: Prev/Next Joint",
+            "buttons (status shows the joint name).",
+            "",
+            "Selected joint is shown on the Robot HUD.",
         },
-        // Page 2: Robot Control - Servo
+        // Page 4: Hand Guide
         new string[]
         {
-            "SERVO MODE (Cartesian)",
+            "HAND GUIDE MODE",
             "",
-            "Left Stick Y ... Forward / Back",
-            "Left Stick X ... Left / Right",
-            "Right Stick Y .. Up / Down",
-            "Right Stick X .. Yaw rotation",
-            "Menu Button .... Switch to Joint mode",
+            "Hold the Right Grip to track your hand.",
+            "The end-effector follows your controller",
+            "while held; release grip to stop.",
             "",
-            "Requires MoveIt Servo running on ROS.",
+            "Best for fine positioning. Movement is",
+            "speed-limited for safety.",
         },
-        // Page 3: Visualization
+        // Page 5: Gripper + EE Lock
         new string[]
         {
-            "VISUALIZATION",
+            "GRIPPER + EE LOCK",
             "",
-            "X Button ....... Toggle TF Axes",
-            "Y Button ....... Open Options Menu",
+            "Right Trigger .. Gripper width 0-100%",
+            "  Squeeze partially for analog control.",
+            "  Works in all modes simultaneously.",
             "",
-            "TF axes show coordinate frames on each",
-            "robot joint and moving objects (RGB=XYZ).",
-            "",
-            "The Data Panel shows live joint angles",
-            "and end-effector position.",
+            "Radial Page 2 -> EE Lock toggles tool",
+            "pointing straight down (locks orientation",
+            "while you translate freely).",
         },
-        // Page 4: Interaction
+        // Page 6: Radial Menu (Options)
         new string[]
         {
-            "OBJECT INTERACTION",
+            "RADIAL MENU (Y BUTTON)",
             "",
-            "Right Trigger .. Grab objects",
-            "Grip Button .... Release objects",
+            "Hold Y to open. Point with right",
+            "controller; pull Right Trigger to select.",
             "",
-            "Grab the cube or other objects and move",
-            "them around the scene. Objects placed in",
-            "bins are detected automatically.",
+            "Page 1 - UI panels:",
+            "  TF Axes / Data Panel / Bin Status",
+            "  Coach / Passthru / Robot HUD",
             "",
-            "The Bin Status panel shows occupancy.",
+            "Page 2 - Robot controls (modes, EE Lock,",
+            "RMRC Mode, Prev/Next Joint).",
         },
-        // Page 5: Options Menu
+        // Page 7: Bins + finishing
         new string[]
         {
-            "OPTIONS MENU",
+            "BINS + GETTING STARTED",
             "",
-            "Y Button ....... Toggle menu",
-            "Point + Trigger  Select option",
+            "Drop objects into the bins around the",
+            "workspace - the Bin Status panel updates",
+            "occupancy automatically.",
             "",
-            "Available toggles:",
-            "  - TF Axes (coordinate frames)",
-            "  - Data Panel (joint angles)",
-            "  - Bin Status (bin detection)",
-            "  - Coaching (this panel)",
+            "Press Passthru on the radial menu to",
+            "switch between MR (real world) and VR",
+            "(virtual environment).",
+            "",
+            "Press NEXT now to start.",
         },
     };
+
+    void Awake()
+    {
+        // Runtime-only: hide the user-listed UI panels until coaching finishes.
+        // In the Editor (edit mode) we leave them active so the Scene view shows them.
+        if (Application.isPlaying)
+        {
+            foreach (var go in hiddenUntilCoachingDone)
+            {
+                if (go != null) go.SetActive(false);
+            }
+        }
+    }
 
     void OnEnable()
     {
@@ -311,12 +364,31 @@ public class CoachingPanel : MonoBehaviour
 
     public void NextPage()
     {
+        if (revealOnLastPageNext && currentPage >= pages.Length - 1)
+        {
+            FinishCoaching();
+            return;
+        }
         SetPage(currentPage + 1);
     }
 
     public void PrevPage()
     {
         SetPage(currentPage - 1);
+    }
+
+    /// <summary>
+    /// Reveal all panels listed in <see cref="hiddenUntilCoachingDone"/> and hide
+    /// this coaching panel. Safe to call from anywhere — e.g. a "Start" button on
+    /// the last page, or from the radial menu.
+    /// </summary>
+    public void FinishCoaching()
+    {
+        foreach (var go in hiddenUntilCoachingDone)
+        {
+            if (go != null) go.SetActive(true);
+        }
+        gameObject.SetActive(false);
     }
 
     public void SetPage(int page)
