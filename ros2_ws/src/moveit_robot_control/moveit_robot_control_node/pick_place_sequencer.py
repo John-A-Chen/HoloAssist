@@ -214,14 +214,14 @@ class PickPlaceSequencer(Node):
         self.declare_parameter("use_block_yaw", True)
         self.declare_parameter("use_place_yaw", True)
 
-        self.declare_parameter("pregrasp_z_offset", 0.11)
-        self.declare_parameter("grasp_z_offset", 0.05)
+        self.declare_parameter("pregrasp_z_offset", 0.10)
+        self.declare_parameter("grasp_z_offset", 0.00)
         self.declare_parameter("place_above_z_offset", 0.17)
         self.declare_parameter("place_z_offset", 0.05)
         self.declare_parameter("place_descent_enabled", False)
 
         self.declare_parameter("open_width", 0.08)
-        self.declare_parameter("close_width", 0.0)
+        self.declare_parameter("close_width", 0.03)
         self.declare_parameter("gripper_motion_sec", 2.0)
         self.declare_parameter("move_timeout_sec", 60.0)
         self.declare_parameter("scene_update_timeout_sec", 5.0)
