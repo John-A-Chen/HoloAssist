@@ -19,6 +19,12 @@ holoassist_board_calibration:
     approx_ws_z_m:  0.015
     approx_ws_yaw_rad: 0.0
 
+    # ── Manual positioning mode ───────────────────────────────────────────────
+    # Set true to skip MoveIt entirely. Enable freedrive on the teach pendant,
+    # manually push the TCP above each tag, and press ENTER to record.
+    # hover_height_m is still subtracted from TCP Z — set 0.0 to touch tags directly.
+    use_manual_positioning: false
+
     # ── Motion parameters ─────────────────────────────────────────────────────
     # Height above the board surface at which the robot hovers for alignment.
     # 150 mm gives a clear visual reference without crowding the board.

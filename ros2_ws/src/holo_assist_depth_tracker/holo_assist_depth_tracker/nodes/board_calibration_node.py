@@ -165,6 +165,13 @@ class BoardCalibrationNode(Node):
         self.declare_parameter("approx_ws_z_m", 0.015)
         self.declare_parameter("approx_ws_yaw_rad", 0.0)
 
+        # ── manual positioning mode ───────────────────────────────────────────
+        # When true: skip MoveIt entirely. Use freedrive on the teach pendant
+        # to manually push the TCP above each tag, then press Enter.
+        # hover_height_m is still subtracted from the measured TCP Z to get the
+        # board surface — set to 0.0 if you place the TCP directly on the tag.
+        self.declare_parameter("use_manual_positioning", False)
+
         # ── motion params ─────────────────────────────────────────────────────
         self.declare_parameter("hover_height_m", 0.150)
         self.declare_parameter("move_group_name", _MOVE_GROUP)
@@ -215,6 +222,7 @@ class BoardCalibrationNode(Node):
         self._output_dir = Path(str(self.get_parameter("output_dir").value))
         self._pass_tol = float(self.get_parameter("pass_tolerance_m").value)
         self._publish_cal_tf = bool(self.get_parameter("publish_calibrated_tf").value)
+        self._manual_mode = bool(self.get_parameter("use_manual_positioning").value)
         self._verify_cam = bool(self.get_parameter("verify_with_camera").value)
         self._tag_family = str(self.get_parameter("tag_family").value)
         self._ws_frame = str(self.get_parameter("workspace_frame").value)
@@ -661,7 +669,13 @@ class BoardCalibrationNode(Node):
 
     def _start_stdin_thread(self) -> None:
         def _read() -> None:
-            sys.stdin.readline()
+            try:
+                # ros2 launch redirects stdin away from the terminal.
+                # Open /dev/tty directly so keypresses always reach us.
+                with open("/dev/tty", "r") as tty:
+                    tty.readline()
+            except OSError:
+                sys.stdin.readline()
             self._user_confirmed.set()
 
         t = threading.Thread(target=_read, daemon=True)
@@ -684,58 +698,127 @@ class BoardCalibrationNode(Node):
         """Execute the full calibration routine (blocking)."""
         self._print_banner()
 
-        # Wait for joint states and MoveIt
+        # Wait for joint states (always needed for FK measurement)
         print("\n[1/6] Waiting for /joint_states …", flush=True)
         current_joints = self._wait_joints(timeout=30.0)
         print(f"      Joint state OK: {[round(j, 3) for j in current_joints]}", flush=True)
 
-        print("[2/6] Waiting for MoveIt …", flush=True)
-        self._wait_moveit(timeout=60.0)
-        print("      MoveIt OK", flush=True)
+        if self._manual_mode:
+            print("[2/6] Manual positioning mode — MoveIt not required.", flush=True)
+            self._wait_user(
+                "MANUAL MODE — freedrive setup\n"
+                "  • Enable freedrive on the teach pendant\n"
+                "  • Board is placed on the bench in its working position\n"
+                "  • For each tag you will manually push the TCP to the tag,\n"
+                f"    hovering {int(self._hover_h * 1000)} mm above the board surface\n"
+                "    (set hover_height_m: 0.0 in config to touch the tag directly)\n"
+                "  • Press ENTER after positioning the TCP over each tag\n"
+                "Confirm ready to start"
+            )
+        else:
+            print("[2/6] Waiting for MoveIt …", flush=True)
+            self._wait_moveit(timeout=60.0)
+            print("      MoveIt OK", flush=True)
+            self._wait_user(
+                "Setup check complete.\n"
+                "  • Robot is connected and in External Control mode\n"
+                "  • Board is roughly positioned in front of the robot\n"
+                "  • You can slide the board freely during hover pauses\n"
+                "Confirm ready to start calibration"
+            )
 
-        self._wait_user(
-            "Setup check complete.\n"
-            "  • Robot is connected and in External Control mode\n"
-            "  • Board is roughly positioned in front of the robot\n"
-            "  • You can slide the board freely during hover pauses\n"
-            "Confirm ready to start calibration"
-        )
-
-        # ── step 3: visit all 4 tag hover points ─────────────────────────────
-        print("\n[3/6] Visiting 4 tag hover points …", flush=True)
+        # ── step 3: visit all 4 tag positions ────────────────────────────────
+        print("\n[3/6] Recording tag positions …", flush=True)
         measured: Dict[int, np.ndarray] = {}
+        skipped: List[int] = []
 
         for step_n, tag_id in enumerate(_VISIT_ORDER, start=1):
             corner = _TAG_CORNER[tag_id]
             model_pos = self._tag_model[tag_id]
-            hover = self._hover_pose(tag_id)
 
-            self._print_step_header(step_n, tag_id, corner, model_pos, hover)
-
-            # plan
-            print(f"      Planning to hover above tag {tag_id} ({corner}) …", flush=True)
-            with self._joints_lock:
-                cur = list(self._current_joints or current_joints)
-            traj = self._plan_to_pose(hover, cur)
-
-            # execute
-            print(f"      Executing …", flush=True)
-            self._execute_trajectory(traj)
-
-            # prompt user to align board
-            self._wait_user(
-                f"HOVER POINT {step_n}/4 — Tag {tag_id} ({corner})\n"
-                f"  Robot is hovering {int(self._hover_h * 1000)} mm above the expected\n"
-                f"  {corner} tag location.\n"
-                f"  → Slide or rotate the board so tag {tag_id} is directly under\n"
-                f"    the robot TCP (the end of the gripper).\n"
-                f"  → Small yaw correction is OK.\n"
-                f"  Board aligned with tag {tag_id} under TCP"
+            print(
+                f"\n  ── Step {step_n}/4: Tag {tag_id} ({corner}) ──\n"
+                f"  Model position in workspace_frame: "
+                f"({model_pos[0]*1000:.1f}, {model_pos[1]*1000:.1f}, 0) mm",
+                flush=True,
             )
+
+            if self._manual_mode:
+                self._wait_user(
+                    f"TAG {tag_id} ({corner})\n"
+                    f"  → Push the TCP to {int(self._hover_h*1000)} mm above tag {tag_id}\n"
+                    f"    (the {corner} corner of the board).\n"
+                    f"  → Hold steady, then press ENTER to record the position."
+                )
+            else:
+                hover = self._hover_pose(tag_id)
+                print(
+                    f"  Approx hover target in base_link: "
+                    f"({hover.position.x:.4f}, {hover.position.y:.4f}, {hover.position.z:.4f}) m",
+                    flush=True,
+                )
+                print(f"      Planning to hover above tag {tag_id} ({corner}) …", flush=True)
+                with self._joints_lock:
+                    cur = list(self._current_joints or current_joints)
+                try:
+                    traj = self._plan_to_pose(hover, cur)
+                except RuntimeError as exc:
+                    print(
+                        f"  ⚠  Tag {tag_id} ({corner}) SKIPPED — MoveIt could not plan:\n"
+                        f"     {exc}\n"
+                        f"     Likely cause: hover target is outside the robot's reachable\n"
+                        f"     workspace. Try use_manual_positioning:=true instead.",
+                        flush=True,
+                    )
+                    skipped.append(tag_id)
+                    continue
+
+                print(f"      Executing …", flush=True)
+                try:
+                    self._execute_trajectory(traj)
+                except RuntimeError as exc:
+                    print(
+                        f"  ⚠  Tag {tag_id} ({corner}) SKIPPED — execution timed out:\n"
+                        f"     {exc}",
+                        flush=True,
+                    )
+                    skipped.append(tag_id)
+                    continue
+
+                self._wait_user(
+                    f"HOVER POINT {step_n}/4 — Tag {tag_id} ({corner})\n"
+                    f"  Robot is hovering {int(self._hover_h * 1000)} mm above the expected\n"
+                    f"  {corner} tag location.\n"
+                    f"  → Slide or rotate the board so tag {tag_id} is directly under\n"
+                    f"    the robot TCP (the end of the gripper).\n"
+                    f"  → Small yaw correction is OK.\n"
+                    f"  Board aligned with tag {tag_id} under TCP"
+                )
 
             # record FK measurement
             print(f"      Recording FK measurement for tag {tag_id} …", flush=True)
-            measured[tag_id] = self._measure_tag_position(tag_id)
+            try:
+                measured[tag_id] = self._measure_tag_position(tag_id)
+            except RuntimeError as exc:
+                print(f"  ⚠  FK measurement for tag {tag_id} failed: {exc}", flush=True)
+                skipped.append(tag_id)
+
+        n_measured = len(measured)
+        if n_measured < 2:
+            raise RuntimeError(
+                f"Only {n_measured} tag(s) measured (need ≥ 2). "
+                "Adjust approx_ws_* in board_calibration_params.yaml so more "
+                "hover targets fall within the robot's working envelope, then retry."
+            )
+        if n_measured < 3:
+            print(
+                f"\n  ⚠  Only {n_measured} tag(s) measured — SVD result will give\n"
+                f"     translation and yaw but roll/pitch are unconstrained.\n"
+                f"     For a full 6-DoF result, ensure ≥ 3 non-collinear tags are reachable.",
+                flush=True,
+            )
+        if skipped:
+            print(f"  Skipped tags: {skipped}", flush=True)
 
         # ── step 4: SVD solve ─────────────────────────────────────────────────
         print("\n[4/6] Solving workspace_frame transform (SVD) …", flush=True)
