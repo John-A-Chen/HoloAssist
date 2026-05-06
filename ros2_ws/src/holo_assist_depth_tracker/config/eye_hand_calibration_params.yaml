@@ -1,0 +1,48 @@
+eye_hand_calibration:
+  ros__parameters:
+    # --- Mode ---
+    # "sim" = synthetic observations (no real robot/camera)
+    # "hardware" = real apriltag_ros detections
+    mode: "sim"
+    num_samples: 20
+
+    # --- Frames ---
+    base_frame: "base_link"
+    ee_frame: "tool0"
+    camera_frame: "camera_color_optical_frame"
+    tag_frame: "tag36h11:50"   # AprilTag ID on the gripper
+
+    # --- Tag offset from tool0 ---
+    # Where the AprilTag is mounted relative to tool0.
+    # Positive Z = away from tool flange (outward from gripper).
+    tag_offset_x: 0.0
+    tag_offset_y: 0.0
+    tag_offset_z: 0.03
+    tag_offset_roll: 0.0
+    tag_offset_pitch: 0.0
+    tag_offset_yaw: 0.0
+
+    # --- Sim-only: ground-truth camera pose (world frame) ---
+    # Positioned in front of and above the robot, angled down at the workspace.
+    sim_camera_x: 0.15
+    sim_camera_y: -0.45
+    sim_camera_z: 0.55
+    sim_camera_roll: 0.0
+    sim_camera_pitch: 0.9599   # ~55 degrees down
+    sim_camera_yaw: 1.5708     # ~90 degrees
+    sim_noise_pos_stddev: 0.002     # 2 mm position noise
+    sim_noise_rot_stddev_deg: 0.5   # 0.5 degree rotation noise
+    sim_settle_time: 1.5            # seconds to wait after sending trajectory
+
+    # --- Solver ---
+    # Options: tsai, park, horaud, daniilidis, auto
+    # "auto" runs all methods and picks the most consistent one.
+    solver_method: "park"
+
+    # --- Output ---
+    output_dir: "~/.holoassist/calibration"
+    output_parent_frame: "world"
+    output_child_frame: "camera_link"
+
+    # --- Trajectory controller (sim) ---
+    trajectory_topic: "/joint_trajectory_controller/joint_trajectory"

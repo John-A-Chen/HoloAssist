@@ -59,6 +59,7 @@ setup(
             "holoassist_overlay_node = holo_assist_depth_tracker.nodes.overlay_node:main",
             "holoassist_sim_apriltag_publisher_node = holo_assist_depth_tracker.nodes.sim_apriltag_publisher_node:main",
             "holoassist_board_calibration = holo_assist_depth_tracker.nodes.board_calibration_node:main",
+            "holoassist_eye_hand_calibration = holo_assist_depth_tracker.nodes.eye_hand_calibration_node:main",
         ],
     },
 )
