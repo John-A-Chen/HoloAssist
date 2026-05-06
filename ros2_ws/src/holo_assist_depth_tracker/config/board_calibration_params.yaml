@@ -1,0 +1,82 @@
+holoassist_board_calibration:
+  ros__parameters:
+
+    # ── Board geometry ────────────────────────────────────────────────────────
+    # Physical board dimensions.  Must match workspace_perception_params.yaml.
+    board_width_m: 0.700   # X span of the board (left → right)
+    board_depth_m: 0.500   # Y span of the board (front → rear)
+    # AprilTag printed size is 0.032 m; tags are flush with board edges.
+    # Tag centre sits 0.016 m (= 0.032/2) inside each edge.
+    board_tag_edge_offset_m: 0.016
+
+    # ── Approximate workspace_frame bootstrap ─────────────────────────────────
+    # Used ONLY to compute initial hover target positions before the calibration
+    # has been solved.  These values are the hand-estimated workspace_frame
+    # origin in base_link (same defaults as workspace_frame_tf.py).
+    # After the SVD solve the node replaces these with measured ground truth.
+    approx_ws_x_m: -0.100
+    approx_ws_y_m: -0.314
+    approx_ws_z_m:  0.015
+    approx_ws_yaw_rad: 0.0
+
+    # ── Motion parameters ─────────────────────────────────────────────────────
+    # Height above the board surface at which the robot hovers for alignment.
+    # 150 mm gives a clear visual reference without crowding the board.
+    hover_height_m: 0.150
+
+    # MoveIt planning group (must match hardware config).
+    move_group_name: ur_onrobot_manipulator
+    # TCP frame used for FK measurements (UR flange, not gripper tip).
+    ee_link: tool0
+    # Planning reference / ground truth frame.
+    base_frame: base_link
+
+    # Trajectory controller that drives the robot during calibration.
+    # Must be active: ros2 control switch_controllers --activate scaled_joint_trajectory_controller
+    trajectory_topic: /scaled_joint_trajectory_controller/joint_trajectory
+
+    # Keep velocity very low during board calibration — the robot is moving
+    # near the board and users may be reaching in to adjust.
+    velocity_scale: 0.08
+
+    # Per-plan time budget (s).  Increase if MoveIt regularly times out.
+    planning_time_s: 8.0
+
+    # MoveIt goal tolerances.
+    position_tolerance_m: 0.010
+    orientation_tolerance_rad: 0.5
+
+    # Joint-settling threshold: execution is considered done when all 6 joints
+    # are within this tolerance of their trajectory endpoint.
+    joint_settle_tolerance_rad: 0.05
+
+    # Multiplier applied to nominal trajectory duration when computing the
+    # execution timeout (nominal_duration × scale + 5 s).
+    execution_timeout_scale: 20.0
+
+    # ── Calibration output ────────────────────────────────────────────────────
+    # Directory where calibration YAMLs are saved.
+    # Two files are written each run:
+    #   calibration_YYYY-MM-DD_HH-MM-SS.yaml  (timestamped archive)
+    #   calibration_latest.yaml                (always overwritten — use this)
+    output_dir: ~/.holoassist/calibration
+
+    # FK residual threshold for PASS/FAIL verdict.
+    # 5 mm is the default; tighten for higher-accuracy applications.
+    pass_tolerance_m: 0.005
+
+    # Publish the calibrated base_link → workspace_frame static TF after
+    # the solve and keep the node alive so the TF remains in the tree.
+    # Set false only if you want to inspect the YAML without applying it.
+    publish_calibrated_tf: true
+
+    # ── Camera verification (optional) ────────────────────────────────────────
+    # If true, after the SVD solve the node looks up each tag TF in
+    # workspace_frame via TF2 and compares positions to the board model.
+    # Requires workspace_board_node to be running alongside the calibration.
+    # Set false if running calibration without the camera pipeline.
+    verify_with_camera: true
+    tag_family: 36h11
+    workspace_frame: workspace_frame
+    # How long to wait for each tag TF during camera verification.
+    camera_verify_timeout_s: 2.0

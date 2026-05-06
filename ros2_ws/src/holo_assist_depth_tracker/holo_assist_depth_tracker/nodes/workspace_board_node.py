@@ -386,9 +386,16 @@ class WorkspaceBoardNode(Node):
         tf_msg.header.frame_id = solution.parent_frame
         tf_msg.header.stamp = self.get_clock().now().to_msg()
         tf_msg.child_frame_id = self.workspace_frame
-        tf_msg.transform.translation.x = float(solution.origin_c[0])
-        tf_msg.transform.translation.y = float(solution.origin_c[1])
-        tf_msg.transform.translation.z = float(solution.origin_c[2])
+        # Shift workspace_frame origin from board corner (SVD model origin) to board
+        # centre so downstream nodes get a centred coordinate system consistent with
+        # workspace_perception_node (ROI ±width/2, ±depth/2).
+        board_center_model = np.array(
+            [self.board_width_m / 2.0, self.board_depth_m / 2.0, 0.0], dtype=np.float64
+        )
+        center_c = solution.origin_c + solution.rotation_c_w @ board_center_model
+        tf_msg.transform.translation.x = float(center_c[0])
+        tf_msg.transform.translation.y = float(center_c[1])
+        tf_msg.transform.translation.z = float(center_c[2])
         qx, qy, qz, qw = quaternion_from_rotation_matrix(solution.rotation_c_w)
         tf_msg.transform.rotation.x = qx
         tf_msg.transform.rotation.y = qy

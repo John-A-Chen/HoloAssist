@@ -1,5 +1,6 @@
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -29,7 +30,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     start_workspace_perception_arg = DeclareLaunchArgument(
         "start_workspace_perception",
-        default_value="false",
+        default_value="true",
         description=(
             "Start workspace perception adapter (bench plane + culling + "
             "foreground object localization)."
@@ -123,6 +124,62 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
     )
 
+    image_topic_arg = DeclareLaunchArgument(
+        "image_topic",
+        default_value="/camera/camera/color/image_raw",
+        description="Color image topic fed to apriltag_ros.",
+    )
+    camera_info_topic_arg = DeclareLaunchArgument(
+        "camera_info_topic",
+        default_value="/camera/camera/color/camera_info",
+        description="Camera info topic fed to apriltag_ros.",
+    )
+    apriltag_params_file_arg = DeclareLaunchArgument(
+        "apriltag_params_file",
+        default_value=PathJoinSubstitution([pkg_share, "config", "apriltag_all.yaml"]),
+        description="apriltag_ros parameter YAML (tag family, size, IDs).",
+    )
+    cube_pose_params_file_arg = DeclareLaunchArgument(
+        "cube_pose_params_file",
+        default_value=PathJoinSubstitution([pkg_share, "config", "cubes.yaml"]),
+        description="Cube pose node parameter YAML.",
+    )
+
+    # apriltag_ros: detects board tags (0-3) and cube tags (10-33), publishes TF +
+    # /detections_all.  workspace_perception_node reads the TF; cube_pose_node reads
+    # both the TF and the detections.
+    try:
+        get_package_share_directory("apriltag_ros")
+        apriltag_node = Node(
+            package="apriltag_ros",
+            executable="apriltag_node",
+            name="apriltag",
+            output="screen",
+            parameters=[LaunchConfiguration("apriltag_params_file")],
+            remappings=[
+                ("image_rect", LaunchConfiguration("image_topic")),
+                ("camera_info", LaunchConfiguration("camera_info_topic")),
+                ("detections", "/detections_all"),
+            ],
+        )
+    except PackageNotFoundError:
+        apriltag_node = LogInfo(
+            msg=(
+                "[visualize_depth_tracker] apriltag_ros package not found. "
+                "Install: sudo apt install ros-humble-apriltag ros-humble-apriltag-ros"
+            )
+        )
+
+    # cube_pose_node: estimates 4 physical cube centres from grouped tag IDs and
+    # publishes /holoassist/perception/april_cube_N_{pose,marker,status} + TF frames.
+    cube_pose_node = Node(
+        package="holo_assist_depth_tracker",
+        executable="holoassist_cube_pose_node",
+        name="holoassist_cube_pose",
+        output="screen",
+        parameters=[LaunchConfiguration("cube_pose_params_file")],
+    )
+
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
@@ -146,9 +203,15 @@ def generate_launch_description() -> LaunchDescription:
             params_file_arg,
             workspace_params_file_arg,
             rviz_config_arg,
+            image_topic_arg,
+            camera_info_topic_arg,
+            apriltag_params_file_arg,
+            cube_pose_params_file_arg,
             camera_launch,
+            apriltag_node,
             tracker_launch,
             workspace_launch,
+            cube_pose_node,
             rviz_node,
         ]
     )

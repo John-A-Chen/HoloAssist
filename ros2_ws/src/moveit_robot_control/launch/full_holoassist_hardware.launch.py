@@ -43,6 +43,17 @@ def generate_launch_description() -> LaunchDescription:
     )
     ur_type_arg = DeclareLaunchArgument("ur_type", default_value="ur3e")
     onrobot_type_arg = DeclareLaunchArgument("onrobot_type", default_value="rg2")
+    kinematics_config_arg = DeclareLaunchArgument(
+        "kinematics_config",
+        default_value=PathJoinSubstitution(
+            [FindPackageShare("ur_onrobot_description"), "config", "ur3e_calibration.yaml"]
+        ),
+        description=(
+            "Robot-specific kinematics calibration YAML. "
+            "Extract with: ros2 launch ur_calibration calibration_correction.launch.py "
+            "robot_ip:=<IP> target_filename:=<path/to/ur3e_calibration.yaml>"
+        ),
+    )
 
     moveit_launch_file_arg = DeclareLaunchArgument(
         "moveit_launch_file",
@@ -113,6 +124,7 @@ def generate_launch_description() -> LaunchDescription:
             "launch_rviz": "false",          # we launch our own RViz below
             "activate_joint_controller": "true",
             "initial_joint_controller": "scaled_joint_trajectory_controller",
+            "kinematics_config": LaunchConfiguration("kinematics_config"),
         }.items(),
     )
 
@@ -271,6 +283,7 @@ def generate_launch_description() -> LaunchDescription:
             robot_ip_arg,
             ur_type_arg,
             onrobot_type_arg,
+            kinematics_config_arg,
             moveit_launch_file_arg,
             move_group_name_arg,
             ee_link_arg,

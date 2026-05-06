@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+# LEGACY — hand-tuned static approximation of base_link → workspace_frame.
+#
+# Superseded by the robot-FK board calibration workflow:
+#   ros2 launch holo_assist_depth_tracker board_calibration.launch.py
+#
+# This node is still valid for:
+#   - Simulation launches (no physical board present)
+#   - Loading a previously saved calibration YAML:
+#       ros2 run moveit_robot_control workspace_frame_tf \
+#           --ros-args --params-file ~/.holoassist/calibration/calibration_latest.yaml
+#
+# On hardware the calibration node (board_calibration_node.py) publishes the
+# measured static TF directly.  Do not run both simultaneously.
 
 from __future__ import annotations
 

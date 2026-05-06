@@ -655,50 +655,12 @@ class DepthTrackerNode(Node):
 
         bbox_msg = Float32MultiArray()
         bbox_msg.data = list(SENTINEL_BBOX)
+        tracker_active = False
         if self.apriltag_distance_tracking_only:
             bbox_msg.data = self._estimate_primary_apriltag_bbox(smoothed_depth_m)
             self._publish_obstacle_delete(msg.header.frame_id)
             if bbox_msg.data[0] >= 0.0:
-                sx, sy, x_max, y_max, cx, cy, sdepth, area_px = bbox_msg.data
-                x0 = int(round(sx))
-                y0 = int(round(sy))
-                x1 = int(round(x_max))
-                y1 = int(round(y_max))
-                cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
-                label = f"apriltag dist={sdepth:.2f}m area={int(area_px)}"
-                cv2.putText(
-                    debug_bgr,
-                    label,
-                    (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
-                pose_text = self._format_pose_text()
-                if pose_text is not None:
-                    cv2.putText(
-                        debug_bgr,
-                        pose_text,
-                        (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.48,
-                        (255, 255, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
-            else:
-                cv2.putText(
-                    debug_bgr,
-                    "No tracked AprilTag target in depth",
-                    (12, 28),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+                tracker_active = True
         else:
             binary_mask = (band_mask.astype(np.uint8) * 255)
             kernel = cv2.getStructuringElement(
@@ -805,35 +767,7 @@ class DepthTrackerNode(Node):
                     median_depth_m=median_depth_m,
                 )
 
-                x0 = int(round(sx))
-                y0 = int(round(sy))
-                x1 = int(round(sx + sw))
-                y1 = int(round(sy + sh))
-                cv2.rectangle(debug_bgr, (x0, y0), (x1, y1), (255, 255, 255), 2)
-
-                pose_text = self._format_pose_text()
-                label = f"primary dist={sdepth:.2f}m area={area_px}"
-                cv2.putText(
-                    debug_bgr,
-                    label,
-                    (x0, min(debug_bgr.shape[0] - 26, y1 + 16)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
-                if pose_text is not None:
-                    cv2.putText(
-                        debug_bgr,
-                        pose_text,
-                        (x0, min(debug_bgr.shape[0] - 8, y1 + 36)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.48,
-                        (255, 255, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
+                tracker_active = True
 
                 bbox_msg.data = [
                     float(sx),
@@ -886,6 +820,11 @@ class DepthTrackerNode(Node):
             )
 
         self._draw_apriltag_overlay(debug_bgr)
+        self._draw_tracking_hud(
+            image_bgr=debug_bgr,
+            reference_frame=msg.header.frame_id,
+            tracker_active=tracker_active,
+        )
 
         debug_msg = self.bridge.cv2_to_imgmsg(debug_bgr, encoding="bgr8")
         debug_msg.header = msg.header
@@ -1402,16 +1341,46 @@ class DepthTrackerNode(Node):
             base_line_thickness=line_thickness,
         )
 
-        cv2.putText(
-            image_bgr,
-            f"tags={len(self.latest_apriltag_detections)} age={age_s:.2f}s",
-            (12, out_h - 14),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.50,
-            line_color,
-            2,
-            cv2.LINE_AA,
-        )
+    def _draw_tracking_hud(
+        self, image_bgr: np.ndarray, reference_frame: str, tracker_active: bool
+    ) -> None:
+        out_h, out_w = image_bgr.shape[:2]
+        pad = 10
+        margin = 12
+        line_h = 20
+        panel_w = 320
+        tags_age_text = "tags: 0  age: inf"
+        if self.latest_apriltag_stamp is not None:
+            age_s = (self.get_clock().now() - self.latest_apriltag_stamp).nanoseconds / 1e9
+            if age_s <= self.apriltag_timeout_s:
+                tags_age_text = f"tags: {len(self.latest_apriltag_detections)}  age: {age_s:.2f}s"
+        lines = [
+            tags_age_text,
+            f"ref frame: {reference_frame or '-'}",
+            f"workspace: {self.workspace_frame or '-'}",
+            f"tracker: {'active' if tracker_active else 'idle'}",
+        ]
+
+        panel_h = pad * 2 + line_h * len(lines)
+        x0 = max(0, out_w - panel_w - margin)
+        y0 = margin
+        x1 = min(out_w - 1, x0 + panel_w)
+        y1 = min(out_h - 1, y0 + panel_h)
+
+        cv2.rectangle(image_bgr, (x0, y0), (x1, y1), (32, 32, 32), -1)
+        cv2.rectangle(image_bgr, (x0, y0), (x1, y1), (255, 255, 255), 1)
+        for idx, text in enumerate(lines):
+            y = y0 + pad + 14 + idx * line_h
+            cv2.putText(
+                image_bgr,
+                text,
+                (x0 + pad, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.52,
+                (245, 245, 245),
+                1,
+                cv2.LINE_AA,
+            )
 
     def _find_tag_detection(self, tag_id: int):
         for det in self.latest_apriltag_detections:

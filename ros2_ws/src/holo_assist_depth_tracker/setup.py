@@ -58,6 +58,7 @@ setup(
             "holoassist_cube_pose_node = holo_assist_depth_tracker.nodes.cube_pose_node:main",
             "holoassist_overlay_node = holo_assist_depth_tracker.nodes.overlay_node:main",
             "holoassist_sim_apriltag_publisher_node = holo_assist_depth_tracker.nodes.sim_apriltag_publisher_node:main",
+            "holoassist_board_calibration = holo_assist_depth_tracker.nodes.board_calibration_node:main",
         ],
     },
 )

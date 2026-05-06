@@ -476,6 +476,7 @@ class WorkspacePerceptionNode(Node):
         )
         self.declare_parameter("apriltag_object_timeout_s", 0.8)
         self.declare_parameter("apriltag_object_size_m", 0.075)
+        self.declare_parameter("publish_object_marker", True)
 
         self.declare_parameter("random_seed", 42)
 
@@ -774,6 +775,9 @@ class WorkspacePerceptionNode(Node):
         )
         self.apriltag_object_size_m = float(
             self.get_parameter("apriltag_object_size_m").value
+        )
+        self.publish_object_marker = bool(
+            self.get_parameter("publish_object_marker").value
         )
 
         self.random_seed = int(self.get_parameter("random_seed").value)
@@ -2854,6 +2858,8 @@ class WorkspacePerceptionNode(Node):
         primary_center_w: np.ndarray,
         primary_extent_w: np.ndarray,
     ) -> None:
+        if not self.publish_object_marker:
+            return
         qx, qy, qz, qw = _quat_from_rotation_matrix(basis_c)
         current_marker_ids: set[int] = set()
 
@@ -2921,6 +2927,9 @@ class WorkspacePerceptionNode(Node):
         self._last_marker_ids = current_marker_ids
 
     def _publish_object_delete(self, frame_id: str, stamp) -> None:
+        if not self.publish_object_marker:
+            self._last_marker_ids.clear()
+            return
         marker_ids = set(self._last_marker_ids)
         marker_ids.add(0)
         for marker_id in marker_ids:

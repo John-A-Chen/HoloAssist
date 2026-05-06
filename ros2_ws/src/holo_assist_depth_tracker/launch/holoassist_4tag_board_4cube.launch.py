@@ -20,7 +20,7 @@ def _validate_apriltag_params(context, *args):
     except Exception as exc:
         return [LogInfo(msg=f"[WARN] unable to read apriltag params file '{path}': {exc}")]
 
-    match = re.search(r"^\\s*size\\s*:\\s*([-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)\\s*$", text, re.MULTILINE)
+    match = re.search(r"^\s*size\s*:\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*$", text, re.MULTILINE)
     if not match:
         messages.append(
             LogInfo(

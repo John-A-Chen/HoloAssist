@@ -20,13 +20,14 @@ holoassist_workspace_board:
     publish_robot_tf: true
     robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
     robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
-    # Board-frame placement:
-    # - robot center is 0.450 m from board left edge
-    # - robot center is 0.564 m from board front edge (0.500 + 0.064)
-    robot_x_m: 0.450
-    robot_y_m: 0.564
-    # UR3e base joint frame is 15 mm below board/plane surface.
-    robot_z_m: -0.015
+    # Robot position in centred workspace_frame (origin = board centre).
+    # +X is left→right across board; +Y is front→rear (robot side is positive Y).
+    #   x = 0.450 - 0.350 = +0.100 m (robot 450 mm from left edge, board centre at 350 mm)
+    #   y = 0.250 + 0.064 = +0.314 m (board back edge at +0.250 m; robot 64 mm beyond)
+    #   z = -0.010 m (UR3e base joint frame is 10 mm below tag plane)
+    robot_x_m: 0.100
+    robot_y_m: 0.314
+    robot_z_m: -0.010
     robot_base_diameter_m: 0.128
     robot_marker_height_m: 0.01
 

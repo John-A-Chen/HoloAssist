@@ -140,7 +140,10 @@ holoassist_workspace_perception:
     object_source_mode: apriltag
     apriltag_object_pose_topic: /holoassist/perception/april_cube_pose
     apriltag_object_timeout_s: 0.8
-    apriltag_object_size_m: 0.075
+    apriltag_object_size_m: 0.040
+    # Per-cube markers are published by cube_pose_node; suppress the generic legacy
+    # "first detected cube" marker from workspace_perception_node.
+    publish_object_marker: false
     robot_pose_topic: /holoassist/perception/ur3e_base_link0_pose
     robot_marker_topic: /holoassist/perception/ur3e_base_link0_marker
     publish_robot_pose_marker: true
@@ -150,24 +153,18 @@ holoassist_workspace_perception:
     # Align workspace frame origin with the blue bench marker center each update.
     workspace_origin_snap_to_bench_center: true
     # UR3e base placement (board: 0.700 m x 0.500 m, centered workspace frame):
-    # - Robot centre is 450 mm from board left edge  -> x = +0.100 m
-    # - Robot centre is 64 mm beyond board back edge -> y = +0.314 m
-    #   (back edge is +0.250 m in centered frame, so +0.250 + 0.064 = +0.314 m).
-    # - Robot base diameter is 128 mm.
-    # - robot_pose_z_m is the UR3e joint frame origin relative to board plane.
-    # Dynamic mode still measures Y from board back edge of the active blue plane.
-    robot_pose_follow_workspace: true
-    robot_pose_from_tag_pair: true
+    # - Robot centre is 450 mm from board left edge  -> x = 0.450 - 0.350 = +0.100 m
+    # - Robot centre is 64 mm beyond board back edge -> y = 0.250 + 0.064 = +0.314 m
+    # - UR3e base joint frame is 10 mm below the tag plane surface -> z = -0.010 m
+    # Fixed transform: robot_pose_follow_workspace=false uses x_m/y_m/z_m directly.
+    robot_pose_follow_workspace: false
+    robot_pose_from_tag_pair: false
     robot_tag_pair_edge_offset_m: 0.064
     robot_edge_clearance_m: 0.0
-    # Keep UR3e base from snapping to workspace center:
-    # +0.10 m = 0.45 m from left edge on a 0.70 m board when centered.
     robot_pose_x_offset_m: 0.10
-    # Manual fallback (used only when robot_pose_follow_workspace=false):
     robot_pose_x_m: 0.100
     robot_pose_y_m: 0.314
-    # UR3e base joint frame is 15 mm below the blue plane surface.
-    robot_pose_z_m: -0.015
+    robot_pose_z_m: -0.010
     robot_pose_yaw_deg: 0.0
     robot_base_diameter_m: 0.128
     robot_marker_height_m: 0.01
