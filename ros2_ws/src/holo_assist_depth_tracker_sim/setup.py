@@ -31,6 +31,7 @@ setup(
             "sim_cube_moveit_bridge_node = holo_assist_depth_tracker_sim.sim_cube_moveit_bridge_node:main",
             "selected_cube_to_moveit_target_node = holo_assist_depth_tracker_sim.selected_cube_to_moveit_target_node:main",
             "pick_place_service_node = holo_assist_depth_tracker_sim.pick_place_service_node:main",
+            "workspace_align_camera_tf_node = holo_assist_depth_tracker_sim.workspace_align_camera_tf_node:main",
         ],
     },
 )

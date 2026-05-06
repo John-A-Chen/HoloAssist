@@ -97,7 +97,7 @@ class PickPlaceServiceNode(Node):
         if pose_ws is None:
             response.success = False
             response.message = (
-                f"No pose received yet for {cube_name}. Is sim_cube_truth_node running?"
+                f"No pose received yet for {cube_name}. Is the perception pipeline running and the cube visible?"
             )
             return response
 

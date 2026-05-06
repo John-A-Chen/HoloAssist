@@ -25,6 +25,10 @@ class SimCubeMoveItBridgeNode(Node):
         self.declare_parameter("planning_scene_topic", "/planning_scene")
         self.declare_parameter("selected_cube_topic", "/holoassist/teleop/selected_cube")
         self.declare_parameter("selected_cube_pose_topic", "/holoassist/teleop/selected_cube_pose")
+        # Prefix for cube pose/status subscriptions.
+        # Sim mode:    /holoassist/sim/perception  (published by sim_cube_perception_node)
+        # Hybrid mode: /holoassist/perception       (published by real cube_pose_node)
+        self.declare_parameter("cube_pose_topic_prefix", "/holoassist/sim/perception")
 
         self.workspace_frame = str(self.get_parameter("workspace_frame").value)
         self.cube_size_m = float(self.get_parameter("cube_size_m").value)
@@ -32,6 +36,7 @@ class SimCubeMoveItBridgeNode(Node):
         self.planning_scene_topic = str(self.get_parameter("planning_scene_topic").value)
         self.selected_cube_topic = str(self.get_parameter("selected_cube_topic").value)
         self.selected_cube_pose_topic = str(self.get_parameter("selected_cube_pose_topic").value)
+        cube_prefix = str(self.get_parameter("cube_pose_topic_prefix").value).rstrip("/")
 
         self._perceived_pose: Dict[str, Optional[PoseStamped]] = {name: None for name in CUBE_NAMES}
         self._last_status: Dict[str, Optional[CubePerceptionStatus]] = {name: None for name in CUBE_NAMES}
@@ -43,13 +48,13 @@ class SimCubeMoveItBridgeNode(Node):
         for name in CUBE_NAMES:
             self.create_subscription(
                 PoseStamped,
-                f"/holoassist/sim/perception/{name}_pose",
+                f"{cube_prefix}/{name}_pose",
                 self._make_pose_cb(name),
                 10,
             )
             self.create_subscription(
                 CubePerceptionStatus,
-                f"/holoassist/sim/perception/{name}_status",
+                f"{cube_prefix}/{name}_status",
                 self._make_status_cb(name),
                 10,
             )
@@ -59,8 +64,8 @@ class SimCubeMoveItBridgeNode(Node):
         self._timer = self.create_timer(1.0 / self.publish_rate_hz, self._on_timer)
 
         self.get_logger().info(
-            "sim moveit bridge started planning_scene_topic=%s selected_cube_topic=%s"
-            % (self.planning_scene_topic, self.selected_cube_topic)
+            "moveit bridge started cube_prefix=%s planning_scene=%s selected_cube=%s"
+            % (cube_prefix, self.planning_scene_topic, self.selected_cube_topic)
         )
 
     def _make_pose_cb(self, cube_name: str):

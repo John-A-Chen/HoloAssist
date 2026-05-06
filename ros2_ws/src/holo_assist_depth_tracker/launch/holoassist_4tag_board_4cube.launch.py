@@ -1,3 +1,5 @@
+import re
+
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
@@ -6,7 +8,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-import re
 
 
 def _validate_apriltag_params(context, *args):
@@ -71,6 +72,16 @@ def generate_launch_description() -> LaunchDescription:
             "Start workspace_board_node (publishes workspace_frame from AprilTags). "
             "Set false when board_calibration_node or workspace_frame_tf owns workspace_frame."
         ),
+    )
+    start_rviz_arg = DeclareLaunchArgument(
+        "start_rviz",
+        default_value="true",
+        description="Start RViz with the hardware combined view config.",
+    )
+    start_scene_arg = DeclareLaunchArgument(
+        "start_scene",
+        default_value="true",
+        description="Start workspace_scene_manager (trolley mesh MarkerArray).",
     )
 
     apriltag_params_arg = DeclareLaunchArgument("apriltag_params_file", default_value=apriltag_params_default)
@@ -148,6 +159,34 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(LaunchConfiguration("start_tracker")),
     )
 
+    workspace_scene_node = Node(
+        package="moveit_robot_control",
+        executable="workspace_scene_manager",
+        name="workspace_scene_manager",
+        output="screen",
+        emulate_tty=True,
+        parameters=[
+            PathJoinSubstitution(
+                [FindPackageShare("moveit_robot_control"), "config", "full_holoassist_hw.yaml"]
+            )
+        ],
+        condition=IfCondition(LaunchConfiguration("start_scene")),
+    )
+
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="holoassist_hw_rviz",
+        output="screen",
+        arguments=[
+            "-d",
+            PathJoinSubstitution(
+                [FindPackageShare("moveit_robot_control"), "rviz", "holoassist_hw.rviz"]
+            ),
+        ],
+        condition=IfCondition(LaunchConfiguration("start_rviz")),
+    )
+
     return LaunchDescription(
         [
             start_camera_arg,
@@ -156,6 +195,8 @@ def generate_launch_description() -> LaunchDescription:
             start_tracker_arg,
             start_overlay_arg,
             start_workspace_board_arg,
+            start_rviz_arg,
+            start_scene_arg,
             apriltag_params_arg,
             workspace_params_arg,
             cube_pose_params_arg,
@@ -167,5 +208,7 @@ def generate_launch_description() -> LaunchDescription:
             cube_pose_node,
             overlay_node,
             tracker_node,
+            workspace_scene_node,
+            rviz_node,
         ]
     )
