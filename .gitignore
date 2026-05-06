@@ -1,3 +1,7 @@
+# Node / frontend build artifacts
+node_modules/
+dist/
+
 # External packages — clone manually per SETUP.md
 ROS-TCP-Connector/
 URDF-Importer/
