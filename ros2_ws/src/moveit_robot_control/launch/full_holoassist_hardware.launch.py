@@ -1,3 +1,5 @@
+import os
+
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -5,7 +7,7 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -22,7 +24,7 @@ def generate_launch_description() -> LaunchDescription:
         [moveit_robot_control_pkg, "config", "full_holoassist_hw.yaml"]
     )
     rviz_default = PathJoinSubstitution(
-        [FindPackageShare("holo_assist_depth_tracker_sim"), "rviz", "holoassist_moveit_full.rviz"]
+        [moveit_robot_control_pkg, "rviz", "holoassist_hw.rviz"]
     )
 
     robot_launch = PathJoinSubstitution([robot_control_pkg, "launch", "start_robot.launch.py"])
@@ -108,6 +110,22 @@ def generate_launch_description() -> LaunchDescription:
     )
     start_moveit_arg = DeclareLaunchArgument("start_moveit", default_value="true")
 
+    use_calibrated_workspace_arg = DeclareLaunchArgument(
+        "use_calibrated_workspace",
+        default_value="true",
+        description=(
+            "true (default): workspace_frame_tf loads calibration_yaml as a static transform. "
+            "false: workspace_board_node provides workspace_frame dynamically from live "
+            "AprilTag detections — requires board to be visible to the camera at all times. "
+            "Only one source may run at a time."
+        ),
+    )
+    calibration_yaml_arg = DeclareLaunchArgument(
+        "calibration_yaml",
+        default_value=os.path.expanduser("~/.holoassist/calibration/calibration_latest.yaml"),
+        description="Path to the calibration YAML written by board_calibration_node.",
+    )
+
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     rviz_config_arg = DeclareLaunchArgument("rviz_config", default_value=rviz_default)
 
@@ -143,16 +161,36 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # ── AprilTag perception pipeline ──────────────────────────────────────────
-    # Starts: (optionally) RealSense camera, apriltag_ros, workspace_board_node
-    # (which publishes workspace_frame TF from board corner tags), cube_pose_node
-    # (which publishes /holoassist/perception/april_cube_{1-4}_pose).
-    # NOTE: workspace_frame_tf static broadcaster is NOT started here — the board
-    # node dynamically solves and broadcasts workspace_frame from AprilTag detections.
+    # Starts: (optionally) RealSense camera, apriltag_ros, cube_pose_node.
+    # workspace_board_node is started only in dynamic mode (use_calibrated_workspace=false).
+    # In calibrated mode workspace_frame_tf below owns base_link → workspace_frame.
     perception_stack = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(perception_launch),
         launch_arguments={
             "start_camera": LaunchConfiguration("start_camera"),
+            "start_workspace_board": "false",
         }.items(),
+        condition=IfCondition(LaunchConfiguration("use_calibrated_workspace")),
+    )
+    perception_stack_dynamic = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(perception_launch),
+        launch_arguments={
+            "start_camera": LaunchConfiguration("start_camera"),
+            "start_workspace_board": "true",
+        }.items(),
+        condition=UnlessCondition(LaunchConfiguration("use_calibrated_workspace")),
+    )
+
+    # ── workspace_frame static TF broadcaster (calibrated mode only) ──────────
+    # Loads the calibration YAML written by board_calibration_node as a --params-file.
+    # Must NOT run alongside workspace_board_node (both would conflict on workspace_frame).
+    workspace_frame_tf = Node(
+        package="moveit_robot_control",
+        executable="workspace_frame_tf",
+        name="workspace_frame_tf",
+        output="screen",
+        parameters=[LaunchConfiguration("calibration_yaml")],
+        condition=IfCondition(LaunchConfiguration("use_calibrated_workspace")),
     )
 
     # ── Workspace collision scene (trolley mesh visual) ───────────────────────
@@ -298,11 +336,15 @@ def generate_launch_description() -> LaunchDescription:
             start_rosbridge_arg,
             rosbridge_port_arg,
             start_moveit_arg,
+            use_calibrated_workspace_arg,
+            calibration_yaml_arg,
             use_rviz_arg,
             rviz_config_arg,
             robot_stack,
             moveit_stack,
             perception_stack,
+            perception_stack_dynamic,
+            workspace_frame_tf,
             TimerAction(period=8.0, actions=[workspace_scene]),
             TimerAction(period=10.0, actions=[coordinate_listener, pick_place_sequencer]),
             TimerAction(period=12.0, actions=[pick_place_service, selected_cube_adapter]),

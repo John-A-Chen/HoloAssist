@@ -64,6 +64,14 @@ def generate_launch_description() -> LaunchDescription:
     camera_info_topic_arg = DeclareLaunchArgument("camera_info_topic", default_value="/camera/camera/color/camera_info")
     start_tracker_arg = DeclareLaunchArgument("start_tracker", default_value="true")
     start_overlay_arg = DeclareLaunchArgument("start_overlay", default_value="true")
+    start_workspace_board_arg = DeclareLaunchArgument(
+        "start_workspace_board",
+        default_value="true",
+        description=(
+            "Start workspace_board_node (publishes workspace_frame from AprilTags). "
+            "Set false when board_calibration_node or workspace_frame_tf owns workspace_frame."
+        ),
+    )
 
     apriltag_params_arg = DeclareLaunchArgument("apriltag_params_file", default_value=apriltag_params_default)
     workspace_params_arg = DeclareLaunchArgument("workspace_params_file", default_value=workspace_params_default)
@@ -105,6 +113,7 @@ def generate_launch_description() -> LaunchDescription:
         name="holoassist_workspace_board",
         output="screen",
         parameters=[LaunchConfiguration("workspace_params_file")],
+        condition=IfCondition(LaunchConfiguration("start_workspace_board")),
     )
 
     cube_pose_node = Node(
@@ -146,6 +155,7 @@ def generate_launch_description() -> LaunchDescription:
             camera_info_topic_arg,
             start_tracker_arg,
             start_overlay_arg,
+            start_workspace_board_arg,
             apriltag_params_arg,
             workspace_params_arg,
             cube_pose_params_arg,

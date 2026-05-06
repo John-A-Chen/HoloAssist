@@ -38,6 +38,10 @@ setup(
             "share/" + package_name + "/meshes",
             glob("meshes/*.dae"),
         ),
+        (
+            "share/" + package_name + "/rviz",
+            glob("rviz/*.rviz"),
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
