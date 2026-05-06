@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/install/ur_robot_driver/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/install/ur_controllers/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/install/ur_dashboard_msgs/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/install/onrobot_driver/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/install/moveit_robot_control_msgs/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_calibration/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_controllers/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_robot_driver/include/**",
+        "/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/onrobot_driver/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ros2",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++17"
+    }
+  ],
+  "version": 4
+}

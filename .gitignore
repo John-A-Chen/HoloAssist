@@ -81,6 +81,9 @@ Thumbs.db
 .vscode/*.db
 .vscode/*.db-*
 .vscode/ipch/
+**/.vscode/*.db
+**/.vscode/*.db-*
+**/.vscode/ipch/
 
 # VSCode bloat
 .vscode/*
