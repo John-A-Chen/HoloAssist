@@ -10,14 +10,14 @@ eye_hand_calibration:
     base_frame: "base_link"
     ee_frame: "tool0"
     camera_frame: "camera_color_optical_frame"
-    tag_frame: "tag36h11:50"   # AprilTag ID on the gripper
+    tag_frame: "tag36h11:0"   # AprilTag ID on the gripper
 
     # --- Tag offset from tool0 ---
     # Where the AprilTag is mounted relative to tool0.
     # Positive Z = away from tool flange (outward from gripper).
     tag_offset_x: 0.0
     tag_offset_y: 0.0
-    tag_offset_z: 0.03
+    tag_offset_z: 0.05
     tag_offset_roll: 0.0
     tag_offset_pitch: 0.0
     tag_offset_yaw: 0.0
