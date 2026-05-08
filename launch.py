@@ -20,7 +20,12 @@ import socket
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROS2_WS = os.path.join(SCRIPT_DIR, "ros2_ws")
-SOURCE_CMD = f"source /opt/ros/humble/setup.bash && source {ROS2_WS}/install/setup.bash"
+MAIN_WS = os.path.join(os.path.dirname(SCRIPT_DIR), "main", "ros2_ws")
+SOURCE_CMD = (
+    f"source /opt/ros/humble/setup.bash"
+    f" && source {ROS2_WS}/install/setup.bash"
+    f" && [ -f {MAIN_WS}/install/setup.bash ] && source {MAIN_WS}/install/setup.bash || true"
+)
 
 DEFAULT_WIFI_IP = "172.19.115.104"
 DEFAULT_ROBOT_IP = "192.168.0.194"
@@ -180,28 +185,83 @@ def main():
                 " sim_april_cube_perception.launch.py"
                 " use_rviz:=false publish_scene_state_publisher:=false",
             )
+            time.sleep(2)
+
+            run(
+                "Workspace Frame TF",
+                "ros2 run tf2_ros static_transform_publisher"
+                " --x 0 --y -0.315 --z 0.02 --frame-id base_link"
+                " --child-frame-id workspace_frame",
+            )
         else:
+            # Publish camera calibration TF (base_link → camera_link)
+            # The easy_handeye2 calibration gives base_link → camera_color_optical_frame,
+            # but the RealSense driver already publishes camera_link → camera_color_optical_frame.
+            # We publish base_link → camera_link to avoid TF parent conflicts.
+            # To recalibrate: run easy_handeye2 with tracking_base_frame:=camera_link
+            calib_file = os.path.expanduser(
+                "~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib"
+            )
+            if os.path.exists(calib_file):
+                try:
+                    import yaml
+                    with open(calib_file) as f:
+                        calib = yaml.safe_load(f)
+                    t = calib["transform"]["translation"]
+                    r = calib["transform"]["rotation"]
+                    run(
+                        "Camera Calibration TF",
+                        f"ros2 run tf2_ros static_transform_publisher"
+                        f" --x {t['x']} --y {t['y']} --z {t['z']}"
+                        f" --qx {r['x']} --qy {r['y']} --qz {r['z']} --qw {r['w']}"
+                        f" --frame-id base_link --child-frame-id camera_link",
+                    )
+                    time.sleep(1)
+                except Exception as e:
+                    print(f"    WARNING: Failed to read calibration: {e}")
+            else:
+                print(f"    WARNING: No calibration found at {calib_file}")
+                print(f"    Run calibration first — see CALIBRATION.md")
+
+            # Camera + depth tracker + RViz
+            rviz_perception = "false" if args.no_rviz else "true"
             run(
                 "Perception (hardware)",
                 "ros2 launch holo_assist_depth_tracker"
-                " holoassist_4tag_board_4cube.launch.py",
+                " visualize_depth_tracker.launch.py"
+                " start_workspace_perception:=false"
+                f" start_rviz:={rviz_perception}",
             )
-        time.sleep(2)
+            time.sleep(2)
 
-        # workspace_frame TF: base_link → workspace_frame
-        # Sim values: (0, -0.315, 0.02) — workspace is 31.5cm in front of robot base
-        run(
-            "Workspace Frame TF",
-            "ros2 run tf2_ros static_transform_publisher"
-            " 0 -0.315 0.02 0 0 0 base_link workspace_frame",
-        )
-        time.sleep(1)
+            # AprilTag detector (publishes TF for tag detections)
+            run(
+                "AprilTag Detector",
+                "ros2 run apriltag_ros apriltag_node --ros-args"
+                ' -p "families:=36h11" -p "size:=0.032" -p "publish_tf:=true"'
+                " --remap image_rect:=/camera/camera/color/image_raw"
+                " --remap camera_info:=/camera/camera/color/camera_info",
+            )
+            time.sleep(1)
+
+            # Cube pose node: computes cube centers from AprilTag faces
+            # Uses base_link as reference frame (via calibration TF chain)
+            # instead of workspace_frame (which needs board corner tags)
+            run(
+                "Cube Pose Node",
+                "ros2 run holo_assist_depth_tracker holoassist_cube_pose_node"
+                " --ros-args"
+                " -p workspace_frame:=base_link"
+                " -p detections_topic:=/detections",
+            )
+
+        time.sleep(2)
 
         # Cube pose relay: transforms perception poses (workspace_frame) to base_link for Unity
         relay_prefix = "/holoassist/sim/perception" if fake else "/holoassist/perception"
         run(
             "Cube Pose Relay",
-            f"python3 {os.path.join(SCRIPT_DIR, 'cube_pose_relay.py')}"
+            f"python3 {os.path.join(SCRIPT_DIR, 'ros2_ws', 'cube_pose_relay.py')}"
             f" --ros-args -p input_prefix:={relay_prefix}",
         )
 
