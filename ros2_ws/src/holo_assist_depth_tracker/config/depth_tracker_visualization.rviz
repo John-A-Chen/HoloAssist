@@ -1,11 +1,12 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 70
+    Help Height: 138
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Global Options1
       Splitter Ratio: 0.5
-    Tree Height: 435
+    Tree Height: 279
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -157,7 +158,7 @@ Visualization Manager:
       Enabled: true
       Name: Bench Plane Marker
       Namespaces:
-        holoassist_bench_plane: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -170,7 +171,7 @@ Visualization Manager:
       Enabled: true
       Name: Workspace Tag Markers
       Namespaces:
-        holoassist_workspace_tags: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -183,7 +184,7 @@ Visualization Manager:
       Enabled: true
       Name: Workspace Axes Marker
       Namespaces:
-        holoassist_workspace_axes: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -196,7 +197,7 @@ Visualization Manager:
       Enabled: false
       Name: Object Marker (legacy – suppressed)
       Namespaces:
-        holoassist_object: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -209,7 +210,7 @@ Visualization Manager:
       Enabled: true
       Name: Robot Pose Marker
       Namespaces:
-        holoassist_robot_pose: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -222,7 +223,7 @@ Visualization Manager:
       Enabled: true
       Name: April Cube 1 Marker
       Namespaces:
-        holoassist_april_cube_1: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -235,7 +236,7 @@ Visualization Manager:
       Enabled: true
       Name: April Cube 2 Marker
       Namespaces:
-        holoassist_april_cube_2: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -248,7 +249,7 @@ Visualization Manager:
       Enabled: true
       Name: April Cube 3 Marker
       Namespaces:
-        holoassist_april_cube_3: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -261,7 +262,7 @@ Visualization Manager:
       Enabled: true
       Name: April Cube 4 Marker
       Namespaces:
-        holoassist_april_cube_4: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -275,13 +276,15 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        apriltag_cube_1:
+        base:
           Value: true
-        apriltag_cube_2:
+        base_link:
           Value: true
-        apriltag_cube_3:
+        base_link_inertia:
           Value: true
-        apriltag_cube_4:
+        cable_connector_0:
+          Value: true
+        cable_connector_1:
           Value: true
         camera_color_frame:
           Value: true
@@ -293,25 +296,61 @@ Visualization Manager:
           Value: true
         camera_link:
           Value: true
-        tag36h11:0:
+        finger_width_mock_link:
           Value: true
-        tag36h11:1:
+        flange:
           Value: true
-        tag36h11:10:
+        forearm_link:
           Value: true
-        tag36h11:16:
+        ft_frame:
           Value: true
-        tag36h11:2:
+        gripper_tcp:
           Value: true
-        tag36h11:24:
+        left_finger_tip:
           Value: true
-        tag36h11:3:
+        left_inner_finger:
+          Value: true
+        left_inner_knuckle:
+          Value: true
+        left_outer_knuckle:
+          Value: true
+        onrobot_base_link:
+          Value: true
+        right_finger_tip:
+          Value: true
+        right_inner_finger:
+          Value: true
+        right_inner_knuckle:
+          Value: true
+        right_outer_knuckle:
+          Value: true
+        shoulder_link:
+          Value: true
+        tag36h11:12:
+          Value: true
+        tag36h11:19:
+          Value: true
+        tag36h11:30:
           Value: true
         tag36h11:33:
+          Value: true
+        tool0:
+          Value: true
+        tool0_controller:
+          Value: true
+        upper_arm_link:
           Value: true
         ur3e_base_link0:
           Value: true
         workspace_frame:
+          Value: true
+        world:
+          Value: true
+        wrist_1_link:
+          Value: true
+        wrist_2_link:
+          Value: true
+        wrist_3_link:
           Value: true
       Marker Scale: 0.11999999731779099
       Name: TF
@@ -319,39 +358,46 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_color_frame:
-            camera_color_optical_frame:
-              tag36h11:0:
-                {}
-              tag36h11:1:
-                {}
-              tag36h11:10:
-                {}
-              tag36h11:16:
-                {}
-              tag36h11:2:
-                {}
-              tag36h11:24:
-                {}
-              tag36h11:3:
-                {}
-              tag36h11:33:
-                {}
-          camera_depth_frame:
-            camera_depth_optical_frame:
-              {}
         workspace_frame:
-          apriltag_cube_1:
-            {}
-          apriltag_cube_2:
-            {}
-          apriltag_cube_3:
-            {}
-          apriltag_cube_4:
-            {}
           ur3e_base_link0:
             {}
+        world:
+          base_link:
+            base:
+              tool0_controller:
+                {}
+            base_link_inertia:
+              shoulder_link:
+                upper_arm_link:
+                  forearm_link:
+                    wrist_1_link:
+                      wrist_2_link:
+                        wrist_3_link:
+                          flange:
+                            tool0:
+                              onrobot_base_link:
+                                cable_connector_0:
+                                  {}
+                                cable_connector_1:
+                                  {}
+                                finger_width_mock_link:
+                                  {}
+                                gripper_tcp:
+                                  {}
+                                left_inner_knuckle:
+                                  {}
+                                left_outer_knuckle:
+                                  left_inner_finger:
+                                    left_finger_tip:
+                                      {}
+                                right_inner_knuckle:
+                                  {}
+                                right_outer_knuckle:
+                                  right_inner_finger:
+                                    right_finger_tip:
+                                      {}
+                          ft_frame:
+                            {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
@@ -385,7 +431,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 30; 30; 30
-    Fixed Frame: workspace_frame
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -415,10 +461,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.30500108003616333
+      Pitch: 0.325001060962677
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 5.21319055557251
+      Yaw: 4.918190002441406
     Saved: ~
 Window Geometry:
   Camera Color Raw:
@@ -428,7 +474,7 @@ Window Geometry:
   Height: 1136
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002fe00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff0000047c0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000002fe000003d4fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000004a00fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000006e000001b90000004a00fffffffb000000100044006900730070006c00610079007301000002330000020f0000018200fffffffb0000001200530065006c0065006300740069006f006e00000003cf00000084000000b000fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de00000075000000b000fffffffb0000000a005600690065007700730000000381000000d20000013200ffffff00000476000003d400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
@@ -438,5 +484,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1920
-  X: 0
-  Y: 27
+  X: 140
+  Y: 54
