@@ -116,6 +116,8 @@ TOPIC_DEFAULTS = {
     "velocity_cmd": "/forward_velocity_controller/commands",
 }
 
+PICK_PLACE_MODE_TOPIC = "/pick_place/mode"
+
 
 class RosInterface:
     """
@@ -179,6 +181,9 @@ class RosInterface:
         # ── Publishers ──
         self._vel_pub = self._node.create_publisher(
             Float64MultiArray, TOPIC_DEFAULTS["velocity_cmd"], 10
+        )
+        self._pick_place_mode_pub = self._node.create_publisher(
+            String, PICK_PLACE_MODE_TOPIC, 10
         )
 
         # ── Subscribers ──
@@ -432,6 +437,7 @@ class RosInterface:
             self._status.estop_zero_count = 0
 
         self._add_event("EMERGENCY STOP TRIGGERED")
+        self._publish_pick_place_mode("stop")
         self._publish_zeros(count=10)
 
         self._safety_stop.clear()
@@ -460,11 +466,15 @@ class RosInterface:
         try:
             result = subprocess.run(
                 ["ros2", "control", "switch_controllers",
-                 "--deactivate", "forward_velocity_controller", "finger_width_controller"],
+                 "--deactivate",
+                 "forward_velocity_controller",
+                 "finger_width_controller",
+                 "scaled_joint_trajectory_controller",
+                 "finger_width_trajectory_controller"],
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                self._add_event("forward_velocity_controller deactivated")
+                self._add_event("Teleop and MoveIt controllers deactivated")
                 with self._lock:
                     self._status.controller_active = False
             else:
@@ -588,16 +598,26 @@ class RosInterface:
             if len(self._events) > 100:
                 self._events = self._events[-100:]
 
+    def _publish_pick_place_mode(self, mode: str):
+        if not ROS_AVAILABLE or self._node is None:
+            return
+        msg = String()
+        msg.data = mode
+        self._pick_place_mode_pub.publish(msg)
+        self._add_event(f"Published {PICK_PLACE_MODE_TOPIC}: {mode}")
+
     # ── MODE SWITCHING ─────────────────────────────────────────────
 
     def switch_to_teleop(self):
         self._add_event("Switching to TELEOP mode...")
         self._operating_mode = OperatingMode.TELEOP
+        self._publish_pick_place_mode("stop")
         threading.Thread(target=self._do_switch_teleop, daemon=True).start()
 
     def switch_to_moveit(self):
         self._add_event("Switching to MOVEIT mode...")
         self._operating_mode = OperatingMode.MOVEIT
+        self._publish_pick_place_mode("run")
         threading.Thread(target=self._do_switch_moveit, daemon=True).start()
 
     def _do_switch_teleop(self):
