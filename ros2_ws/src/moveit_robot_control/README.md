@@ -1,193 +1,332 @@
 # moveit_robot_control
 
-`moveit_robot_control` is the ROS 2 package in this workspace that sits between MoveIt and the higher-level pick-and-place workflow.
+`moveit_robot_control` is the HoloAssist motion-control package. It brings together the UR3e + OnRobot MoveIt stack, the workspace/trolley scene, fake-hardware simulation, and the pick-and-place sequencer.
 
-Detailed integration + merge guide:
+Use this README for day-to-day running and debugging. Deeper implementation notes live in:
 
-- [INTEGRATION_AND_MERGE.md](./INTEGRATION_AND_MERGE.md)
 - [docs/MOTION_EXECUTION_REFERENCE.md](./docs/MOTION_EXECUTION_REFERENCE.md)
+- [INTEGRATION_AND_MERGE.md](./INTEGRATION_AND_MERGE.md)
 - [../../docs/POSE_HANDOFF_CONTRACT.md](../../docs/POSE_HANDOFF_CONTRACT.md)
 - [../../docs/J0HN_MERGED_ARCHITECTURE.md](../../docs/J0HN_MERGED_ARCHITECTURE.md)
 
-## Full Sim + MoveIt (single launch)
+## Before Running
 
-For the integrated fake-hardware stack (trolley + MoveIt robot + workspace + camera + truth/perceived cubes + target forwarding):
+Always source ROS and this workspace from the workspace root:
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py
+cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
 ```
 
-This launch starts:
+Only run one robot stack at a time. Do not run the fake sim and `ur_robot_driver` or `full_holoassist_hardware.launch.py` together; they share ROS names such as `/controller_manager` and will break each other.
 
-- MoveIt bringup from `ur_onrobot_moveit_config`
-- `workspace_scene_manager` (trolley mesh marker on `/workspace_scene/markers`)
-- `holoassist_workspace_frame_tf` (`base_link -> workspace_frame` static TF)
-- `coordinate_listener` with `require_robot_status:=false` by default
-- sim truth/perception stack and selected-cube MoveIt target adapter
-- one RViz session preconfigured for robot + TF + trolley + workspace/camera/cubes
+If the graph is confused, stop old launches with `Ctrl+C`. If required:
 
-Main scene-placement tuning file:
+```bash
+pkill -f "full_holoassist_moveit_sim.launch.py"
+pkill -f "full_holoassist_hardware.launch.py"
+pkill -f "ros2 launch ur_robot_driver"
+pkill -f "ros2_control_node"
+pkill -f "ur_ros2_control_node"
+pkill -f "move_group"
+pkill -f "rviz2"
+```
 
-- `config/full_holoassist_sim.yaml`
+## Fake MoveIt Sim
 
-It provides three main pieces:
+This is the normal development command. It uses fake hardware and does not need a robot IP.
 
-1. `coordinate_listener`
-   Accepts coordinate goals on ROS topics, plans motion with MoveIt, and executes trajectories on the robot.
-2. `pick_place_sequencer`
-   Runs the pick-and-place sequence by publishing motion goals and gripper commands.
-3. `workspace_scene_manager`
-   Publishes table/block markers and optional MoveIt collision objects for the workspace.
+```bash
+ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py \
+  use_rviz:=true \
+  start_pick_place:=true
+```
 
-## What each node does
+This launches:
 
-### 1. Coordinate listener
+- fake UR3e + OnRobot `ros2_control`
+- `joint_state_broadcaster`, `joint_trajectory_controller`, and `finger_width_trajectory_controller`
+- MoveIt `move_group`
+- workspace/trolley scene
+- simulated cube truth/perception
+- cube-to-MoveIt planning-scene bridge
+- pick/place sequencer and `/holoassist/pick_cube_to_bin` service
+- one RViz session
 
-Node name:
+No `robot_ip` argument is used in this mode. The fake sim default is:
 
-- `moveit_robot_control`
+```bash
+robot_base_yaw_rad:=0.0
+```
+
+The sim bench/workspace is already world-fixed in [config/full_holoassist_sim.yaml](./config/full_holoassist_sim.yaml).
+
+## Pick Up a Cube in Sim
+
+With the fake sim running, open a second terminal, source the workspace, then call:
+
+```bash
+ros2 service call /holoassist/pick_cube_to_bin \
+  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
+```
+
+Valid cubes:
+
+```text
+april_cube_1
+april_cube_2
+april_cube_3
+april_cube_4
+```
+
+Valid bins:
+
+```text
+bin_1
+bin_2
+bin_3
+bin_4
+```
+
+Watch progress with:
+
+```bash
+ros2 topic echo /pick_place/status
+```
+
+The sequence is:
+
+1. move to the configured home joint pose
+2. move above the cube
+3. descend to the cube
+4. close the gripper
+5. lift
+6. move above the bin
+7. descend to place
+8. open the gripper
+9. return home
+
+The current home pose is configured in `pick_place_sequencer.py`:
+
+```text
+Base      -75 deg
+Shoulder  -90 deg
+Elbow     -50 deg
+Wrist 1  -120 deg
+Wrist 2    90 deg
+Wrist 3     0 deg
+```
+
+## URSim or Real Robot
+
+For URSim Docker or the real robot, use the hardware launch. This mode needs `robot_ip`.
+
+For the URSim started with:
+
+```bash
+ros2 run ur_client_library start_ursim.sh -m ur3e
+```
+
+the robot IP is normally `192.168.56.101`:
+
+```bash
+ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+  robot_ip:=192.168.56.101 \
+  start_camera:=false
+```
+
+For the real robot, replace the IP and normally leave the camera enabled:
+
+```bash
+ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+  robot_ip:=<robot_ip>
+```
+
+Hardware defaults:
+
+```bash
+robot_base_yaw_rad:=3.14159
+velocity_scale:=0.05
+use_rviz:=true
+start_pick_place:=true
+```
+
+`robot_base_yaw_rad` rotates the robot mounting frame in the URDF. It does not change the real robot's joint values.
+
+## URSim With World-Fixed Bench
+
+For URSim testing without the real camera stack:
+
+```bash
+ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+  robot_ip:=192.168.56.101 \
+  robot_base_yaw_rad:=0.0 \
+  hw_config:=/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/moveit_robot_control/config/full_holoassist_ursim.yaml \
+  start_camera:=false \
+  start_tracker:=false \
+  start_overlay:=false \
+  start_pick_place:=false \
+  start_rosbridge:=false \
+  use_calibrated_workspace:=false
+```
+
+## Build
+
+Build this package after editing launch files, Python nodes, configs, or RViz files:
+
+```bash
+cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select moveit_robot_control --symlink-install
+source install/setup.bash
+```
+
+If you edit the sim bridge in `holo_assist_depth_tracker_sim`, build that package too:
+
+```bash
+colcon build --packages-select holo_assist_depth_tracker_sim --symlink-install
+source install/setup.bash
+```
+
+## Launch Files
+
+Main launch files:
+
+- `launch/full_holoassist_moveit_sim.launch.py`
+  Fake-hardware MoveIt sim. Best for motion and pick/place development. No IP needed.
+
+- `launch/full_holoassist_hardware.launch.py`
+  UR driver based launch for URSim or the real robot. Requires `robot_ip`.
+
+- `launch/full_holoassist_gazebo_sim.launch.py`
+  Gazebo-based sim entry point.
+
+- `launch/coordinate_listener.launch.py`
+  Starts only the MoveIt topic controller.
+
+- `launch/pick_place.launch.py`
+  Starts only the pick/place sequencer.
+
+- `launch/pick_place_system.launch.py`
+  Starts workspace scene, coordinate listener, and pick/place sequencer, but not the robot driver or MoveIt.
+
+- `launch/workspace_scene.launch.py`
+  Starts only the workspace/trolley scene manager.
+
+## Nodes And Topics
+
+### Coordinate Listener
 
 Executable:
 
-- `coordinate_listener`
+```text
+coordinate_listener
+```
 
-Purpose:
+Node name:
 
-- Accepts target positions and poses from topics
-- Plans a Cartesian path first when possible
-- Falls back to MoveIt pose-goal planning when the straight-line route fails
-- In `orientation_mode:=auto`, samples several wrist orientations and, if needed, does a final free-orientation position-only fallback so MoveIt can choose a reachable wrist orientation
-- Rejects predicted UR flange-to-forearm clamp routes before execution when `avoid_flange_forearm_clamp:=true`
-- Publishes human-readable status plus machine-readable state/debug topics
+```text
+moveit_robot_control
+```
 
-Input topics:
+Inputs:
 
 - `/moveit_robot_control/target_point` - `geometry_msgs/msg/Point`
 - `/moveit_robot_control/target_pose` - `geometry_msgs/msg/Pose`
 - `/moveit_robot_control/target` - `moveit_robot_control_msgs/msg/TargetRPY`
+- `/moveit_robot_control/target_joint_state` - `sensor_msgs/msg/JointState`
 
-Output topics:
+Outputs:
 
-- `/moveit_robot_control/status` - plain text status
-- `/moveit_robot_control/state` - simple lifecycle state such as `READY`, `PLANNING`, `EXECUTING`, `COMPLETE`, `FAILED`
-- `/moveit_robot_control/debug` - JSON payload with detailed facts
-- `/moveit_robot_control/complete` - completion message when a goal finishes
+- `/moveit_robot_control/status`
+- `/moveit_robot_control/state`
+- `/moveit_robot_control/debug`
+- `/moveit_robot_control/complete`
 
-### 2. Pick-place sequencer
+Important parameters:
 
-Node name:
+- `move_group_name`
+- `ee_link`
+- `frame`
+- `trajectory_topic`
+- `require_robot_status`
+- `require_controller_check`
+- `velocity_scale`
+- `orientation_mode`
+- `allow_pose_goal_fallback`
+- `avoid_flange_forearm_clamp`
 
-- `pick_place_sequencer`
+### Pick-Place Sequencer
 
 Executable:
 
-- `pick_place_sequencer`
+```text
+pick_place_sequencer
+```
 
-Purpose:
-
-- Waits for a block pose or a JSON command
-- Computes the approach, grasp, lift, place-above, and optional place-down poses
-- Commands the gripper open/close actions
-- Publishes high-level progress updates for each pick-place step
-- Uses the bin pose configuration file as the source of truth for bin locations
-
-Input topics:
+Inputs:
 
 - `/pick_place/block_pose` - `geometry_msgs/msg/PoseStamped`
-- `/pick_place/command` - `std_msgs/msg/String` containing JSON
-- `/pick_place/mode` - `std_msgs/msg/String` with `run` or `stop`
+- `/pick_place/command` - JSON in `std_msgs/msg/String`
+- `/pick_place/mode` - `run`, `stop`, or `pause`
 
-Output topics:
+Outputs:
 
-- `/pick_place/status` - JSON string describing the current step and target coordinates
-- `/moveit_robot_control/target_point` or `/moveit_robot_control/target_pose` - motion goals sent to the coordinate listener
-- `/finger_width_trajectory_controller/joint_trajectory` - gripper commands
-- `/workspace_scene/command` - optional block add/remove scene updates
+- `/pick_place/status`
+- `/moveit_robot_control/target_point`
+- `/moveit_robot_control/target_pose`
+- `/moveit_robot_control/target_joint_state`
+- `/finger_width_trajectory_controller/joint_trajectory`
+- `/workspace_scene/command`
 
-### 3. Workspace scene manager
-
-Node name:
-
-- `workspace_scene_manager`
+### Workspace Scene Manager
 
 Executable:
 
-- `workspace_scene_manager`
+```text
+workspace_scene_manager
+```
 
 Purpose:
 
-- Publishes the trolley/table mesh into RViz
-- Optionally adds a table collision object to MoveIt
-- Adds, removes, and clears block collision objects and matching markers
+- publishes the trolley/table mesh for RViz
+- optionally applies table collision to MoveIt
+- adds/removes block collision objects and markers
 
-Input topics:
+Topics:
 
-- `/workspace_scene/command` - `std_msgs/msg/String` containing JSON commands
-- `/workspace_scene/spawn_block_pose` - `geometry_msgs/msg/PoseStamped`
-
-Output topics:
-
+- `/workspace_scene/command`
+- `/workspace_scene/spawn_block_pose`
 - `/workspace_scene/markers`
 - `/workspace_scene/status`
 
-## Launch files in this package
+## Configuration Files
 
-- `launch/coordinate_listener.launch.py`
-  Starts the coordinate listener node and exposes planning/execution parameters.
+Useful files in this package:
 
-- `launch/pick_place.launch.py`
-  Starts the pick-place sequencer and exposes placement/bin/gripper settings.
+- [config/full_holoassist_sim.yaml](./config/full_holoassist_sim.yaml)
+  Fake sim workspace, trolley, and selected-cube target offsets.
 
-- `launch/pick_place_system.launch.py`
-  Starts `workspace_scene_manager`, `coordinate_listener`, and `pick_place_sequencer` together.
+- [config/full_holoassist_hw.yaml](./config/full_holoassist_hw.yaml)
+  Hardware workspace/trolley settings.
 
-- `launch/workspace_scene.launch.py`
-  Starts the workspace scene manager.
-
-For a UR + OnRobot setup like this workspace, the usual MoveIt bringup is:
-
-- `ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py ur_type:=ur3e onrobot_type:=rg2`
-
-## Files used by the current workflow
-
-If you want to send only the files used by the current UR + OnRobot pick-place flow to main, these are the ones to focus on:
-
-- `README.md`
-- `package.xml`
-- `setup.py`
-- `setup.cfg`
-- `resource/moveit_robot_control`
-- `config/bin_poses.json`
-- `launch/coordinate_listener.launch.py`
-- `launch/pick_place.launch.py`
-- `launch/pick_place_system.launch.py`
-- `launch/workspace_scene.launch.py`
-- `moveit_robot_control_node/moveit_robot_control.py`
-- `moveit_robot_control_node/pick_place_sequencer.py`
-- `moveit_robot_control_node/workspace_scene_manager.py`
-- `moveit_robot_control_node/__init__.py`
-- `meshes/UR3eTrolley_decimated.dae`
-
-## Archived files
-
-Files not part of the current workflow are stored in:
-
-- `old_files/`
-
-Right now that archived set is:
-
-- `old_files/launch/ur_moveit.launch.py`
-  Legacy generic UR MoveIt launch for older or plain-UR workflows.
-
-## Bin configuration
-
-The bin positions now live in one place:
+- [config/full_holoassist_ursim.yaml](./config/full_holoassist_ursim.yaml)
+  URSim-specific world-fixed bench settings.
 
 - [config/bin_poses.json](./config/bin_poses.json)
+  Default bin locations used by the pick/place sequencer.
 
-Edit that file to change the default bin locations used by the pick-place sequencer.
+- [config/sim_controllers.yaml](./config/sim_controllers.yaml)
+  Controllers used by the fake-hardware sim.
 
-Current default bins:
+- [rviz/holoassist_hw.rviz](./rviz/holoassist_hw.rviz)
+  Hardware/URSim RViz config.
+
+## Bin Configuration
+
+Bin poses are in [config/bin_poses.json](./config/bin_poses.json):
 
 ```json
 {
@@ -198,309 +337,122 @@ Current default bins:
 }
 ```
 
-You can also point the sequencer at a different file with:
+To use another bin file:
 
 ```bash
-bin_config_path:=/full/path/to/bin_poses.json
-```
-
-## Build
-
-From the workspace root:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-colcon build --packages-select moveit_robot_control --symlink-install
-source install/setup.bash
-```
-
-## Typical run order
-
-The important thing to remember is that `pick_place.launch.py` is not the whole robot stack by itself. It expects the robot driver, controllers, MoveIt, and the coordinate listener to already be available.
-
-### Real robot with UR + OnRobot
-
-Open a separate terminal for each long-running launch.
-
-### Terminal 1 - Robot driver and gripper
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
-ros2 launch ur_onrobot_control start_robot.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2 \
-  robot_ip:=<robot_ip> \
-  gripper_target_force:=5.0
-```
-
-### Terminal 2 - MoveIt
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
-ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py \
-  ur_type:=ur3e \
-  onrobot_type:=rg2
-```
-
-### Terminal 3 - Optional workspace scene
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control workspace_scene.launch.py \
-  frame_id:=base_link \
-  publish_table_mesh:=true \
-  apply_table_collision:=false
-```
-
-### Terminal 4 - Coordinate listener
-
-Use the UR + OnRobot planning group and TCP:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control_node coordinate_listener.launch.py \
-  move_group_name:=ur_onrobot_manipulator \
-  ee_link:=gripper_tcp \
-  frame:=base_link \
-  allow_pose_goal_fallback:=true \
-  orientation_mode:=auto \
-  avoid_flange_forearm_clamp:=true
-```
-
-### Terminal 5 - Pick and place
-
-```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
 ros2 launch moveit_robot_control pick_place.launch.py \
-  frame_id:=base_link \
-  initial_mode:=run \
-  orientation_mode:=auto \
-  block_id:=block_1
+  bin_config_path:=/full/path/to/bin_poses.json
 ```
 
-### One-command version of those three launches
+## Quick Manual Tests
 
-If you want the workspace scene, coordinate listener, and pick-place sequencer together, use:
+Move to one XYZ point:
 
 ```bash
-source /opt/ros/humble/setup.bash
-cd /home/ollie/RS2_workspace/ros2_ws
-source install/setup.bash
-
-ros2 launch moveit_robot_control pick_place_system.launch.py \
-  frame_id:=base_link \
-  publish_table_mesh:=true \
-  apply_table_collision:=false \
-  move_group_name:=ur_onrobot_manipulator \
-  ee_link:=gripper_tcp \
-  frame:=base_link \
-  allow_pose_goal_fallback:=true \
-  orientation_mode:=auto \
-  avoid_flange_forearm_clamp:=true \
-  initial_mode:=run \
-  block_id:=block_1
+ros2 topic pub --once /moveit_robot_control/target_point \
+  geometry_msgs/msg/Point "{x: 0.20, y: 0.30, z: 0.10}"
 ```
 
-This combined launch does not start the robot driver or MoveIt. Those still need to be running already.
-
-If you start the sequencer with `initial_mode:=stop`, it will queue the request but will not move until you publish:
+Move to a full pose:
 
 ```bash
-ros2 topic pub --once /pick_place/mode std_msgs/msg/String "{data: run}"
+ros2 topic pub --once /moveit_robot_control/target_pose \
+  geometry_msgs/msg/Pose \
+  "{position: {x: 0.20, y: 0.30, z: 0.10}, orientation: {x: 0.0, y: 1.0, z: 0.0, w: 0.0}}"
 ```
 
-### Fake hardware or simulation
-
-For fake hardware testing, the key changes are:
-
-- start the robot bringup with `use_fake_hardware:=true`
-- start the coordinate listener with `require_robot_status:=false`
-
-Example coordinate listener launch for fake hardware:
+Move to the pick/place home joint pose:
 
 ```bash
-ros2 launch moveit_robot_control coordinate_listener.launch.py \
-  move_group_name:=ur_onrobot_manipulator \
-  ee_link:=gripper_tcp \
-  frame:=base_link \
-  require_robot_status:=false \
-  allow_pose_goal_fallback:=true \
-  orientation_mode:=auto
+ros2 topic pub --once /moveit_robot_control/target_joint_state \
+  sensor_msgs/msg/JointState \
+  "{name: ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'], position: [-1.308997, -1.570796, -0.872665, -2.094395, 1.570796, 0.0]}"
 ```
 
-## Quick tests
-
-### Move the robot to a single XYZ point
-
-```bash
-ros2 topic pub --once /moveit_robot_control/target_point geometry_msgs/msg/Point \
-"{x: 0.20, y: 0.30, z: 0.10}"
-```
-
-### Move the robot to a full pose
-
-```bash
-ros2 topic pub --once /moveit_robot_control/target_pose geometry_msgs/msg/Pose \
-"{position: {x: 0.20, y: 0.30, z: 0.10}, orientation: {x: 0.0, y: 1.0, z: 0.0, w: 0.0}}"
-```
-
-### Send a pick-place request using a block pose topic
-
-This uses the default destination from the sequencer configuration.
-
-```bash
-ros2 topic pub --once /pick_place/block_pose geometry_msgs/msg/PoseStamped \
-"{header: {frame_id: base_link}, pose: {position: {x: 0.20, y: 0.30, z: 0.10}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}}"
-```
-
-### Send a pick-place request to a specific bin
+Send a JSON pick/place command directly:
 
 ```bash
 ros2 topic pub --once /pick_place/command std_msgs/msg/String \
-"{data: '{\"block_id\":\"block_1\",\"frame_id\":\"base_link\",\"block_pose\":{\"x\":0.20,\"y\":0.30,\"z\":0.10},\"bin_id\":\"bin_3\"}'}"
+  "{data: '{\"block_id\":\"block_1\",\"frame_id\":\"base_link\",\"block_pose\":{\"x\":0.20,\"y\":0.30,\"z\":0.02},\"bin_id\":\"bin_3\"}'}"
 ```
 
-### Spawn a block in the workspace scene
+Add a visual/collision block to the workspace scene:
 
 ```bash
 ros2 topic pub --once /workspace_scene/command std_msgs/msg/String \
-"{data: '{\"action\":\"add_block\",\"id\":\"block_1\",\"frame_id\":\"base_link\",\"x\":0.20,\"y\":0.30,\"z\":0.10,\"size\":[0.05,0.05,0.05],\"z_mode\":\"bottom\"}'}"
+  "{data: '{\"action\":\"add_block\",\"id\":\"block_1\",\"frame_id\":\"base_link\",\"x\":0.20,\"y\":0.30,\"z\":0.10,\"size\":[0.05,0.05,0.05],\"z_mode\":\"bottom\"}'}"
 ```
 
-### Remove a block from the workspace scene
+Remove a block:
 
 ```bash
 ros2 topic pub --once /workspace_scene/command std_msgs/msg/String \
-"{data: '{\"action\":\"remove_block\",\"id\":\"block_1\"}'}"
+  "{data: '{\"action\":\"remove_block\",\"id\":\"block_1\"}'}"
 ```
 
-## Recommended monitoring topics
+## Checks and Troubleshooting
 
-### High-level pick-place progress
+Check that fake sim controllers are active:
+
+```bash
+ros2 control list_controllers
+```
+
+Expected active controllers in fake sim:
+
+```text
+joint_state_broadcaster
+joint_trajectory_controller
+finger_width_trajectory_controller
+```
+
+Check joint states:
+
+```bash
+ros2 topic echo /joint_states --once
+```
+
+Check robot TF:
+
+```bash
+ros2 run tf2_ros tf2_echo world base_link
+```
+
+Check pick/place progress:
 
 ```bash
 ros2 topic echo /pick_place/status
 ```
 
-This is the best topic to watch when you want to know:
-
-- what step the sequencer is on
-- which bin it is targeting
-- which `x/y/z` it is moving toward at that step
-
-### Motion planner/executor status
+Check MoveIt state:
 
 ```bash
-ros2 topic echo /moveit_robot_control/status
 ros2 topic echo /moveit_robot_control/state
+ros2 topic echo /moveit_robot_control/status
 ros2 topic echo /moveit_robot_control/debug
 ```
 
-## Important parameters
+Common issues:
 
-### Coordinate listener
+- RViz does not open:
+  Use `use_rviz:=true`. The sim intentionally disables nested RViz instances and launches only one top-level RViz.
 
-- `move_group_name`
-- `ee_link`
-- `frame`
-- `orientation_mode` - `auto`, `current`, or `fixed`
-- `allow_pose_goal_fallback`
-- `avoid_flange_forearm_clamp`
-- `velocity_scale`
-- `joint_goal_tolerance`
+- The robot is missing in RViz:
+  Check `/joint_states` and `ros2 control list_controllers`. This usually means another UR driver stack is still running and clashing with `/controller_manager`.
 
-### Pick-place sequencer
+- The launch says `use_rviz=false` even though you passed `true`:
+  Rebuild `moveit_robot_control`; launch files run from `install/`.
 
-- `bin_config_path`
-- `default_bin_id`
-- `item_bin_map`
-- `pregrasp_z_offset`
-- `grasp_z_offset`
-- `place_above_z_offset`
-- `place_z_offset`
-- `place_descent_enabled`
-- `initial_mode`
-- `open_width`
-- `close_width`
+- A cube collision blocks the lift after grasp:
+  Restart after rebuilding `holo_assist_depth_tracker_sim`. The sim bridge suppresses the carried cube when the sequencer removes it from the planning scene.
 
-### Workspace scene manager
+- The robot faces the wrong way:
+  For fake sim, leave `robot_base_yaw_rad` at its default `0.0`. For hardware/URSim, the hardware launch defaults to `3.14159`. This changes the URDF mounting frame, not the real joint values.
 
-- `publish_table_mesh`
-- `apply_table_collision`
-- `table_collision_xyz`
-- `table_collision_size`
-
-## How the pieces fit together
-
-The normal flow is:
-
-1. A block pose arrives on `/pick_place/block_pose` or a JSON command arrives on `/pick_place/command`
-2. `pick_place_sequencer` chooses the destination pose or bin
-3. The sequencer generates approach and place poses
-4. The sequencer publishes motion goals to the coordinate listener
-5. `coordinate_listener` plans with MoveIt and sends the final joint trajectory to the controller
-6. The sequencer opens and closes the gripper at the right steps
-7. The sequencer optionally removes and re-adds the block in the planning scene
-
-## Troubleshooting
-
-### `pick_place.launch.py` starts but nothing moves
-
-Check these first:
-
-- Is the coordinate listener running?
-- Is MoveIt running?
-- Is the robot driver running?
-- Did you launch the sequencer with `initial_mode:=stop`?
-
-### The robot waits forever for MoveIt services
-
-MoveIt is not up, or the wrong MoveIt stack is running.
-
-For the UR + OnRobot setup, use:
+- Nothing moves after sending a pick command:
+  Make sure `/holoassist/pick_cube_to_bin` exists, `pick_place_sequencer` is running, and the mode is `run`.
 
 ```bash
-ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py ur_type:=ur3e onrobot_type:=rg2
+ros2 service list | rg /holoassist/pick_cube_to_bin
+ros2 topic pub --once /pick_place/mode std_msgs/msg/String "{data: run}"
 ```
-
-### The sequencer goes to the wrong bin
-
-Check:
-
-- [config/bin_poses.json](./config/bin_poses.json)
-- any custom `bin_config_path:=...`
-- any `default_bin_id`
-- any `item_bin_map`
-
-### A target point is reachable in position but fails in orientation
-
-Use:
-
-- `orientation_mode:=auto`
-- `allow_pose_goal_fallback:=true`
-
-In the current code, `auto` will try sampled orientations first and then fall back to free-orientation position planning if needed.
-
-### The robot trips the UR flange/forearm protective stop
-
-Keep:
-
-- `avoid_flange_forearm_clamp:=true`
-
-This package now performs a planner-side clamp-zone check and tries to reject risky routes before execution, but it still depends on a reasonable robot model, valid TF, and safe target poses.
