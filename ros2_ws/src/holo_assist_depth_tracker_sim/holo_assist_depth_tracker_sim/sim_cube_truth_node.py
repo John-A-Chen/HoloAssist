@@ -7,6 +7,7 @@ import random
 from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 import rclpy
 from geometry_msgs.msg import Point, Pose, PoseStamped, TransformStamped
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
@@ -14,6 +15,11 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 from tf2_ros import TransformBroadcaster
+
+# Ubuntu 22.04's transforms3d still references np.float; NumPy >=1.24 removed it.
+if not hasattr(np, "float"):
+    setattr(np, "float", float)
+
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback, Marker
 

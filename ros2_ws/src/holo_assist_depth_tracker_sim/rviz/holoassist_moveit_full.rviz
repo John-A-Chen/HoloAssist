@@ -393,7 +393,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 34; 39; 43
-    Fixed Frame: base_link
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:

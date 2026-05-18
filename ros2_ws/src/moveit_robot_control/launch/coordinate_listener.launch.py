@@ -47,6 +47,11 @@ def generate_launch_description():
                 description="Topic for legacy geometry_msgs/msg/Point goals.",
             ),
             DeclareLaunchArgument(
+                "joint_state_topic",
+                default_value="/moveit_robot_control/target_joint_state",
+                description="Topic for sensor_msgs/msg/JointState joint goals.",
+            ),
+            DeclareLaunchArgument(
                 "require_robot_status",
                 default_value="true",
                 description=(
@@ -222,6 +227,7 @@ def generate_launch_description():
                         "coordinate_topic": LaunchConfiguration("coordinate_topic"),
                         "point_topic": LaunchConfiguration("point_topic"),
                         "pose_topic": LaunchConfiguration("pose_topic"),
+                        "joint_state_topic": LaunchConfiguration("joint_state_topic"),
                         "require_robot_status": LaunchConfiguration(
                             "require_robot_status"
                         ),

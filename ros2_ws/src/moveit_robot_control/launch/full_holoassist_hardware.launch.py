@@ -9,8 +9,9 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -19,6 +20,7 @@ def generate_launch_description() -> LaunchDescription:
     perception_pkg = FindPackageShare("holo_assist_depth_tracker")
     moveit_pkg = FindPackageShare("ur_onrobot_moveit_config")
     robot_control_pkg = FindPackageShare("ur_onrobot_control")
+    robot_description_pkg = FindPackageShare("ur_onrobot_description")
 
     hw_config_default = PathJoinSubstitution(
         [moveit_robot_control_pkg, "config", "full_holoassist_hw.yaml"]
@@ -37,6 +39,12 @@ def generate_launch_description() -> LaunchDescription:
     coordinate_listener_launch = PathJoinSubstitution(
         [moveit_robot_control_pkg, "launch", "coordinate_listener.launch.py"]
     )
+    robot_xacro = PathJoinSubstitution(
+        [robot_description_pkg, "urdf", "ur_onrobot.urdf.xacro"]
+    )
+    srdf_xacro = PathJoinSubstitution(
+        [moveit_pkg, "srdf", "ur_onrobot.srdf.xacro"]
+    )
 
     # ── Declared arguments ───────────────────────────────────────────────────
     robot_ip_arg = DeclareLaunchArgument(
@@ -45,6 +53,15 @@ def generate_launch_description() -> LaunchDescription:
     )
     ur_type_arg = DeclareLaunchArgument("ur_type", default_value="ur3e")
     onrobot_type_arg = DeclareLaunchArgument("onrobot_type", default_value="rg2")
+    robot_base_yaw_rad_arg = DeclareLaunchArgument(
+        "robot_base_yaw_rad",
+        default_value="3.14159",
+        description=(
+            "Yaw of the world->base mounting joint in radians. "
+            "Default 3.14159 rotates the UR3e mounting 180 degrees to match "
+            "the HoloAssist bench/trolley orientation."
+        ),
+    )
     kinematics_config_arg = DeclareLaunchArgument(
         "kinematics_config",
         default_value=PathJoinSubstitution(
@@ -129,6 +146,50 @@ def generate_launch_description() -> LaunchDescription:
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     rviz_config_arg = DeclareLaunchArgument("rviz_config", default_value=rviz_default)
 
+    rviz_robot_description = {
+        "robot_description": ParameterValue(
+            Command(
+                [
+                    FindExecutable(name="xacro"),
+                    " ",
+                    robot_xacro,
+                    " ",
+                    "robot_ip:=", LaunchConfiguration("robot_ip"),
+                    " ",
+                    "ur_type:=", LaunchConfiguration("ur_type"),
+                    " ",
+                    "onrobot_type:=", LaunchConfiguration("onrobot_type"),
+                    " ",
+                    "name:=ur_onrobot",
+                    " ",
+                    "use_fake_hardware:=false",
+                    " ",
+                    "base_yaw_rad:=", LaunchConfiguration("robot_base_yaw_rad"),
+                    " ",
+                    "kinematics_parameters_file:=", LaunchConfiguration("kinematics_config"),
+                ]
+            ),
+            value_type=str,
+        )
+    }
+    rviz_robot_description_semantic = {
+        "robot_description_semantic": ParameterValue(
+            Command(
+                [
+                    FindExecutable(name="xacro"),
+                    " ",
+                    srdf_xacro,
+                    " ",
+                    "name:=ur_onrobot",
+                    " ",
+                    "prefix:=",
+                    "",
+                ]
+            ),
+            value_type=str,
+        )
+    }
+
     # ── UR3e + OnRobot robot driver ───────────────────────────────────────────
     # Starts ur_ros2_control_node, controller_manager, RSP, dashboard client,
     # controller_stopper, tool_communication (serial → /tmp/ttyUR for OnRobot).
@@ -143,6 +204,7 @@ def generate_launch_description() -> LaunchDescription:
             "activate_joint_controller": "true",
             "initial_joint_controller": "scaled_joint_trajectory_controller",
             "kinematics_config": LaunchConfiguration("kinematics_config"),
+            "base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
         }.items(),
     )
 
@@ -157,6 +219,7 @@ def generate_launch_description() -> LaunchDescription:
             "robot_ip": LaunchConfiguration("robot_ip"),
             "launch_rviz": "false",
             "launch_servo": "false",
+            "base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
         }.items(),
     )
 
@@ -169,6 +232,8 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             "start_camera": LaunchConfiguration("start_camera"),
             "start_workspace_board": "false",
+            "start_rviz": "false",
+            "start_scene": "false",
         }.items(),
         condition=IfCondition(LaunchConfiguration("use_calibrated_workspace")),
     )
@@ -177,6 +242,8 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             "start_camera": LaunchConfiguration("start_camera"),
             "start_workspace_board": "true",
+            "start_rviz": "false",
+            "start_scene": "false",
         }.items(),
         condition=UnlessCondition(LaunchConfiguration("use_calibrated_workspace")),
     )
@@ -302,6 +369,10 @@ def generate_launch_description() -> LaunchDescription:
         name="holoassist_moveit_hw_rviz",
         output="screen",
         arguments=["-d", LaunchConfiguration("rviz_config")],
+        parameters=[
+            rviz_robot_description,
+            rviz_robot_description_semantic,
+        ],
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
@@ -321,6 +392,7 @@ def generate_launch_description() -> LaunchDescription:
             robot_ip_arg,
             ur_type_arg,
             onrobot_type_arg,
+            robot_base_yaw_rad_arg,
             kinematics_config_arg,
             moveit_launch_file_arg,
             move_group_name_arg,

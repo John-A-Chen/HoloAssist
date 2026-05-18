@@ -1993,6 +1993,9 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.declare_parameter("coordinate_topic", "/moveit_robot_control/target")
         self.declare_parameter("point_topic", "/moveit_robot_control/target_point")
         self.declare_parameter("pose_topic", "/moveit_robot_control/target_pose")
+        self.declare_parameter(
+            "joint_state_topic", "/moveit_robot_control/target_joint_state"
+        )
         self.declare_parameter("complete_topic", "/moveit_robot_control/complete")
         self.declare_parameter("status_topic", "/moveit_robot_control/status")
         self.declare_parameter("state_topic", "/moveit_robot_control/state")
@@ -2069,6 +2072,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         coordinate_topic = str(self.get_parameter("coordinate_topic").value)
         point_topic = str(self.get_parameter("point_topic").value)
         pose_topic = str(self.get_parameter("pose_topic").value)
+        joint_state_topic = str(self.get_parameter("joint_state_topic").value)
         complete_topic = str(self.get_parameter("complete_topic").value)
         status_topic = str(self.get_parameter("status_topic").value)
         state_topic = str(self.get_parameter("state_topic").value)
@@ -2169,6 +2173,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.pending_coordinates: Deque[
             tuple[int, tuple[float, float, float], Optional[Quaternion]]
         ] = deque()
+        self.pending_joint_goals: Deque[tuple[int, list[float]]] = deque()
         self.motion_in_progress = False
         self.current_state = "STARTING"
         self.next_goal_id = 0
@@ -2204,8 +2209,12 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             )
         accepted_goal_inputs.append(f"geometry_msgs/msg/Point goals to {point_topic}")
         accepted_goal_inputs.append(f"geometry_msgs/msg/Pose goals to {pose_topic}")
+        accepted_goal_inputs.append(
+            f"sensor_msgs/msg/JointState goals to {joint_state_topic}"
+        )
         self.create_subscription(Point, point_topic, self.coordinate_cb, 10)
         self.create_subscription(Pose, pose_topic, self.pose_cb, 10)
+        self.create_subscription(JointState, joint_state_topic, self.joint_goal_cb, 10)
 
         self.publish_status(
             "Coordinate listener starting. Send "
@@ -2219,6 +2228,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             coordinate_topic=coordinate_topic,
             point_topic=point_topic,
             pose_topic=pose_topic,
+            joint_state_topic=joint_state_topic,
             complete_topic=complete_topic,
             status_topic=status_topic,
             state_topic=state_topic,
@@ -2260,7 +2270,8 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             "state": state or self.current_state,
             "node_time_sec": self.get_clock().now().nanoseconds / 1e9,
             "wall_time_sec": time.time(),
-            "queue_length": len(self.pending_coordinates),
+            "queue_length": len(self.pending_coordinates)
+            + len(self.pending_joint_goals),
             "motion_in_progress": self.motion_in_progress,
         }
         if goal_id is not None:
@@ -2424,6 +2435,59 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             orientation=quaternion_debug_dict(orientation),
         )
 
+    def joint_goal_cb(self, msg: JointState) -> None:
+        joint_map = {
+            str(joint_name): float(position)
+            for joint_name, position in zip(msg.name, msg.position)
+        }
+        missing_joints = [
+            joint_name for joint_name in UR_JOINT_ORDER if joint_name not in joint_map
+        ]
+        if missing_joints:
+            self.publish_status(
+                "Ignoring joint goal missing required joints: "
+                + ", ".join(missing_joints)
+            )
+            self.publish_state(
+                "REJECTED",
+                event="joint_goal_rejected",
+                reason="missing_joints",
+                missing_joints=missing_joints,
+            )
+            return
+
+        joint_positions = [joint_map[joint_name] for joint_name in UR_JOINT_ORDER]
+        if not all(math.isfinite(value) for value in joint_positions):
+            self.publish_status("Ignoring joint goal with non-finite positions")
+            self.publish_state(
+                "REJECTED",
+                event="joint_goal_rejected",
+                reason="non_finite_joint_positions",
+            )
+            return
+
+        self.next_goal_id += 1
+        goal_id = self.next_goal_id
+        self.pending_joint_goals.append((goal_id, joint_positions))
+        self.publish_status(
+            "Queued joint goal "
+            f"#{goal_id}: "
+            + ", ".join(
+                f"{joint_name}={math.degrees(position):.1f}deg"
+                for joint_name, position in zip(UR_JOINT_ORDER, joint_positions)
+            )
+        )
+        self.publish_state(
+            "QUEUED",
+            event="joint_goal_queued",
+            goal_id=goal_id,
+            joint_names=list(UR_JOINT_ORDER),
+            joint_positions=list(joint_positions),
+            joint_positions_deg=[
+                math.degrees(position) for position in joint_positions
+            ],
+        )
+
     def fixed_orientation(self) -> Quaternion:
         return quaternion_from_rpy(
             math.radians(self.roll_deg),
@@ -2528,7 +2592,12 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         return list(self.auto_orientation_candidates(coordinate, current_pose))
 
     def process_next_coordinate(self) -> None:
-        if self.motion_in_progress or not self.pending_coordinates:
+        if self.motion_in_progress:
+            return
+        if self.pending_joint_goals:
+            self.process_next_joint_goal()
+            return
+        if not self.pending_coordinates:
             return
 
         goal_id, coordinate, goal_orientation = self.pending_coordinates.popleft()
@@ -2756,6 +2825,121 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
                 f"#{goal_id}: x={coordinate[0]:.4f}, y={coordinate[1]:.4f}, "
                 f"z={coordinate[2]:.4f}"
             )
+        finally:
+            self.motion_in_progress = False
+
+    def process_next_joint_goal(self) -> None:
+        if self.motion_in_progress or not self.pending_joint_goals:
+            return
+
+        goal_id, joint_positions = self.pending_joint_goals.popleft()
+        self.motion_in_progress = True
+        phase = "planning"
+        total_started_at = time.monotonic()
+        self.publish_status(
+            "Moving to joint goal "
+            f"#{goal_id}: "
+            + ", ".join(
+                f"{joint_name}={math.degrees(position):.1f}deg"
+                for joint_name, position in zip(UR_JOINT_ORDER, joint_positions)
+            )
+        )
+
+        try:
+            self.publish_state(
+                "PLANNING",
+                event="joint_planning_started",
+                goal_id=goal_id,
+                joint_names=list(UR_JOINT_ORDER),
+                joint_positions=list(joint_positions),
+                joint_positions_deg=[
+                    math.degrees(position) for position in joint_positions
+                ],
+                move_group_name=self.move_group_name,
+                velocity_scale=self.velocity_scale,
+                collision_check_stride=self.collision_check_stride,
+            )
+            planning_started_at = time.monotonic()
+            trajectory = self.plan_joint_motion(
+                joint_positions,
+                allowed_planning_time=self.pose_goal_planning_time,
+                velocity_scale=self.velocity_scale,
+                acceleration_scale=self.velocity_scale,
+                route_candidates=self.pose_goal_route_candidates,
+                moveit_planning_attempts=self.pose_goal_planning_attempts,
+                collision_check_stride=self.collision_check_stride,
+            )
+            planning_duration_sec = time.monotonic() - planning_started_at
+            planned_duration_sec = trajectory_duration_sec(trajectory)
+            self.publish_state(
+                "PLANNED",
+                event="joint_planning_succeeded",
+                goal_id=goal_id,
+                planning_duration_sec=planning_duration_sec,
+                planned_execution_duration_sec=planned_duration_sec,
+                trajectory_points=len(trajectory.points),
+                trajectory_joints=list(trajectory.joint_names),
+            )
+
+            if self.dry_run:
+                self.motion_in_progress = False
+                self.publish_state(
+                    "DRY_RUN_COMPLETE",
+                    event="joint_dry_run_complete",
+                    goal_id=goal_id,
+                    total_duration_sec=time.monotonic() - total_started_at,
+                )
+                self.publish_status(
+                    f"Dry run completed for joint goal #{goal_id}; "
+                    "trajectory was not executed"
+                )
+                return
+
+            phase = "execution"
+            self.publish_state(
+                "EXECUTING",
+                event="joint_execution_started",
+                goal_id=goal_id,
+                planned_execution_duration_sec=planned_duration_sec,
+                trajectory_points=len(trajectory.points),
+            )
+            execution_started_at = time.monotonic()
+            self.execute_trajectory(trajectory)
+            execution_duration_sec = time.monotonic() - execution_started_at
+
+        except Exception as exc:
+            self.motion_in_progress = False
+            if phase == "planning":
+                failure_state = "INVALID"
+                failure_event = "joint_goal_invalid"
+                status_prefix = "Invalid joint goal"
+            else:
+                failure_state = "FAILED"
+                failure_event = "joint_goal_failed"
+                status_prefix = "Failed joint goal"
+
+            self.publish_status(f"{status_prefix} #{goal_id}: {exc}")
+            self.publish_state(
+                failure_state,
+                event=failure_event,
+                goal_id=goal_id,
+                phase=phase,
+                error=str(exc),
+                error_type=type(exc).__name__,
+                total_duration_sec=time.monotonic() - total_started_at,
+            )
+        else:
+            self.motion_in_progress = False
+            self.publish_complete()
+            self.publish_state(
+                "COMPLETE",
+                event="joint_goal_completed",
+                goal_id=goal_id,
+                planning_duration_sec=planning_duration_sec,
+                execution_duration_sec=execution_duration_sec,
+                total_duration_sec=time.monotonic() - total_started_at,
+            )
+            self.publish_status(f"Completed joint goal #{goal_id}")
         finally:
             self.motion_in_progress = False
 

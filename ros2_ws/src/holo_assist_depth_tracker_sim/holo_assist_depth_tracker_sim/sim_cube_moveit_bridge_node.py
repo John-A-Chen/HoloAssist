@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Dict, Optional
 
 import rclpy
@@ -25,6 +26,7 @@ class SimCubeMoveItBridgeNode(Node):
         self.declare_parameter("planning_scene_topic", "/planning_scene")
         self.declare_parameter("selected_cube_topic", "/holoassist/teleop/selected_cube")
         self.declare_parameter("selected_cube_pose_topic", "/holoassist/teleop/selected_cube_pose")
+        self.declare_parameter("workspace_command_topic", "/workspace_scene/command")
         # Prefix for cube pose/status subscriptions.
         # Sim mode:    /holoassist/sim/perception  (published by sim_cube_perception_node)
         # Hybrid mode: /holoassist/perception       (published by real cube_pose_node)
@@ -36,11 +38,13 @@ class SimCubeMoveItBridgeNode(Node):
         self.planning_scene_topic = str(self.get_parameter("planning_scene_topic").value)
         self.selected_cube_topic = str(self.get_parameter("selected_cube_topic").value)
         self.selected_cube_pose_topic = str(self.get_parameter("selected_cube_pose_topic").value)
+        self.workspace_command_topic = str(self.get_parameter("workspace_command_topic").value)
         cube_prefix = str(self.get_parameter("cube_pose_topic_prefix").value).rstrip("/")
 
         self._perceived_pose: Dict[str, Optional[PoseStamped]] = {name: None for name in CUBE_NAMES}
         self._last_status: Dict[str, Optional[CubePerceptionStatus]] = {name: None for name in CUBE_NAMES}
         self._selected_cube: Optional[str] = None
+        self._suppressed_cubes: set[str] = set()
 
         self._planning_scene_pub = self.create_publisher(PlanningScene, self.planning_scene_topic, 10)
         self._selected_pose_pub = self.create_publisher(PoseStamped, self.selected_cube_pose_topic, 10)
@@ -60,6 +64,7 @@ class SimCubeMoveItBridgeNode(Node):
             )
 
         self.create_subscription(String, self.selected_cube_topic, self._on_selected_cube, 10)
+        self.create_subscription(String, self.workspace_command_topic, self._on_workspace_command, 10)
 
         self._timer = self.create_timer(1.0 / self.publish_rate_hz, self._on_timer)
 
@@ -67,6 +72,53 @@ class SimCubeMoveItBridgeNode(Node):
             "moveit bridge started cube_prefix=%s planning_scene=%s selected_cube=%s"
             % (cube_prefix, self.planning_scene_topic, self.selected_cube_topic)
         )
+
+    def _on_workspace_command(self, msg: String) -> None:
+        try:
+            command = json.loads(msg.data)
+            if not isinstance(command, dict):
+                raise ValueError("workspace command must be a JSON object")
+        except Exception as exc:
+            self.get_logger().warn("Ignoring workspace command: %s" % exc)
+            return
+
+        action = str(command.get("action", "")).strip().lower()
+        object_id = str(
+            command.get("id", command.get("object_id", command.get("block_id", "")))
+        ).strip()
+
+        if action in {"clear", "clear_blocks", "remove_all"}:
+            self._suppressed_cubes.update(CUBE_NAMES)
+            self._publish_removed_cubes(CUBE_NAMES)
+            self.get_logger().info("Suppressed all cube collision objects")
+            return
+
+        if object_id not in CUBE_NAMES:
+            return
+
+        if action in {"remove", "remove_block", "delete", "suppress"}:
+            self._suppressed_cubes.add(object_id)
+            self._publish_removed_cubes([object_id])
+            self.get_logger().info(
+                "Suppressed cube collision object %s after workspace remove command"
+                % object_id
+            )
+        elif action in {"unsuppress", "resume", "resume_tracking", "track"}:
+            self._suppressed_cubes.discard(object_id)
+            self.get_logger().info("Resumed cube collision tracking for %s" % object_id)
+
+    def _publish_removed_cubes(self, cube_names) -> None:
+        scene = PlanningScene()
+        scene.is_diff = True
+        for cube_name in cube_names:
+            obj = CollisionObject()
+            obj.header.frame_id = self.workspace_frame
+            obj.header.stamp = self.get_clock().now().to_msg()
+            obj.id = cube_name
+            obj.operation = CollisionObject.REMOVE
+            scene.world.collision_objects.append(obj)
+        if scene.world.collision_objects:
+            self._planning_scene_pub.publish(scene)
 
     def _make_pose_cb(self, cube_name: str):
         def _cb(msg: PoseStamped) -> None:
@@ -98,6 +150,8 @@ class SimCubeMoveItBridgeNode(Node):
         scene.is_diff = True
 
         for name in CUBE_NAMES:
+            if name in self._suppressed_cubes:
+                continue
             pose_msg = self._perceived_pose[name]
             if pose_msg is None:
                 continue

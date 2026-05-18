@@ -1,5 +1,12 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+    TimerAction,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
@@ -123,10 +130,10 @@ def generate_launch_description() -> LaunchDescription:
     start_moveit_arg = DeclareLaunchArgument("start_moveit", default_value="true")
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
+        default_value="0.0",
         description=(
             "Yaw of the world→base mounting joint in radians. "
-            "Default 3.14159 (π) rotates the arm 180° to match HoloAssist trolley orientation."
+            "Default 0.0 keeps the robot mounting aligned with the world-fixed sim bench."
         ),
     )
     moveit_launch_file_arg = DeclareLaunchArgument(
@@ -248,18 +255,23 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # ── Perception sim (truth cubes, fake D435i camera, visibility-based perception) ─
-    perception_stack = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(perception_launch),
-        launch_arguments={
-            "use_rviz": "false",
-            "use_sim_time": LaunchConfiguration("use_sim_time"),
-            "sim_scene_config": LaunchConfiguration("sim_scene_config"),
-            "sim_camera_config": LaunchConfiguration("sim_camera_config"),
-            "sim_cubes_config": LaunchConfiguration("sim_cubes_config"),
-            # Suppress the standalone scene URDF publisher; robot_state_publisher above
-            # already publishes world→base_link and workspace_frame_tf adds base_link→workspace_frame.
-            "publish_scene_state_publisher": "false",
-        }.items(),
+    perception_stack = GroupAction(
+        scoped=True,
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(perception_launch),
+                launch_arguments={
+                    "use_rviz": "false",
+                    "use_sim_time": LaunchConfiguration("use_sim_time"),
+                    "sim_scene_config": LaunchConfiguration("sim_scene_config"),
+                    "sim_camera_config": LaunchConfiguration("sim_camera_config"),
+                    "sim_cubes_config": LaunchConfiguration("sim_cubes_config"),
+                    # Suppress the standalone scene URDF publisher; robot_state_publisher above
+                    # already publishes world→base_link and workspace_frame_tf adds base_link→workspace_frame.
+                    "publish_scene_state_publisher": "false",
+                }.items(),
+            )
+        ],
     )
 
     # ── MoveIt planning scene bridge (perceived cubes → collision objects) ────

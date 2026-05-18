@@ -17,6 +17,7 @@ from moveit_msgs.msg import CollisionObject
 from moveit_msgs.msg import PlanningScene
 from moveit_msgs.srv import ApplyPlanningScene
 from rclpy.node import Node
+from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import String
 from trajectory_msgs.msg import JointTrajectory
@@ -30,6 +31,7 @@ DEFAULT_MODE_TOPIC = "/pick_place/mode"
 DEFAULT_STATUS_TOPIC = "/pick_place/status"
 DEFAULT_TARGET_POSE_TOPIC = "/moveit_robot_control/target_pose"
 DEFAULT_TARGET_POINT_TOPIC = "/moveit_robot_control/target_point"
+DEFAULT_TARGET_JOINT_STATE_TOPIC = "/moveit_robot_control/target_joint_state"
 DEFAULT_MOVE_STATE_TOPIC = "/moveit_robot_control/state"
 DEFAULT_MOVE_COMPLETE_TOPIC = "/moveit_robot_control/complete"
 DEFAULT_GRIPPER_TOPIC = "/finger_width_trajectory_controller/joint_trajectory"
@@ -50,6 +52,15 @@ RUN_MODE = "RUN"
 STOP_MODE = "STOP"
 AUTO_ORIENTATION_MODE = "auto"
 FIXED_ORIENTATION_MODE = "fixed"
+UR_JOINT_ORDER = [
+    "shoulder_pan_joint",
+    "shoulder_lift_joint",
+    "elbow_joint",
+    "wrist_1_joint",
+    "wrist_2_joint",
+    "wrist_3_joint",
+]
+DEFAULT_HOME_JOINT_POSITIONS_DEG = [-75.0, -90.0, -50.0, -120.0, 90.0, 0.0]
 
 
 def quaternion_from_rpy(roll: float, pitch: float, yaw: float) -> Quaternion:
@@ -181,6 +192,9 @@ class PickPlaceSequencer(Node):
         self.declare_parameter("status_topic", DEFAULT_STATUS_TOPIC)
         self.declare_parameter("target_pose_topic", DEFAULT_TARGET_POSE_TOPIC)
         self.declare_parameter("target_point_topic", DEFAULT_TARGET_POINT_TOPIC)
+        self.declare_parameter(
+            "target_joint_state_topic", DEFAULT_TARGET_JOINT_STATE_TOPIC
+        )
         self.declare_parameter("move_state_topic", DEFAULT_MOVE_STATE_TOPIC)
         self.declare_parameter("move_complete_topic", DEFAULT_MOVE_COMPLETE_TOPIC)
         self.declare_parameter("gripper_topic", DEFAULT_GRIPPER_TOPIC)
@@ -228,6 +242,13 @@ class PickPlaceSequencer(Node):
         self.declare_parameter("initial_mode", "stop")
         self.declare_parameter("remove_block_collision_before_grasp", True)
         self.declare_parameter("add_block_at_place_after_release", True)
+        self.declare_parameter("home_enabled", True)
+        self.declare_parameter("home_before_pick", True)
+        self.declare_parameter("home_after_place", True)
+        self.declare_parameter("home_joint_names", UR_JOINT_ORDER)
+        self.declare_parameter(
+            "home_joint_positions_deg", DEFAULT_HOME_JOINT_POSITIONS_DEG
+        )
 
         self.frame_id = str(self.get_parameter("frame_id").value)
         block_pose_topic = str(self.get_parameter("block_pose_topic").value)
@@ -236,6 +257,9 @@ class PickPlaceSequencer(Node):
         status_topic = str(self.get_parameter("status_topic").value)
         target_pose_topic = str(self.get_parameter("target_pose_topic").value)
         target_point_topic = str(self.get_parameter("target_point_topic").value)
+        target_joint_state_topic = str(
+            self.get_parameter("target_joint_state_topic").value
+        )
         move_state_topic = str(self.get_parameter("move_state_topic").value)
         move_complete_topic = str(self.get_parameter("move_complete_topic").value)
         gripper_topic = str(self.get_parameter("gripper_topic").value)
@@ -307,6 +331,20 @@ class PickPlaceSequencer(Node):
         self.add_block_at_place_after_release = bool(
             self.get_parameter("add_block_at_place_after_release").value
         )
+        self.home_enabled = bool(self.get_parameter("home_enabled").value)
+        self.home_before_pick = bool(self.get_parameter("home_before_pick").value)
+        self.home_after_place = bool(self.get_parameter("home_after_place").value)
+        self.home_joint_names = [
+            str(joint_name)
+            for joint_name in self.get_parameter("home_joint_names").value
+        ]
+        self.home_joint_positions_deg = self.get_vector_parameter(
+            "home_joint_positions_deg", len(self.home_joint_names)
+        )
+        self.home_joint_positions_rad = [
+            math.radians(position_deg)
+            for position_deg in self.home_joint_positions_deg
+        ]
 
         self.motion_complete = threading.Event()
         self.motion_failed = threading.Event()
@@ -319,6 +357,9 @@ class PickPlaceSequencer(Node):
 
         self.target_pose_pub = self.create_publisher(Pose, target_pose_topic, 10)
         self.target_point_pub = self.create_publisher(Point, target_point_topic, 10)
+        self.target_joint_state_pub = self.create_publisher(
+            JointState, target_joint_state_topic, 10
+        )
         self.gripper_pub = self.create_publisher(JointTrajectory, gripper_topic, 10)
         self.workspace_command_pub = self.create_publisher(
             String, self.workspace_command_topic, 10
@@ -341,6 +382,7 @@ class PickPlaceSequencer(Node):
             mode_topic=mode_topic,
             target_pose_topic=target_pose_topic,
             target_point_topic=target_point_topic,
+            target_joint_state_topic=target_joint_state_topic,
             gripper_topic=gripper_topic,
             place_xyz=[
                 self.default_place_pose.position.x,
@@ -352,6 +394,9 @@ class PickPlaceSequencer(Node):
             default_bin_id=self.default_bin_id,
             mode=self.current_mode.lower(),
             orientation_mode=self.orientation_mode,
+            home_enabled=self.home_enabled,
+            home_joint_names=self.home_joint_names,
+            home_joint_positions_deg=self.home_joint_positions_deg,
         )
 
     def get_vector_parameter(self, name: str, length: int) -> list[float]:
@@ -757,6 +802,9 @@ class PickPlaceSequencer(Node):
                 self.use_place_yaw,
             )
 
+            if self.home_enabled and self.home_before_pick:
+                self.move_to_home("move to pick-place home before pick")
+
             self.move_to_pose(pregrasp_pose, "move above block")
             self.send_gripper(self.open_width, "open gripper")
 
@@ -778,6 +826,9 @@ class PickPlaceSequencer(Node):
                 self.add_block_to_scene(block_id, frame_id, final_block_pose)
 
             self.move_to_pose(place_above_pose, "move up after release")
+            if self.home_enabled and self.home_after_place:
+                self.move_to_home("move to pick-place home after place")
+
             self.publish_status("Pick-place sequence complete", block_id=block_id)
         except Exception as exc:
             self.publish_status(
@@ -809,6 +860,39 @@ class PickPlaceSequencer(Node):
             self.target_point_pub.publish(point)
         else:
             self.target_pose_pub.publish(pose)
+        try:
+            deadline = time.monotonic() + self.move_timeout_sec
+            while time.monotonic() < deadline and rclpy.ok():
+                if self.motion_complete.wait(timeout=0.1):
+                    return
+                if self.motion_failed.is_set():
+                    raise RuntimeError(
+                        f"{label} failed in coordinate listener: "
+                        f"{self.last_failure_state}"
+                    )
+
+            raise RuntimeError(f"{label} timed out after {self.move_timeout_sec:.1f} s")
+        finally:
+            self.motion_waiting.clear()
+
+    def move_to_home(self, label: str) -> None:
+        self.publish_status(
+            label,
+            joint_names=self.home_joint_names,
+            joint_positions_deg=self.home_joint_positions_deg,
+        )
+        self.motion_complete.clear()
+        self.motion_failed.clear()
+        self.motion_started.clear()
+        self.motion_waiting.set()
+        self.last_failure_state = ""
+
+        joint_state = JointState()
+        joint_state.header.stamp = self.get_clock().now().to_msg()
+        joint_state.name = list(self.home_joint_names)
+        joint_state.position = list(self.home_joint_positions_rad)
+        self.target_joint_state_pub.publish(joint_state)
+
         try:
             deadline = time.monotonic() + self.move_timeout_sec
             while time.monotonic() < deadline and rclpy.ok():

@@ -39,7 +39,7 @@
             output_recipe_filename="${output_recipe_filename}"
             input_recipe_filename="${input_recipe_filename}"
         >
-            <origin xyz="0 0 0" rpy="0 0 0" />
+            <xacro:insert_block name="origin" />
         </xacro:ur_robot>
 
         <!--Create the OnRobot model -->

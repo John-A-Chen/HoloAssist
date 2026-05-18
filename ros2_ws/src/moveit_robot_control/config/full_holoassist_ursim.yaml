@@ -1,26 +1,9 @@
-holoassist_workspace_frame_tf:
-  ros__parameters:
-    parent_frame: world
-    child_frame: workspace_frame
-    # world -> workspace_frame. Keep the bench/workspace fixed in the scene so
-    # robot_base_yaw_rad rotates only the robot mounting, not the whole bench.
-    x_m: 0.0
-    y_m: 0.315
-    z_m: 1.02
-    roll_rad: 0.0
-    pitch_rad: 0.0
-    yaw_rad: 3.14159
-
 workspace_scene_manager:
   ros__parameters:
     frame_id: world
     publish_table_mesh: true
     apply_table_collision: false
     table_mesh_resource: package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae
-    # Trolley mesh placement in world frame:
-    #   Z=-1.061: sinks mesh so its top surface (Blender Z=106.05cm, scaled 0.01) aligns with z=0
-    # In world frame the UR base is at z=1.0, so z=-0.05 preserves the old
-    # tabletop height while allowing the robot mounting yaw to change visibly.
     table_mesh_xyz: [0.0, 0.210, -0.05]
     table_mesh_rpy_deg: [0.0, 0.0, 180.0]
     table_mesh_scale: [1.0, 1.0, 1.0]

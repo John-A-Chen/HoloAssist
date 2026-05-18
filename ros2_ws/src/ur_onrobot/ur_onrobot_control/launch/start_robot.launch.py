@@ -22,6 +22,7 @@ def launch_setup(context, *args, **kwargs):
     robot_ip = LaunchConfiguration("robot_ip")
 
     tf_prefix = LaunchConfiguration("tf_prefix")
+    base_yaw_rad = LaunchConfiguration("base_yaw_rad")
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
     kinematics_config = LaunchConfiguration("kinematics_config")
 
@@ -55,6 +56,9 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "use_fake_hardware:=",
             use_fake_hardware,
+            " ",
+            "base_yaw_rad:=",
+            base_yaw_rad,
             " ",
             "kinematics_parameters_file:=",
             kinematics_config,
@@ -305,6 +309,16 @@ def generate_launch_description():
             description="tf_prefix of the joint names, useful for "
             "multi-robot setup. If changed, also joint names in the controllers' configuration "
             "have to be updated.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "base_yaw_rad",
+            default_value="0.0",
+            description=(
+                "Yaw of the world->base mounting joint in radians. "
+                "Set to 3.14159 to rotate the robot mounting 180 degrees."
+            ),
         )
     )
     declared_arguments.append(

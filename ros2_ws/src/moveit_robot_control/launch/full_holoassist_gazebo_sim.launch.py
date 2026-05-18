@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
+    GroupAction,
     IncludeLaunchDescription,
     LogInfo,
     OpaqueFunction,
@@ -91,7 +92,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
+        default_value="0.0",
         description="Yaw of the world→base mounting joint in radians.",
     )
     moveit_launch_file_arg = DeclareLaunchArgument(
@@ -270,16 +271,21 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # ── Perception sim (truth cubes + fake camera) ────────────────────────────
-    perception_stack = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(perception_launch),
-        launch_arguments={
-            "use_rviz": "false",
-            "use_sim_time": LaunchConfiguration("use_sim_time"),
-            "sim_scene_config": LaunchConfiguration("sim_scene_config"),
-            "sim_camera_config": LaunchConfiguration("sim_camera_config"),
-            "sim_cubes_config": LaunchConfiguration("sim_cubes_config"),
-            "publish_scene_state_publisher": "false",
-        }.items(),
+    perception_stack = GroupAction(
+        scoped=True,
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(perception_launch),
+                launch_arguments={
+                    "use_rviz": "false",
+                    "use_sim_time": LaunchConfiguration("use_sim_time"),
+                    "sim_scene_config": LaunchConfiguration("sim_scene_config"),
+                    "sim_camera_config": LaunchConfiguration("sim_camera_config"),
+                    "sim_cubes_config": LaunchConfiguration("sim_cubes_config"),
+                    "publish_scene_state_publisher": "false",
+                }.items(),
+            )
+        ],
     )
 
     # ── MoveIt planning scene bridge ──────────────────────────────────────────

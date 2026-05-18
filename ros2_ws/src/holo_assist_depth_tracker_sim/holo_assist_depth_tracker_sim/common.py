@@ -4,7 +4,13 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
+import numpy as np
 from geometry_msgs.msg import Pose, Quaternion
+
+# Ubuntu 22.04's transforms3d still references np.float; NumPy >=1.24 removed it.
+if not hasattr(np, "float"):
+    setattr(np, "float", float)
+
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
 

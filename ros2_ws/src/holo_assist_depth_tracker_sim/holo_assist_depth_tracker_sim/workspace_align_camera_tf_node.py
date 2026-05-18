@@ -30,6 +30,11 @@ import rclpy.time
 from geometry_msgs.msg import TransformStamped
 from rclpy.node import Node
 from tf2_ros import Buffer, TransformBroadcaster, TransformListener
+
+# Ubuntu 22.04's transforms3d still references np.float; NumPy >=1.24 removed it.
+if not hasattr(np, "float"):
+    setattr(np, "float", float)
+
 from tf_transformations import euler_matrix, quaternion_from_matrix, quaternion_matrix
 
 
