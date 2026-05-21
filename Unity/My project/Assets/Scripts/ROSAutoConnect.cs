@@ -15,16 +15,12 @@ public class ROSAutoConnect : MonoBehaviour
     Thread scanThread;
     bool connected;
 
-    // Scan 192.168.0.101–109, skip .100 (robot Ethernet)
-    static readonly int RangeStart = 101;
-    static readonly int RangeEnd = 109;
-
     void Awake()
     {
         var ros = ROSConnection.GetOrCreateInstance();
         ros.ConnectOnStart = false;
 
-        scanThread = new Thread(ScanSubnet) { IsBackground = true };
+        scanThread = new Thread(ScanForEndpoint) { IsBackground = true };
         scanThread.Start();
     }
 
@@ -42,21 +38,36 @@ public class ROSAutoConnect : MonoBehaviour
         }
     }
 
-    void ScanSubnet()
+    void ScanForEndpoint()
     {
-        Debug.Log($"[ROSAutoConnect] Scanning 192.168.0.{RangeStart}-{RangeEnd}:{rosPort}...");
+        Debug.Log($"[ROSAutoConnect] Scanning for ROS endpoint on port {rosPort}...");
 
-        for (int round = 0; round < 20 && foundIP == null; round++)
+        for (int round = 0; round < 30 && foundIP == null; round++)
         {
-            for (int i = RangeStart; i <= RangeEnd && foundIP == null; i++)
+            // Try localhost first (Unity Editor on same machine)
+            if (TryConnect("127.0.0.1")) { foundIP = "127.0.0.1"; return; }
+
+            // Scan robot subnet 192.168.0.101-110 (skip .100 = robot Ethernet)
+            for (int i = 101; i <= 110 && foundIP == null; i++)
             {
                 string ip = $"192.168.0.{i}";
-                if (TryConnect(ip))
+                if (TryConnect(ip)) { foundIP = ip; return; }
+            }
+
+            // Scan local machine IPs (catches any subnet)
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var addr in host.AddressList)
                 {
-                    foundIP = ip;
-                    return;
+                    if (addr.AddressFamily != AddressFamily.InterNetwork) continue;
+                    string ip = addr.ToString();
+                    if (ip == "127.0.0.1") continue;
+                    if (TryConnect(ip)) { foundIP = ip; return; }
                 }
             }
+            catch { }
+
             Thread.Sleep(500);
         }
 

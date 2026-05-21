@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""HoloAssist ROS 2 launcher — starts UR driver, controller switch, and TCP endpoint."""
+"""
+HoloAssist ROS 2 launcher.
+
+Starts:
+  - UR3e + OnRobot RG2 driver (fake or real hardware)
+  - Controller switch (velocity + gripper for teleop)
+  - ROS-TCP endpoint (Unity bridge, port 10000)
+  - UDP beacon (Quest auto-discovery)
+  - [optional] Perception sim + cube pose relay (--perception)
+"""
 
 import argparse
 import os
@@ -9,10 +18,14 @@ import sys
 import time
 import socket
 
-# Resolve ros2_ws relative to this script so the launcher works on any machine.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROS2_WS = os.path.join(SCRIPT_DIR, "ros2_ws")
-SOURCE_CMD = f"source /opt/ros/humble/setup.bash && source {ROS2_WS}/install/setup.bash"
+MAIN_WS = os.path.join(os.path.dirname(SCRIPT_DIR), "main", "ros2_ws")
+SOURCE_CMD = (
+    f"source /opt/ros/humble/setup.bash"
+    f" && source {ROS2_WS}/install/setup.bash"
+    f" && [ -f {MAIN_WS}/install/setup.bash ] && source {MAIN_WS}/install/setup.bash || true"
+)
 
 DEFAULT_WIFI_IP = "172.19.115.104"
 DEFAULT_ROBOT_IP = "192.168.0.194"
@@ -54,6 +67,23 @@ def run(name, cmd):
     return proc
 
 
+def run_once(name, cmd, retries=1, delay=5):
+    """Run a command once (blocking), retry on failure."""
+    for attempt in range(1 + retries):
+        result = subprocess.run(
+            ["bash", "-c", f"{SOURCE_CMD} && {cmd}"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            print(f">>> {name}: OK")
+            return True
+        if attempt < retries:
+            print(f">>> {name}: failed, retrying in {delay}s...")
+            time.sleep(delay)
+    print(f">>> {name}: FAILED — {result.stderr.strip()}")
+    return False
+
+
 def cleanup(*_):
     print("\n\n>>> Shutting down all processes...")
     for name, proc in reversed(processes):
@@ -73,21 +103,17 @@ def cleanup(*_):
 def main():
     parser = argparse.ArgumentParser(description="HoloAssist ROS 2 Launcher")
     parser.add_argument(
-        "--robot-ip",
-        type=str,
-        default=None,
-        help=f"Real robot IP (e.g. {DEFAULT_ROBOT_IP}). If omitted, uses fake hardware.",
+        "--robot-ip", type=str, default=None,
+        help=f"Real robot IP (e.g. {DEFAULT_ROBOT_IP}). Omit for fake hardware.",
     )
     parser.add_argument(
-        "--ros-ip",
-        type=str,
-        default="0.0.0.0",
-        help="ROS TCP endpoint bind IP (default: 0.0.0.0 = all interfaces)",
+        "--ros-ip", type=str, default="0.0.0.0",
+        help="ROS TCP endpoint bind IP (default: 0.0.0.0)",
     )
+    parser.add_argument("--no-rviz", action="store_true", help="Disable RViz")
     parser.add_argument(
-        "--no-rviz",
-        action="store_true",
-        help="Disable RViz",
+        "--perception", action="store_true",
+        help="Start perception pipeline + cube pose relay (AprilTag cubes in Unity)",
     )
     args = parser.parse_args()
 
@@ -95,25 +121,26 @@ def main():
     robot_ip = "0.0.0.0" if fake else args.robot_ip
     wifi_ip = get_wifi_ip()
 
-    print("=" * 60)
+    print("=" * 65)
     print("  HoloAssist ROS 2 Launcher")
-    print("=" * 60)
-    print(f"  Mode:       {'FAKE HARDWARE' if fake else 'REAL ROBOT'}")
+    print("=" * 65)
+    print(f"  Mode:        {'FAKE HARDWARE' if fake else 'REAL ROBOT'}")
     if not fake:
-        print(f"  Robot IP:   {robot_ip}")
-    print(f"  ROS IP:     {args.ros_ip}")
-    print(f"  WiFi IP:    {wifi_ip}  <-- set this in Unity ROS Settings")
-    print(f"  RViz:       {'off' if args.no_rviz else 'on'}")
-    print("=" * 60)
+        print(f"  Robot IP:    {robot_ip}")
+    print(f"  ROS IP:      {args.ros_ip}")
+    print(f"  WiFi IP:     {wifi_ip}  <-- set this in Unity ROS Settings")
+    print(f"  RViz:        {'off' if args.no_rviz else 'on'}")
+    print(f"  Perception:  {'on' if args.perception else 'off (use --perception to enable)'}")
+    print("=" * 65)
 
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    # 1. UR + OnRobot driver (combined)
-    rviz = "false" if args.no_rviz else "true"
+    # ── Phase 1: UR + OnRobot driver ─────────────────────────────────
+    rviz_flag = "false" if args.no_rviz else "true"
     driver_cmd = (
         f"ros2 launch ur_onrobot_control start_robot.launch.py"
-        f" ur_type:=ur3e onrobot_type:=rg2 launch_rviz:={rviz}"
+        f" ur_type:=ur3e onrobot_type:=rg2 launch_rviz:={rviz_flag}"
     )
     if fake:
         driver_cmd += " use_fake_hardware:=true"
@@ -121,59 +148,146 @@ def main():
         driver_cmd += f" robot_ip:={robot_ip}"
     run("UR + OnRobot Driver", driver_cmd)
 
-    # Wait for driver to initialize before switching controllers
-    print("\n>>> Waiting 8s for UR driver to start...")
-    time.sleep(8)
+    print("\n>>> Waiting 10s for UR driver to initialize...")
+    time.sleep(10)
 
-    # 2. Switch controllers (activate velocity + gripper, deactivate trajectory)
-    # Use `ros2 service call` instead of `ros2 control switch_controllers` so we
-    # don't depend on the ros2controlcli apt package being installed.
+    # ── Phase 2: Controller switch ───────────────────────────────────
     switch_cmd = (
         "ros2 service call /controller_manager/switch_controller"
         " controller_manager_msgs/srv/SwitchController"
         " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
         " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
-        " strictness: 2}\""
+        " strictness: 1}\""
     )
-    switch_proc = subprocess.run(
-        ["bash", "-c", f"{SOURCE_CMD} && {switch_cmd}"],
-        capture_output=True,
-        text=True,
-    )
-    if switch_proc.returncode == 0:
-        print(">>> Controllers switched (forward_velocity_controller + finger_width_controller active)")
-    else:
-        print(f">>> Controller switch failed: {switch_proc.stderr.strip()}")
-        print("    Retrying in 5s...")
-        time.sleep(5)
-        subprocess.run(["bash", "-c", f"{SOURCE_CMD} && {switch_cmd}"])
+    run_once("Controller Switch (teleop)", switch_cmd, retries=5, delay=3)
 
-    # 3. ROS-TCP endpoint
-    tcp_cmd = (
+    # ── Phase 3: Communication bridges ───────────────────────────────
+    subprocess.run(["bash", "-c", "fuser -k 10000/tcp 2>/dev/null"], capture_output=True)
+    time.sleep(0.5)
+    run(
+        "ROS-TCP Endpoint",
         f"ros2 run ros_tcp_endpoint default_server_endpoint"
-        f" --ros-args -p ROS_IP:={args.ros_ip}"
+        f" --ros-args -p ROS_IP:={args.ros_ip}",
     )
-    run("ROS-TCP Endpoint", tcp_cmd)
 
-    # 4. UDP beacon for Quest auto-discovery
-    beacon_cmd = f"python3 /home/nic/git/RS2-HoloAssist/nic/beacon.py --ip {wifi_ip}"
-    run("IP Beacon", beacon_cmd)
+    beacon_path = os.path.join(SCRIPT_DIR, "beacon.py")
+    if os.path.exists(beacon_path):
+        run("IP Beacon", f"python3 {beacon_path} --ip {wifi_ip}")
 
-    print("\n" + "=" * 60)
+    # ── Phase 4: Perception + cube relay (optional) ──────────────────
+    if args.perception:
+        print("\n>>> Starting perception pipeline...")
+
+        if fake:
+            run(
+                "Perception (sim)",
+                "ros2 launch holo_assist_depth_tracker_sim"
+                " sim_april_cube_perception.launch.py"
+                " use_rviz:=false publish_scene_state_publisher:=false",
+            )
+            time.sleep(2)
+
+            run(
+                "Workspace Frame TF",
+                "ros2 run tf2_ros static_transform_publisher"
+                " --x 0 --y -0.315 --z 0.02 --frame-id base_link"
+                " --child-frame-id workspace_frame",
+            )
+        else:
+            # Publish camera calibration TF (base_link → camera_link)
+            # The easy_handeye2 calibration gives base_link → camera_color_optical_frame,
+            # but the RealSense driver already publishes camera_link → camera_color_optical_frame.
+            # We publish base_link → camera_link to avoid TF parent conflicts.
+            # To recalibrate: run easy_handeye2 with tracking_base_frame:=camera_link
+            calib_file = os.path.expanduser(
+                "~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib"
+            )
+            if os.path.exists(calib_file):
+                try:
+                    import yaml
+                    with open(calib_file) as f:
+                        calib = yaml.safe_load(f)
+                    t = calib["transform"]["translation"]
+                    r = calib["transform"]["rotation"]
+                    run(
+                        "Camera Calibration TF",
+                        f"ros2 run tf2_ros static_transform_publisher"
+                        f" --x {t['x']} --y {t['y']} --z {t['z']}"
+                        f" --qx {r['x']} --qy {r['y']} --qz {r['z']} --qw {r['w']}"
+                        f" --frame-id base_link --child-frame-id camera_link",
+                    )
+                    time.sleep(1)
+                except Exception as e:
+                    print(f"    WARNING: Failed to read calibration: {e}")
+            else:
+                print(f"    WARNING: No calibration found at {calib_file}")
+                print(f"    Run calibration first — see CALIBRATION.md")
+
+            # Camera + depth tracker + RViz
+            rviz_perception = "false" if args.no_rviz else "true"
+            run(
+                "Perception (hardware)",
+                "ros2 launch holo_assist_depth_tracker"
+                " visualize_depth_tracker.launch.py"
+                " start_workspace_perception:=false"
+                f" start_rviz:={rviz_perception}",
+            )
+            time.sleep(2)
+
+            # AprilTag detector (publishes TF for tag detections)
+            run(
+                "AprilTag Detector",
+                "ros2 run apriltag_ros apriltag_node --ros-args"
+                ' -p "families:=36h11" -p "size:=0.032" -p "publish_tf:=true"'
+                " --remap image_rect:=/camera/camera/color/image_raw"
+                " --remap camera_info:=/camera/camera/color/camera_info",
+            )
+            time.sleep(1)
+
+            # Cube pose node: computes cube centers from AprilTag faces
+            # Uses base_link as reference frame (via calibration TF chain)
+            # instead of workspace_frame (which needs board corner tags)
+            run(
+                "Cube Pose Node",
+                "ros2 run holo_assist_depth_tracker holoassist_cube_pose_node"
+                " --ros-args"
+                " -p workspace_frame:=base_link"
+                " -p detections_topic:=/detections",
+            )
+
+        time.sleep(2)
+
+        # Cube pose relay: transforms perception poses (workspace_frame) to base_link for Unity
+        relay_prefix = "/holoassist/sim/perception" if fake else "/holoassist/perception"
+        run(
+            "Cube Pose Relay",
+            f"python3 {os.path.join(SCRIPT_DIR, 'ros2_ws', 'cube_pose_relay.py')}"
+            f" --ros-args -p input_prefix:={relay_prefix}",
+        )
+
+    # ── Done ─────────────────────────────────────────────────────────
+    print("\n" + "=" * 65)
     print("  All running. Ctrl+C to stop everything.")
-    print(f"  IP Beacon:  broadcasting {wifi_ip}:10000 (Quest auto-discovery)")
+    print(f"  ROS-TCP:     port 10000 (Unity)")
+    if args.perception:
+        print(f"  Perception:  cube poses relayed to /holoassist/unity/cube_{{1-4}}_pose")
+    print()
     if not fake:
         print("  Don't forget: run External Control on teach pendant")
     print("  Then hit Play in Unity.")
-    print("=" * 60)
+    print("=" * 65)
 
-    # Wait for any process to exit
+    critical = {"UR + OnRobot Driver", "ROS-TCP Endpoint"}
     while True:
-        for name, proc in processes:
+        for name, proc in list(processes):
             ret = proc.poll()
             if ret is not None:
                 print(f"\n>>> {name} exited (code {ret})")
-                cleanup()
+                if name in critical:
+                    print(f"    Critical process died — shutting down.")
+                    cleanup()
+                else:
+                    processes.remove((name, proc))
         time.sleep(1)
 
 
