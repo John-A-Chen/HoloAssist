@@ -98,21 +98,18 @@ public class BinDetector : MonoBehaviour
 
     void SetupTriggerZone(Bounds worldBounds)
     {
-        // Convert world bounds to local space (handle parent scaling)
-        Vector3 localCenter = transform.InverseTransformPoint(worldBounds.center);
-        Vector3 localSize = transform.InverseTransformVector(worldBounds.size);
-        localSize = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z));
-
-        // Create child trigger object
+        // Build a WORLD-axis-aligned trigger child so the Y-offset shifts the box
+        // UPWARD in world space (not along the bin's local Y, which may point
+        // sideways after FBX import rotation). Same strategy as BuildContainerColliders.
         var triggerObj = new GameObject("BinTrigger");
-        triggerObj.transform.SetParent(transform, false);
-        triggerObj.transform.localPosition = Vector3.zero;
-        triggerObj.transform.localRotation = Quaternion.identity;
+        triggerObj.transform.position = worldBounds.center;
+        triggerObj.transform.rotation = Quaternion.identity;
         triggerObj.transform.localScale = Vector3.one;
+        triggerObj.transform.SetParent(transform, worldPositionStays: true);
 
         var trigger = triggerObj.AddComponent<BoxCollider>();
-        trigger.center = localCenter + new Vector3(0, triggerYOffset / Mathf.Max(transform.lossyScale.y, 0.001f), 0);
-        trigger.size = localSize * triggerSizeMultiplier;
+        trigger.center = new Vector3(0f, triggerYOffset, 0f);
+        trigger.size = worldBounds.size * triggerSizeMultiplier;
         trigger.isTrigger = true;
 
         // Need a Rigidbody on the trigger object for trigger events
@@ -129,48 +126,54 @@ public class BinDetector : MonoBehaviour
 
     void BuildContainerColliders(Bounds worldBounds)
     {
-        Vector3 localCenter = transform.InverseTransformPoint(worldBounds.center);
-        Vector3 localSize = transform.InverseTransformVector(worldBounds.size);
-        localSize = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z));
-
-        float wt = Mathf.Max(0.001f, wallThickness);
-        float innerX = Mathf.Max(0.001f, localSize.x - 2f * wallInset);
-        float innerZ = Mathf.Max(0.001f, localSize.z - 2f * wallInset);
-        float halfX = innerX * 0.5f;
-        float halfZ = innerZ * 0.5f;
-        float wallHeight = localSize.y;
-        float bottomY = localCenter.y - localSize.y * 0.5f;
-
+        // Build a WORLD-axis-aligned container so the floor stays at the bottom and
+        // side walls stay vertical regardless of the bin GameObject's rotation
+        // (e.g. FBX import rotation -90 X from Z-up source data) and scale
+        // (e.g. FBX imported at 0.15× scale).
+        //
+        // Strategy: set the container's world transform first, then re-parent with
+        // worldPositionStays=true so the bin's rotation/scale are NOT inherited.
         var container = new GameObject("BinContainerColliders");
-        container.transform.SetParent(transform, false);
-        container.transform.localPosition = Vector3.zero;
-        container.transform.localRotation = Quaternion.identity;
+        container.transform.position = worldBounds.center;
+        container.transform.rotation = Quaternion.identity;
         container.transform.localScale = Vector3.one;
+        container.transform.SetParent(transform, worldPositionStays: true);
         container.layer = gameObject.layer;
 
-        // Floor — sits at the bottom of the bin volume
+        float wt = Mathf.Max(0.001f, wallThickness);
+        Vector3 size = worldBounds.size;
+        float innerX = Mathf.Max(0.001f, size.x - 2f * wallInset);
+        float innerZ = Mathf.Max(0.001f, size.z - 2f * wallInset);
+        float halfX = innerX * 0.5f;
+        float halfZ = innerZ * 0.5f;
+        float wallHeight = size.y;
+        float halfY = size.y * 0.5f;
+
+        // All wall positions are in the container's world-aligned local space
+        // (origin at world bounds center). Floor at world -Y, side walls vertical.
+
         AddWall(container.transform, "Floor",
-            new Vector3(localCenter.x, bottomY + wt * 0.5f, localCenter.z),
+            new Vector3(0f, -halfY + wt * 0.5f, 0f),
             new Vector3(innerX, wt, innerZ));
 
-        // Side walls — full bin height. Top is open so things can be dropped in.
+        // Side walls — full bin height in world Y. Top open.
         AddWall(container.transform, "Wall_PosX",
-            new Vector3(localCenter.x + halfX - wt * 0.5f, localCenter.y, localCenter.z),
+            new Vector3(halfX - wt * 0.5f, 0f, 0f),
             new Vector3(wt, wallHeight, innerZ));
 
         AddWall(container.transform, "Wall_NegX",
-            new Vector3(localCenter.x - halfX + wt * 0.5f, localCenter.y, localCenter.z),
+            new Vector3(-halfX + wt * 0.5f, 0f, 0f),
             new Vector3(wt, wallHeight, innerZ));
 
         AddWall(container.transform, "Wall_PosZ",
-            new Vector3(localCenter.x, localCenter.y, localCenter.z + halfZ - wt * 0.5f),
+            new Vector3(0f, 0f, halfZ - wt * 0.5f),
             new Vector3(innerX, wallHeight, wt));
 
         AddWall(container.transform, "Wall_NegZ",
-            new Vector3(localCenter.x, localCenter.y, localCenter.z - halfZ + wt * 0.5f),
+            new Vector3(0f, 0f, -halfZ + wt * 0.5f),
             new Vector3(innerX, wallHeight, wt));
 
-        Debug.Log($"[BinDetector] {binName}: container colliders built (inner {innerX:F3}×{wallHeight:F3}×{innerZ:F3})");
+        Debug.Log($"[BinDetector] {binName}: container colliders built (inner {innerX:F3}×{wallHeight:F3}×{innerZ:F3}) world-aligned");
     }
 
     void AddWall(Transform parent, string name, Vector3 localCenter, Vector3 size)
@@ -269,7 +272,9 @@ public class BinDetector : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Visualize the trigger zone in the editor
+        // Visualize the trigger zone in the editor.
+        // Trigger lives in world-aligned space (rotation = identity), so use its
+        // own localToWorldMatrix, not the bin's.
         var triggerChild = transform.Find("BinTrigger");
         if (triggerChild != null)
         {
@@ -277,19 +282,21 @@ public class BinDetector : MonoBehaviour
             if (box != null)
             {
                 Gizmos.color = HasObjects ? new Color(0, 1, 0, 0.3f) : new Color(1, 1, 0, 0.3f);
-                Gizmos.matrix = transform.localToWorldMatrix;
+                Gizmos.matrix = triggerChild.localToWorldMatrix;
                 Gizmos.DrawCube(box.center, box.size);
                 Gizmos.color = HasObjects ? Color.green : Color.yellow;
                 Gizmos.DrawWireCube(box.center, box.size);
             }
         }
 
-        // Visualize container walls + floor
+        // Visualize container walls + floor.
+        // Walls live in the container's world-aligned local space (rotation = identity),
+        // so use the container's localToWorldMatrix, not the bin's.
         var container = transform.Find("BinContainerColliders");
         if (container != null)
         {
             Gizmos.color = new Color(0.3f, 0.6f, 1f, 0.9f);
-            Gizmos.matrix = transform.localToWorldMatrix;
+            Gizmos.matrix = container.localToWorldMatrix;
             for (int i = 0; i < container.childCount; i++)
             {
                 var wall = container.GetChild(i);
