@@ -29,6 +29,12 @@ try:
 except ImportError:
     ROS_AVAILABLE = False
 
+try:
+    from holo_assist_depth_tracker_sim_interfaces.srv import PickCubeToBin
+    PICK_CUBE_SERVICE_AVAILABLE = True
+except ImportError:
+    PICK_CUBE_SERVICE_AVAILABLE = False
+
 
 class RobotState(Enum):
     DISCONNECTED = auto()
@@ -95,6 +101,12 @@ class DashboardStatus:
     ee_lock_count: int = 0
     # Operating mode
     operating_mode: str = "TELEOP"
+    # MoveIt pick/place
+    pick_service_ready: bool = False
+    pick_request_pending: bool = False
+    last_pick_cube: str = ""
+    last_pick_success: Optional[bool] = None
+    last_pick_message: str = ""
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -117,6 +129,7 @@ TOPIC_DEFAULTS = {
 }
 
 PICK_PLACE_MODE_TOPIC = "/pick_place/mode"
+PICK_CUBE_SERVICE = "/holoassist/pick_cube_to_bin"
 
 
 class RosInterface:
@@ -158,6 +171,7 @@ class RosInterface:
         self._session_info: dict = {}
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
         self._operating_mode: OperatingMode = OperatingMode.TELEOP
+        self._pick_cube_client = None
 
     def start(self):
         """Initialize rclpy and start spinning in a background thread."""
@@ -185,6 +199,10 @@ class RosInterface:
         self._pick_place_mode_pub = self._node.create_publisher(
             String, PICK_PLACE_MODE_TOPIC, 10
         )
+        if PICK_CUBE_SERVICE_AVAILABLE:
+            self._pick_cube_client = self._node.create_client(
+                PickCubeToBin, PICK_CUBE_SERVICE
+            )
 
         # ── Subscribers ──
 
@@ -276,6 +294,10 @@ class RosInterface:
             self._status.robot_state = RobotState.RUNNING
         self._add_event("ROS 2 node started")
         self._add_event(f"Subscribing to {len(TOPIC_DEFAULTS)} topics")
+        if self._pick_cube_client is not None:
+            self._add_event(f"Pick cube service client ready: {PICK_CUBE_SERVICE}")
+        else:
+            self._add_event("Pick cube service type unavailable")
 
         threading.Thread(target=self._check_controller_status, daemon=True).start()
 
@@ -539,6 +561,13 @@ class RosInterface:
 
     def get_status(self) -> DashboardStatus:
         """Return a snapshot of current status. Called from GUI thread."""
+        pick_service_ready = False
+        if self._pick_cube_client is not None:
+            try:
+                pick_service_ready = self._pick_cube_client.service_is_ready()
+            except Exception:
+                pick_service_ready = False
+
         # Build topic rates snapshot
         topic_rates = {}
         for name in self._rate_streams:
@@ -585,6 +614,11 @@ class RosInterface:
                 ee_locked=session_info_copy.get("ee_locked", False),
                 ee_lock_count=session_info_copy.get("ee_lock_count", 0),
                 operating_mode=self._operating_mode.name,
+                pick_service_ready=pick_service_ready,
+                pick_request_pending=self._status.pick_request_pending,
+                last_pick_cube=self._status.last_pick_cube,
+                last_pick_success=self._status.last_pick_success,
+                last_pick_message=self._status.last_pick_message,
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
@@ -605,6 +639,121 @@ class RosInterface:
         msg.data = mode
         self._pick_place_mode_pub.publish(msg)
         self._add_event(f"Published {PICK_PLACE_MODE_TOPIC}: {mode}")
+
+    # ── MOVEIT CUBE PICK/PLACE ─────────────────────────────────────
+
+    def pick_cube_to_bin(self, cube_id: int, bin_id: Optional[int] = None) -> bool:
+        """Queue a MoveIt pick/place request for april_cube_N -> bin_N."""
+        try:
+            cube_id = int(cube_id)
+            bin_id = cube_id if bin_id is None else int(bin_id)
+        except (TypeError, ValueError):
+            self._add_event(f"Pick request ignored: invalid cube/bin {cube_id!r}/{bin_id!r}")
+            return False
+
+        if cube_id not in range(1, 5) or bin_id not in range(1, 5):
+            self._add_event(f"Pick request ignored: cube/bin must be 1-4 ({cube_id}/{bin_id})")
+            return False
+
+        cube_name = f"april_cube_{cube_id}"
+        bin_name = f"bin_{bin_id}"
+
+        with self._lock:
+            if self._status.pick_request_pending:
+                self._add_event(f"Pick request ignored: {self._status.last_pick_cube} is already pending")
+                return False
+            if self._status.robot_state == RobotState.ESTOPPED:
+                self._add_event(f"Pick {cube_name} ignored: robot is E-stopped")
+                return False
+
+        if self._operating_mode != OperatingMode.MOVEIT:
+            self._add_event(f"Pick {cube_name} ignored: switch to MOVEIT mode first")
+            return False
+
+        if not ROS_AVAILABLE or self._node is None:
+            self._add_event(f"Pick {cube_name} unavailable: ROS is offline")
+            return False
+
+        if not PICK_CUBE_SERVICE_AVAILABLE or self._pick_cube_client is None:
+            self._add_event("Pick cube unavailable: PickCubeToBin service type is not installed")
+            return False
+
+        self._set_pick_status(
+            pending=True,
+            cube_name=cube_name,
+            success=None,
+            message=f"Requesting {cube_name} -> {bin_name}",
+        )
+        self._add_event(f"Pick requested: {cube_name} -> {bin_name}")
+        threading.Thread(
+            target=self._do_pick_cube_to_bin,
+            args=(cube_name, bin_name),
+            daemon=True,
+        ).start()
+        return True
+
+    def _do_pick_cube_to_bin(self, cube_name: str, bin_name: str):
+        try:
+            if not self._pick_cube_client.wait_for_service(timeout_sec=1.0):
+                self._set_pick_status(
+                    pending=False,
+                    cube_name=cube_name,
+                    success=False,
+                    message=f"{PICK_CUBE_SERVICE} not available",
+                )
+                self._add_event(f"Pick {cube_name} failed: service not available")
+                return
+
+            req = PickCubeToBin.Request()
+            req.cube_name = cube_name
+            req.bin_id = bin_name
+            future = self._pick_cube_client.call_async(req)
+
+            start = time.time()
+            while self._running and not future.done() and time.time() - start < 5.0:
+                time.sleep(0.05)
+
+            if not future.done():
+                self._set_pick_status(
+                    pending=False,
+                    cube_name=cube_name,
+                    success=False,
+                    message="Service call timed out",
+                )
+                self._add_event(f"Pick {cube_name} failed: service call timed out")
+                return
+
+            result = future.result()
+            success = bool(result.success)
+            message = result.message or ("queued" if success else "failed")
+            self._set_pick_status(
+                pending=False,
+                cube_name=cube_name,
+                success=success,
+                message=message,
+            )
+            self._add_event(f"Pick {cube_name}: {message}")
+        except Exception as e:
+            self._set_pick_status(
+                pending=False,
+                cube_name=cube_name,
+                success=False,
+                message=str(e),
+            )
+            self._add_event(f"Pick {cube_name} error: {e}")
+
+    def _set_pick_status(
+        self,
+        pending: bool,
+        cube_name: str,
+        success: Optional[bool],
+        message: str,
+    ):
+        with self._lock:
+            self._status.pick_request_pending = pending
+            self._status.last_pick_cube = cube_name
+            self._status.last_pick_success = success
+            self._status.last_pick_message = message
 
     # ── MODE SWITCHING ─────────────────────────────────────────────
 

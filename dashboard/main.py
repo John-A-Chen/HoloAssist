@@ -1145,6 +1145,124 @@ class SessionScreen(QWidget):
         return f"{s}s"
 
 
+# ── Screen: MoveIt Cube Pick/Place ─────────────────────────────────
+
+class CubePickScreen(QWidget):
+    """MoveIt pick/place controls for AprilTag-tracked cubes."""
+
+    def __init__(self, ros: RosInterface, parent=None):
+        super().__init__(parent)
+        self.ros = ros
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 8)
+        layout.setSpacing(8)
+
+        header = QHBoxLayout()
+        title = QLabel("CUBE PICK & PLACE")
+        title.setFont(QFont("monospace", 8, QFont.Bold))
+        title.setStyleSheet(f"color: {BLUE};")
+        header.addWidget(title)
+
+        header.addStretch()
+
+        self.status_label = QLabel("SERVICE: ---")
+        self.status_label.setFont(QFont("monospace", 8, QFont.Bold))
+        self.status_label.setStyleSheet(f"color: {TEXT_DIM};")
+        header.addWidget(self.status_label)
+        layout.addLayout(header)
+
+        grid = QGridLayout()
+        grid.setSpacing(8)
+
+        self.cube_buttons = []
+        for cube_id in range(1, 5):
+            btn = QPushButton(f"APRIL CUBE\n{cube_id}")
+            btn.setFont(QFont("monospace", 12, QFont.Bold))
+            btn.setMinimumHeight(120)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.clicked.connect(lambda checked=False, c=cube_id: self._request_pick(c))
+            grid.addWidget(btn, (cube_id - 1) // 2, (cube_id - 1) % 2)
+            self.cube_buttons.append(btn)
+
+        layout.addLayout(grid, 1)
+
+        self.service_label = QLabel("Service: /holoassist/pick_cube_to_bin")
+        self.service_label.setFont(QFont("monospace", 8))
+        self.service_label.setStyleSheet(f"color: {TEXT_DIM};")
+        self.service_label.setWordWrap(True)
+        layout.addWidget(self.service_label)
+
+        self._set_buttons_enabled(False)
+
+    def _request_pick(self, cube_id: int):
+        self.status_label.setText(f"REQUESTING: APRIL CUBE {cube_id}")
+        self.status_label.setStyleSheet(f"color: {YELLOW};")
+        self.ros.pick_cube_to_bin(cube_id, cube_id)
+
+    def update_status(self, status):
+        moveit = status.operating_mode == "MOVEIT"
+        estopped = status.robot_state == RobotState.ESTOPPED
+        ready = (
+            moveit
+            and status.ros_connected
+            and status.pick_service_ready
+            and not status.pick_request_pending
+            and not estopped
+        )
+        self._set_buttons_enabled(ready)
+
+        if status.pick_request_pending:
+            cube = status.last_pick_cube.replace("april_cube_", "APRIL CUBE ")
+            self.status_label.setText(f"PENDING: {cube}")
+            self.status_label.setStyleSheet(f"color: {YELLOW};")
+        elif status.last_pick_message:
+            cube = status.last_pick_cube.replace("april_cube_", "APRIL CUBE ")
+            prefix = "READY"
+            color = GREEN
+            if status.last_pick_success is False:
+                prefix = "FAILED"
+                color = RED
+            elif status.last_pick_success is True:
+                prefix = "QUEUED"
+                color = GREEN
+            self.status_label.setText(f"{prefix}: {cube}")
+            self.status_label.setStyleSheet(f"color: {color};")
+            self.service_label.setText(status.last_pick_message)
+        elif not status.ros_connected:
+            self.status_label.setText("ROS: OFFLINE")
+            self.status_label.setStyleSheet(f"color: {RED};")
+        elif estopped:
+            self.status_label.setText("ROBOT: E-STOPPED")
+            self.status_label.setStyleSheet(f"color: {RED};")
+        elif not status.pick_service_ready:
+            self.status_label.setText("SERVICE: WAITING")
+            self.status_label.setStyleSheet(f"color: {YELLOW};")
+        else:
+            self.status_label.setText("SERVICE: READY")
+            self.status_label.setStyleSheet(f"color: {GREEN};")
+
+    def _set_buttons_enabled(self, enabled: bool):
+        for btn in self.cube_buttons:
+            btn.setEnabled(enabled)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {BLUE if enabled else DARK_BG};
+                    color: {'white' if enabled else TEXT_DIM};
+                    border: 3px solid {('#79bbff' if enabled else BORDER)};
+                    border-radius: 8px;
+                }}
+                QPushButton:hover {{
+                    background-color: #79bbff;
+                    color: white;
+                }}
+                QPushButton:pressed {{
+                    background-color: #2f81f7;
+                }}
+            """)
+
+
 # ── Main Window ─────────────────────────────────────────────────────
 
 class MainWindow(QMainWindow):
@@ -1200,6 +1318,10 @@ class MainWindow(QMainWindow):
         self.session_screen = SessionScreen()
         self.tabs.addTab(self.session_screen, "SESSION")
 
+        self.cube_screen = CubePickScreen(ros)
+        self._cube_tab_index = None
+        self._cube_tab_insert_index = self.tabs.count()
+
         left_col.addWidget(self.tabs, 1)
 
         # Mode buttons (bottom of left column)
@@ -1223,6 +1345,7 @@ class MainWindow(QMainWindow):
 
         self._active_mode = "TELEOP"
         self._update_mode_buttons()
+        self._set_cube_tab_visible(False)
 
         left_col.addLayout(mode_row)
         body.addLayout(left_col, 1)
@@ -1248,20 +1371,34 @@ class MainWindow(QMainWindow):
         self.stats_screen.update_status(status)
         self.latency_screen.update_status(status)
         self.session_screen.update_status(status)
+        self.cube_screen.update_status(status)
         self.estop.sync_state(status)
         if status.operating_mode != self._active_mode:
             self._active_mode = status.operating_mode
             self._update_mode_buttons()
+        self._set_cube_tab_visible(status.operating_mode == "MOVEIT")
 
     def _on_teleop(self):
         self._active_mode = "TELEOP"
         self._update_mode_buttons()
+        self._set_cube_tab_visible(False)
         self.ros.switch_to_teleop()
 
     def _on_moveit(self):
         self._active_mode = "MOVEIT"
         self._update_mode_buttons()
+        self._set_cube_tab_visible(True)
         self.ros.switch_to_moveit()
+
+    def _set_cube_tab_visible(self, visible: bool):
+        if visible and self._cube_tab_index is None:
+            insert_at = min(self._cube_tab_insert_index, self.tabs.count())
+            self._cube_tab_index = self.tabs.insertTab(insert_at, self.cube_screen, "CUBE")
+        elif not visible and self._cube_tab_index is not None:
+            if self.tabs.currentWidget() is self.cube_screen:
+                self.tabs.setCurrentIndex(0)
+            self.tabs.removeTab(self._cube_tab_index)
+            self._cube_tab_index = None
 
     def _update_mode_buttons(self):
         if self._active_mode == "TELEOP":
