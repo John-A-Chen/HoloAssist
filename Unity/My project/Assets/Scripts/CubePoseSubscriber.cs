@@ -34,6 +34,21 @@ public class CubePoseSubscriber : MonoBehaviour
     [Tooltip("Scale of spawned virtual objects")]
     public float objectScale = 0.04f;
 
+    [Header("Pose Averaging (anti-jitter)")]
+    [Tooltip("Apply a moving-average filter to incoming poses to reduce per-frame jitter. The existing `smoothing` lerp still runs on top for visual continuity.")]
+    public bool useAveraging = true;
+
+    [Range(1, 30)]
+    [Tooltip("How many recent position samples to average. Higher = smoother but more lag. 1 = no averaging (just the smoothing lerp).")]
+    public int positionAverageWindow = 6;
+
+    [Range(1, 30)]
+    [Tooltip("How many recent rotation samples to average via incremental Slerp. 1 = no rotation averaging.")]
+    public int rotationAverageWindow = 3;
+
+    [Tooltip("Reject incoming poses that differ from the current averaged position by more than this distance (metres). 0 = no rejection (let outliers in).")]
+    public float outlierRejectDistance = 0f;
+
     private class CubeState
     {
         public GameObject instance;
@@ -42,6 +57,8 @@ public class CubePoseSubscriber : MonoBehaviour
         public Quaternion targetRotation;
         public bool visible;
         public string name;
+        public Queue<Vector3> positionBuffer = new Queue<Vector3>();
+        public Queue<Quaternion> rotationBuffer = new Queue<Quaternion>();
     }
 
     private Dictionary<string, CubeState> cubes = new Dictionary<string, CubeState>();
@@ -88,6 +105,10 @@ public class CubePoseSubscriber : MonoBehaviour
                 {
                     state.instance.SetActive(false);
                     state.visible = false;
+                    // Drop stale samples — when the cube reappears it should
+                    // start a fresh moving average, not blend with old poses.
+                    state.positionBuffer.Clear();
+                    state.rotationBuffer.Clear();
                 }
                 continue;
             }
@@ -132,18 +153,83 @@ public class CubePoseSubscriber : MonoBehaviour
             (float)msg.pose.orientation.w);
         Quaternion unityLocalRot = new Quaternion(rosRot.y, -rosRot.z, -rosRot.x, rosRot.w);
 
+        Vector3 worldPos;
+        Quaternion worldRot;
         if (robotBase != null)
         {
-            state.targetPosition = robotBase.TransformPoint(unityLocal);
-            state.targetRotation = robotBase.rotation * unityLocalRot;
+            worldPos = robotBase.TransformPoint(unityLocal);
+            worldRot = robotBase.rotation * unityLocalRot;
         }
         else
         {
-            state.targetPosition = unityLocal;
-            state.targetRotation = unityLocalRot;
+            worldPos = unityLocal;
+            worldRot = unityLocalRot;
+        }
+
+        // Pose averaging — feed the world-space pose into the moving-average
+        // filter. The lerp in Update() still smooths from current → averaged
+        // target for visual continuity.
+        if (useAveraging)
+        {
+            // Outlier rejection (optional) — drop spikes that diverge wildly
+            // from the recent average so a single bad detection doesn't poison
+            // the running average. 0 disables.
+            if (outlierRejectDistance > 0f && state.positionBuffer.Count > 0)
+            {
+                Vector3 currentAvg = AveragePosition(state.positionBuffer);
+                if (Vector3.Distance(worldPos, currentAvg) > outlierRejectDistance)
+                {
+                    state.lastReceived = Time.time; // still counts as "alive"
+                    return;
+                }
+            }
+
+            EnqueueClamped(state.positionBuffer, worldPos, positionAverageWindow);
+            EnqueueClamped(state.rotationBuffer, worldRot, rotationAverageWindow);
+
+            state.targetPosition = AveragePosition(state.positionBuffer);
+            state.targetRotation = AverageRotation(state.rotationBuffer);
+        }
+        else
+        {
+            state.targetPosition = worldPos;
+            state.targetRotation = worldRot;
         }
 
         state.lastReceived = Time.time;
+    }
+
+    static void EnqueueClamped<T>(Queue<T> buf, T value, int maxCount)
+    {
+        buf.Enqueue(value);
+        while (buf.Count > Mathf.Max(1, maxCount)) buf.Dequeue();
+    }
+
+    static Vector3 AveragePosition(Queue<Vector3> buf)
+    {
+        if (buf.Count == 0) return Vector3.zero;
+        Vector3 sum = Vector3.zero;
+        foreach (var p in buf) sum += p;
+        return sum / buf.Count;
+    }
+
+    // Approximate equal-weighted quaternion average via incremental Slerp.
+    // For small angle differences (e.g. perception jitter) this converges to
+    // a result very close to the true average without the expense of solving
+    // for the principal eigenvector. Quaternion.Slerp internally takes the
+    // shorter path so sign-ambiguity isn't a problem.
+    static Quaternion AverageRotation(Queue<Quaternion> buf)
+    {
+        if (buf.Count == 0) return Quaternion.identity;
+        Quaternion result = Quaternion.identity;
+        int i = 0;
+        foreach (var q in buf)
+        {
+            if (i == 0) result = q;
+            else result = Quaternion.Slerp(result, q, 1f / (i + 1));
+            i++;
+        }
+        return result;
     }
 
     GameObject CreateVirtualObject(int cubeIndex)
