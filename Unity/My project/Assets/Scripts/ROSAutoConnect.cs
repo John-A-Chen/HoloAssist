@@ -47,9 +47,13 @@ public class ROSAutoConnect : MonoBehaviour
             // Try localhost first (Unity Editor on same machine)
             if (TryConnect("127.0.0.1")) { foundIP = "127.0.0.1"; return; }
 
-            // Scan robot subnet 192.168.0.101-110 (skip .100 = robot Ethernet)
-            for (int i = 101; i <= 110 && foundIP == null; i++)
+            // Try known laptop IP first
+            if (TryConnect("192.168.0.224")) { foundIP = "192.168.0.224"; return; }
+
+            // Scan robot subnet 192.168.0.200-230
+            for (int i = 200; i <= 230 && foundIP == null; i++)
             {
+                if (i == 224) continue;
                 string ip = $"192.168.0.{i}";
                 if (TryConnect(ip)) { foundIP = ip; return; }
             }

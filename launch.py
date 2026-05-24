@@ -230,6 +230,8 @@ def main():
                 "ros2 launch holo_assist_depth_tracker"
                 " visualize_depth_tracker.launch.py"
                 " start_workspace_perception:=false"
+                " start_tracker:=false"
+                " start_overlay:=false"
                 f" start_rviz:={rviz_perception}",
             )
             time.sleep(2)

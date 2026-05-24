@@ -104,12 +104,12 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    # ── Phase 1: UR + OnRobot driver ────────────────────────────────
+    # ── Phase 1: UR driver ──────────────────────────────────────────
     rviz_flag = "false" if args.no_rviz else "true"
     run(
         "UR + OnRobot Driver",
-        f"ros2 launch ur_onrobot_control start_robot.launch.py"
-        f" ur_type:=ur3e onrobot_type:=rg2"
+        f"ros2 launch ur_robot_driver ur_control.launch.py"
+        f" ur_type:=ur3e"
         f" robot_ip:={args.robot_ip} launch_rviz:={rviz_flag}",
     )
 
