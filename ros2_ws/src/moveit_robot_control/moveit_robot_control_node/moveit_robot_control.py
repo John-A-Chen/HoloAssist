@@ -49,6 +49,7 @@ from tf2_ros import Buffer
 from tf2_ros import TransformException
 from tf2_ros import TransformListener
 from trajectory_msgs.msg import JointTrajectory
+from trajectory_msgs.msg import JointTrajectoryPoint
 from urdf_parser_py.urdf import URDF
 from ur_dashboard_msgs.msg import RobotMode
 from ur_dashboard_msgs.msg import SafetyMode
@@ -56,6 +57,7 @@ from ur_dashboard_msgs.msg import SafetyMode
 
 JOINT_STATES_TOPIC = "/joint_states"
 TRAJECTORY_TOPIC = "/scaled_joint_trajectory_controller/joint_trajectory"
+STOP_TOPIC = "/moveit_robot_control/stop"
 MOVEIT_PLANNING_SERVICE = "/plan_kinematic_path"
 MOVEIT_CARTESIAN_PATH_SERVICE = "/compute_cartesian_path"
 STATE_VALIDITY_SERVICE = "/check_state_validity"
@@ -1887,6 +1889,8 @@ class MoveItRobotControl(Node):
         )
         while rclpy.ok() and time.time() < deadline:
             rclpy.spin_once(self, timeout_sec=0.1)
+            if getattr(self, "cancel_requested", False):
+                raise RuntimeError("Trajectory execution cancelled")
             if self.current_pos is None:
                 continue
             max_error_joint, max_error = max_angular_joint_error(
@@ -2000,6 +2004,8 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.declare_parameter("status_topic", "/moveit_robot_control/status")
         self.declare_parameter("state_topic", "/moveit_robot_control/state")
         self.declare_parameter("debug_topic", "/moveit_robot_control/debug")
+        self.declare_parameter("stop_topic", STOP_TOPIC)
+        self.declare_parameter("stop_hold_sec", 0.1)
         self.declare_parameter("complete_message", "complete")
         self.declare_parameter("frame", BASE_FRAME)
         self.declare_parameter("ee_link", END_EFFECTOR_LINK)
@@ -2077,7 +2083,9 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         status_topic = str(self.get_parameter("status_topic").value)
         state_topic = str(self.get_parameter("state_topic").value)
         debug_topic = str(self.get_parameter("debug_topic").value)
+        stop_topic = str(self.get_parameter("stop_topic").value)
 
+        self.stop_hold_sec = max(0.0, float(self.get_parameter("stop_hold_sec").value))
         self.complete_message = str(self.get_parameter("complete_message").value)
         self.base_frame = str(self.get_parameter("frame").value)
         self.end_effector_link = str(self.get_parameter("ee_link").value)
@@ -2175,6 +2183,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         ] = deque()
         self.pending_joint_goals: Deque[tuple[int, list[float]]] = deque()
         self.motion_in_progress = False
+        self.cancel_requested = False
         self.current_state = "STARTING"
         self.next_goal_id = 0
 
@@ -2215,6 +2224,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.create_subscription(Point, point_topic, self.coordinate_cb, 10)
         self.create_subscription(Pose, pose_topic, self.pose_cb, 10)
         self.create_subscription(JointState, joint_state_topic, self.joint_goal_cb, 10)
+        self.create_subscription(String, stop_topic, self.stop_cb, 10)
 
         self.publish_status(
             "Coordinate listener starting. Send "
@@ -2229,6 +2239,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             point_topic=point_topic,
             pose_topic=pose_topic,
             joint_state_topic=joint_state_topic,
+            stop_topic=stop_topic,
             complete_topic=complete_topic,
             status_topic=status_topic,
             state_topic=state_topic,
@@ -2295,6 +2306,40 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         msg.data = state
         self.state_pub.publish(msg)
         self.publish_debug(event or state.lower(), state=state, **facts)
+
+    def stop_cb(self, msg: String) -> None:
+        command = msg.data.strip().lower()
+        if command and command not in {"stop", "cancel", "abort", "reset"}:
+            self.publish_status(f"Ignoring stop topic command: {msg.data!r}")
+            return
+
+        dropped_goals = len(self.pending_coordinates) + len(self.pending_joint_goals)
+        self.pending_coordinates.clear()
+        self.pending_joint_goals.clear()
+        self.cancel_requested = True
+        self.publish_hold_current_position()
+        self.publish_status(
+            f"Motion stop requested; cleared {dropped_goals} queued goal(s)"
+        )
+        self.publish_state(
+            "CANCELLED",
+            event="motion_cancelled",
+            cleared_goals=dropped_goals,
+            motion_in_progress=self.motion_in_progress,
+        )
+
+    def publish_hold_current_position(self) -> None:
+        if self.current_pos is None:
+            self.publish_status("Could not stop with hold trajectory: no joint state yet")
+            return
+
+        trajectory = JointTrajectory()
+        trajectory.joint_names = list(UR_JOINT_ORDER)
+        point = JointTrajectoryPoint()
+        point.positions = list(self.current_pos)
+        set_duration_seconds(point.time_from_start, self.stop_hold_sec)
+        trajectory.points.append(point)
+        self.trajectory_pub.publish(trajectory)
 
     def coordinate_cb(self, msg: Point) -> None:
         coordinate = (float(msg.x), float(msg.y), float(msg.z))
@@ -2602,6 +2647,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
 
         goal_id, coordinate, goal_orientation = self.pending_coordinates.popleft()
         self.motion_in_progress = True
+        self.cancel_requested = False
         phase = "planning"
         total_started_at = time.monotonic()
         self.publish_status(
@@ -2740,6 +2786,8 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
                 if last_error is not None:
                     raise last_error
                 raise RuntimeError("No orientation candidate was available")
+            if self.cancel_requested:
+                raise RuntimeError("Coordinate goal cancelled")
 
             planning_duration_sec = time.monotonic() - planning_started_at
             planned_duration_sec = trajectory_duration_sec(trajectory)
@@ -2785,14 +2833,15 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
 
         except Exception as exc:
             self.motion_in_progress = False
+            cancelled = self.cancel_requested
             if phase == "planning":
-                failure_state = "INVALID"
-                failure_event = "goal_invalid"
-                status_prefix = "Invalid coordinate goal"
+                failure_state = "CANCELLED" if cancelled else "INVALID"
+                failure_event = "goal_cancelled" if cancelled else "goal_invalid"
+                status_prefix = "Cancelled coordinate goal" if cancelled else "Invalid coordinate goal"
             else:
-                failure_state = "FAILED"
-                failure_event = "goal_failed"
-                status_prefix = "Failed coordinate goal"
+                failure_state = "CANCELLED" if cancelled else "FAILED"
+                failure_event = "goal_cancelled" if cancelled else "goal_failed"
+                status_prefix = "Cancelled coordinate goal" if cancelled else "Failed coordinate goal"
 
             self.publish_status(
                 f"{status_prefix} #{goal_id}: x={coordinate[0]:.4f}, "
@@ -2834,6 +2883,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
 
         goal_id, joint_positions = self.pending_joint_goals.popleft()
         self.motion_in_progress = True
+        self.cancel_requested = False
         phase = "planning"
         total_started_at = time.monotonic()
         self.publish_status(
@@ -2871,6 +2921,8 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
             )
             planning_duration_sec = time.monotonic() - planning_started_at
             planned_duration_sec = trajectory_duration_sec(trajectory)
+            if self.cancel_requested:
+                raise RuntimeError("Joint goal cancelled")
             self.publish_state(
                 "PLANNED",
                 event="joint_planning_succeeded",
@@ -2909,14 +2961,15 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
 
         except Exception as exc:
             self.motion_in_progress = False
+            cancelled = self.cancel_requested
             if phase == "planning":
-                failure_state = "INVALID"
-                failure_event = "joint_goal_invalid"
-                status_prefix = "Invalid joint goal"
+                failure_state = "CANCELLED" if cancelled else "INVALID"
+                failure_event = "joint_goal_cancelled" if cancelled else "joint_goal_invalid"
+                status_prefix = "Cancelled joint goal" if cancelled else "Invalid joint goal"
             else:
-                failure_state = "FAILED"
-                failure_event = "joint_goal_failed"
-                status_prefix = "Failed joint goal"
+                failure_state = "CANCELLED" if cancelled else "FAILED"
+                failure_event = "joint_goal_cancelled" if cancelled else "joint_goal_failed"
+                status_prefix = "Cancelled joint goal" if cancelled else "Failed joint goal"
 
             self.publish_status(f"{status_prefix} #{goal_id}: {exc}")
             self.publish_state(
