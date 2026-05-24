@@ -34,6 +34,9 @@ DEFAULT_TARGET_POINT_TOPIC = "/moveit_robot_control/target_point"
 DEFAULT_TARGET_JOINT_STATE_TOPIC = "/moveit_robot_control/target_joint_state"
 DEFAULT_MOVE_STATE_TOPIC = "/moveit_robot_control/state"
 DEFAULT_MOVE_COMPLETE_TOPIC = "/moveit_robot_control/complete"
+DEFAULT_MOVE_STOP_TOPIC = "/moveit_robot_control/stop"
+DEFAULT_JOINT_STATES_TOPIC = "/joint_states"
+DEFAULT_ARM_TRAJECTORY_TOPIC = "/scaled_joint_trajectory_controller/joint_trajectory"
 DEFAULT_GRIPPER_TOPIC = "/finger_width_trajectory_controller/joint_trajectory"
 DEFAULT_WORKSPACE_COMMAND_TOPIC = "/workspace_scene/command"
 DEFAULT_APPLY_PLANNING_SCENE_SERVICE = "/apply_planning_scene"
@@ -112,6 +115,15 @@ def pose_from_xyz_rpy(xyz: Sequence[float], rpy_deg: Sequence[float]) -> Pose:
 
 def finite_values(values: Sequence[float]) -> bool:
     return all(math.isfinite(float(value)) for value in values)
+
+
+def set_duration_seconds(duration, seconds: float) -> None:
+    seconds = max(0.0, float(seconds))
+    duration.sec = int(seconds)
+    duration.nanosec = int(round((seconds - duration.sec) * 1e9))
+    if duration.nanosec >= 1_000_000_000:
+        duration.sec += 1
+        duration.nanosec -= 1_000_000_000
 
 
 def bin_config_candidates() -> list[Path]:
@@ -197,6 +209,9 @@ class PickPlaceSequencer(Node):
         )
         self.declare_parameter("move_state_topic", DEFAULT_MOVE_STATE_TOPIC)
         self.declare_parameter("move_complete_topic", DEFAULT_MOVE_COMPLETE_TOPIC)
+        self.declare_parameter("move_stop_topic", DEFAULT_MOVE_STOP_TOPIC)
+        self.declare_parameter("joint_states_topic", DEFAULT_JOINT_STATES_TOPIC)
+        self.declare_parameter("arm_trajectory_topic", DEFAULT_ARM_TRAJECTORY_TOPIC)
         self.declare_parameter("gripper_topic", DEFAULT_GRIPPER_TOPIC)
         self.declare_parameter(
             "workspace_command_topic", DEFAULT_WORKSPACE_COMMAND_TOPIC
@@ -237,6 +252,7 @@ class PickPlaceSequencer(Node):
         self.declare_parameter("open_width", 0.08)
         self.declare_parameter("close_width", 0.0)
         self.declare_parameter("gripper_motion_sec", 2.0)
+        self.declare_parameter("stop_hold_sec", 0.1)
         self.declare_parameter("move_timeout_sec", 60.0)
         self.declare_parameter("scene_update_timeout_sec", 5.0)
         self.declare_parameter("initial_mode", "stop")
@@ -262,6 +278,9 @@ class PickPlaceSequencer(Node):
         )
         move_state_topic = str(self.get_parameter("move_state_topic").value)
         move_complete_topic = str(self.get_parameter("move_complete_topic").value)
+        move_stop_topic = str(self.get_parameter("move_stop_topic").value)
+        joint_states_topic = str(self.get_parameter("joint_states_topic").value)
+        arm_trajectory_topic = str(self.get_parameter("arm_trajectory_topic").value)
         gripper_topic = str(self.get_parameter("gripper_topic").value)
         self.workspace_command_topic = str(
             self.get_parameter("workspace_command_topic").value
@@ -318,6 +337,7 @@ class PickPlaceSequencer(Node):
         self.gripper_motion_sec = float(
             self.get_parameter("gripper_motion_sec").value
         )
+        self.stop_hold_sec = max(0.0, float(self.get_parameter("stop_hold_sec").value))
         self.move_timeout_sec = float(self.get_parameter("move_timeout_sec").value)
         self.scene_update_timeout_sec = float(
             self.get_parameter("scene_update_timeout_sec").value
@@ -350,15 +370,22 @@ class PickPlaceSequencer(Node):
         self.motion_failed = threading.Event()
         self.motion_started = threading.Event()
         self.motion_waiting = threading.Event()
+        self.abort_requested = threading.Event()
         self.sequence_lock = threading.Lock()
         self.sequence_thread: Optional[threading.Thread] = None
         self.pending_request: Optional[dict[str, Any]] = None
         self.last_failure_state = ""
+        self.latest_joint_positions: dict[str, float] = {}
+        self.latest_gripper_width: Optional[float] = None
 
         self.target_pose_pub = self.create_publisher(Pose, target_pose_topic, 10)
         self.target_point_pub = self.create_publisher(Point, target_point_topic, 10)
         self.target_joint_state_pub = self.create_publisher(
             JointState, target_joint_state_topic, 10
+        )
+        self.move_stop_pub = self.create_publisher(String, move_stop_topic, 10)
+        self.arm_trajectory_pub = self.create_publisher(
+            JointTrajectory, arm_trajectory_topic, 10
         )
         self.gripper_pub = self.create_publisher(JointTrajectory, gripper_topic, 10)
         self.workspace_command_pub = self.create_publisher(
@@ -369,6 +396,7 @@ class PickPlaceSequencer(Node):
             ApplyPlanningScene, apply_scene_service
         )
 
+        self.create_subscription(JointState, joint_states_topic, self.joint_state_cb, 10)
         self.create_subscription(PoseStamped, block_pose_topic, self.block_pose_cb, 10)
         self.create_subscription(String, command_topic, self.command_cb, 10)
         self.create_subscription(String, mode_topic, self.mode_cb, 10)
@@ -383,6 +411,9 @@ class PickPlaceSequencer(Node):
             target_pose_topic=target_pose_topic,
             target_point_topic=target_point_topic,
             target_joint_state_topic=target_joint_state_topic,
+            move_stop_topic=move_stop_topic,
+            joint_states_topic=joint_states_topic,
+            arm_trajectory_topic=arm_trajectory_topic,
             gripper_topic=gripper_topic,
             place_xyz=[
                 self.default_place_pose.position.x,
@@ -451,6 +482,15 @@ class PickPlaceSequencer(Node):
         msg.data = json.dumps(payload, sort_keys=True)
         self.status_pub.publish(msg)
         self.get_logger().info(message)
+
+    def joint_state_cb(self, msg: JointState) -> None:
+        with self.sequence_lock:
+            self.latest_joint_positions = {
+                name: position
+                for name, position in zip(msg.name, msg.position)
+            }
+            if "finger_width" in self.latest_joint_positions:
+                self.latest_gripper_width = self.latest_joint_positions["finger_width"]
 
     def normalize_mode(self, value: str) -> str:
         text = value.strip().upper()
@@ -527,10 +567,14 @@ class PickPlaceSequencer(Node):
             return
 
         mode_changed = False
+        should_abort = False
         with self.sequence_lock:
             if new_mode != self.current_mode:
                 self.current_mode = new_mode
                 mode_changed = True
+            if new_mode == STOP_MODE:
+                self.pending_request = None
+                should_abort = True
 
         if mode_changed:
             self.publish_status(
@@ -540,6 +584,8 @@ class PickPlaceSequencer(Node):
 
         if new_mode == RUN_MODE:
             self.try_start_pending_sequence()
+        elif should_abort:
+            self.abort_active_sequence("stop command")
 
     def destination_from_command(self, command: dict[str, Any]) -> tuple[Pose, str]:
         place_pose = self.parse_pose_from_command(command, "place_pose")
@@ -725,6 +771,7 @@ class PickPlaceSequencer(Node):
 
             request = self.pending_request
             self.pending_request = None
+            self.abort_requested.clear()
             self.sequence_thread = threading.Thread(
                 target=self.run_sequence,
                 args=(
@@ -738,6 +785,51 @@ class PickPlaceSequencer(Node):
             )
             self.sequence_thread.start()
             return True
+
+    def abort_active_sequence(self, reason: str) -> None:
+        self.abort_requested.set()
+        self.motion_failed.set()
+        self.motion_complete.set()
+        msg = String()
+        msg.data = "stop"
+        self.move_stop_pub.publish(msg)
+        self.publish_hold_trajectories()
+        self.publish_status(
+            "Pick-place sequence aborted and reset",
+            reason=reason,
+            mode=self.current_mode.lower(),
+        )
+
+    def publish_hold_trajectories(self) -> None:
+        joint_positions = None
+        gripper_width = None
+        with self.sequence_lock:
+            if all(name in self.latest_joint_positions for name in self.home_joint_names):
+                joint_positions = [
+                    self.latest_joint_positions[name]
+                    for name in self.home_joint_names
+                ]
+            gripper_width = self.latest_gripper_width
+
+        if joint_positions is not None:
+            trajectory = JointTrajectory()
+            trajectory.joint_names = list(self.home_joint_names)
+            point = JointTrajectoryPoint()
+            point.positions = list(joint_positions)
+            set_duration_seconds(point.time_from_start, self.stop_hold_sec)
+            trajectory.points.append(point)
+            self.arm_trajectory_pub.publish(trajectory)
+        else:
+            self.publish_status(
+                "Could not publish arm hold trajectory: waiting for joint_states"
+            )
+
+        if gripper_width is not None:
+            self.publish_gripper_trajectory(gripper_width, self.stop_hold_sec)
+
+    def ensure_not_aborted(self, label: str = "pick-place sequence") -> None:
+        if self.abort_requested.is_set() or self.current_mode != RUN_MODE:
+            raise RuntimeError(f"{label} aborted")
 
     def tool_pose(
         self,
@@ -769,6 +861,7 @@ class PickPlaceSequencer(Node):
         destination_id: str,
     ) -> None:
         try:
+            self.ensure_not_aborted("pick-place sequence")
             self.publish_status(
                 "Starting pick-place sequence",
                 block_id=block_id,
@@ -805,22 +898,27 @@ class PickPlaceSequencer(Node):
             if self.home_enabled and self.home_before_pick:
                 self.move_to_home("move to pick-place home before pick")
 
+            self.ensure_not_aborted("pick-place sequence")
             self.move_to_pose(pregrasp_pose, "move above block")
             self.send_gripper(self.open_width, "open gripper")
 
+            self.ensure_not_aborted("pick-place sequence")
             if self.remove_block_collision_before_grasp:
                 self.remove_block_from_scene(block_id, frame_id)
 
             self.move_to_pose(grasp_pose, "move down onto block")
             self.send_gripper(self.close_width, "close gripper")
+            self.ensure_not_aborted("pick-place sequence")
             self.move_to_pose(pregrasp_pose, "move back above block")
             self.move_to_pose(place_above_pose, f"move above {destination_id}")
 
             if self.place_descent_enabled:
                 self.move_to_pose(place_down_pose, f"move down to {destination_id}")
 
+            self.ensure_not_aborted("pick-place sequence")
             self.send_gripper(self.open_width, "drop block")
 
+            self.ensure_not_aborted("pick-place sequence")
             if self.add_block_at_place_after_release:
                 final_block_pose = copy_pose(place_pose)
                 self.add_block_to_scene(block_id, frame_id, final_block_pose)
@@ -829,6 +927,7 @@ class PickPlaceSequencer(Node):
             if self.home_enabled and self.home_after_place:
                 self.move_to_home("move to pick-place home after place")
 
+            self.ensure_not_aborted("pick-place sequence")
             self.publish_status("Pick-place sequence complete", block_id=block_id)
         except Exception as exc:
             self.publish_status(
@@ -838,7 +937,9 @@ class PickPlaceSequencer(Node):
         finally:
             with self.sequence_lock:
                 self.sequence_thread = None
-            self.try_start_pending_sequence()
+                stopped = self.current_mode == STOP_MODE
+            if not stopped:
+                self.try_start_pending_sequence()
 
     def move_to_pose(self, pose: Pose, label: str) -> None:
         self.publish_status(
@@ -852,6 +953,7 @@ class PickPlaceSequencer(Node):
         self.motion_started.clear()
         self.motion_waiting.set()
         self.last_failure_state = ""
+        self.ensure_not_aborted(label)
         if self.orientation_mode == AUTO_ORIENTATION_MODE:
             point = Point()
             point.x = pose.position.x
@@ -863,9 +965,12 @@ class PickPlaceSequencer(Node):
         try:
             deadline = time.monotonic() + self.move_timeout_sec
             while time.monotonic() < deadline and rclpy.ok():
+                self.ensure_not_aborted(label)
                 if self.motion_complete.wait(timeout=0.1):
+                    self.ensure_not_aborted(label)
                     return
                 if self.motion_failed.is_set():
+                    self.ensure_not_aborted(label)
                     raise RuntimeError(
                         f"{label} failed in coordinate listener: "
                         f"{self.last_failure_state}"
@@ -886,6 +991,7 @@ class PickPlaceSequencer(Node):
         self.motion_started.clear()
         self.motion_waiting.set()
         self.last_failure_state = ""
+        self.ensure_not_aborted(label)
 
         joint_state = JointState()
         joint_state.header.stamp = self.get_clock().now().to_msg()
@@ -896,9 +1002,12 @@ class PickPlaceSequencer(Node):
         try:
             deadline = time.monotonic() + self.move_timeout_sec
             while time.monotonic() < deadline and rclpy.ok():
+                self.ensure_not_aborted(label)
                 if self.motion_complete.wait(timeout=0.1):
+                    self.ensure_not_aborted(label)
                     return
                 if self.motion_failed.is_set():
+                    self.ensure_not_aborted(label)
                     raise RuntimeError(
                         f"{label} failed in coordinate listener: "
                         f"{self.last_failure_state}"
@@ -922,19 +1031,23 @@ class PickPlaceSequencer(Node):
 
     def send_gripper(self, width: float, label: str) -> None:
         self.publish_status(label, width=width)
+        self.ensure_not_aborted(label)
+        self.publish_gripper_trajectory(width, self.gripper_motion_sec)
+        deadline = time.monotonic() + max(0.0, self.gripper_motion_sec)
+        while time.monotonic() < deadline:
+            self.ensure_not_aborted(label)
+            time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+
+    def publish_gripper_trajectory(self, width: float, duration_sec: float) -> None:
         trajectory = JointTrajectory()
         trajectory.joint_names = ["finger_width"]
 
         point = JointTrajectoryPoint()
         point.positions = [float(width)]
-        point.time_from_start.sec = int(self.gripper_motion_sec)
-        point.time_from_start.nanosec = int(
-            round((self.gripper_motion_sec - point.time_from_start.sec) * 1e9)
-        )
+        set_duration_seconds(point.time_from_start, max(0.0, duration_sec))
         trajectory.points.append(point)
 
         self.gripper_pub.publish(trajectory)
-        time.sleep(max(0.0, self.gripper_motion_sec))
 
     def remove_block_from_scene(self, block_id: str, frame_id: str) -> None:
         self.publish_workspace_command({"action": "remove", "id": block_id})
