@@ -42,9 +42,16 @@ public class BinDetector : MonoBehaviour
     // Current objects inside the bin
     private HashSet<Collider> objectsInBin = new HashSet<Collider>();
 
+    // Cumulative count — incremented on every new entry, never decremented.
+    private int totalDeposited = 0;
+
     public int ObjectCount => objectsInBin.Count;
+    public int TotalCount => totalDeposited;
     public bool HasObjects => objectsInBin.Count > 0;
     public string Status => HasObjects ? $"{objectsInBin.Count} object(s)" : "Empty";
+
+    /// <summary>Reset the cumulative score for this bin (e.g. start of new game).</summary>
+    public void ResetScore() { totalDeposited = 0; }
 
     void Start()
     {
@@ -214,9 +221,15 @@ public class BinDetector : MonoBehaviour
     {
         if (!ShouldDetect(other)) return;
 
-        objectsInBin.Add(other);
-        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} objects)");
+        bool isNew = objectsInBin.Add(other);
+        if (isNew) totalDeposited++;
+        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} now, {totalDeposited} total)");
         UpdatePanel();
+        if (isNew)
+        {
+            ConfettiBlaster.FireIfEnabled();
+            EventBanner.NotifyBinEvent();
+        }
     }
 
     void OnTriggerExit(Collider other)
@@ -231,9 +244,15 @@ public class BinDetector : MonoBehaviour
     public void OnChildTriggerEnter(Collider other)
     {
         if (!ShouldDetect(other)) return;
-        objectsInBin.Add(other);
-        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} objects)");
+        bool isNew = objectsInBin.Add(other);
+        if (isNew) totalDeposited++;
+        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} now, {totalDeposited} total)");
         UpdatePanel();
+        if (isNew)
+        {
+            ConfettiBlaster.FireIfEnabled();
+            EventBanner.NotifyBinEvent();
+        }
     }
 
     public void OnChildTriggerExit(Collider other)

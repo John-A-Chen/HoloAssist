@@ -13,6 +13,8 @@ using UnityEngine.Rendering;
 /// </summary>
 public class PassthroughToggle : MonoBehaviour
 {
+    public static PassthroughToggle Instance { get; private set; }
+
     [Header("References")]
     [Tooltip("Camera to modify (auto-finds Main Camera if blank)")]
     public Camera xrCamera;
@@ -39,6 +41,22 @@ public class PassthroughToggle : MonoBehaviour
     private Material origSkybox;
 
     public bool PassthroughEnabled => passthroughEnabled;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning($"[PassthroughToggle] Multiple instances — keeping '{Instance.gameObject.name}', destroying '{gameObject.name}'.");
+            Destroy(this);
+            return;
+        }
+        Instance = this;
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
 
     void Start()
     {
@@ -92,6 +110,7 @@ public class PassthroughToggle : MonoBehaviour
             SetEnvironmentVisible(false);
 
             Debug.Log("[PassthroughToggle] Passthrough ON (MR mode)");
+            EnvironmentCycler.Instance?.OnPassthroughChanged(true);
         }
         else
         {
@@ -109,6 +128,7 @@ public class PassthroughToggle : MonoBehaviour
             SetEnvironmentVisible(true);
 
             Debug.Log("[PassthroughToggle] Passthrough OFF (VR mode)");
+            EnvironmentCycler.Instance?.OnPassthroughChanged(false);
         }
     }
 
