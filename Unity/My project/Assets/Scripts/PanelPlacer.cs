@@ -30,15 +30,24 @@ public class PanelPlacer : MonoBehaviour
     private BoxCollider grabCollider;
     private Rigidbody panelRigidbody;
     private MonoBehaviour panelBehavior;
+    private TaskConfigPanel taskConfigPanel;   // special-cased: needs Update to keep running for button hover feedback
     private bool wasFollowing;
 
     void Start()
     {
-        // Find which panel script is on this object so we can disable it during grab
-        panelBehavior = GetComponent<RobotDataPanel>() as MonoBehaviour;
-        if (panelBehavior == null) panelBehavior = GetComponent<BinStatusPanel>() as MonoBehaviour;
-        if (panelBehavior == null) panelBehavior = GetComponent<CoachingPanel>() as MonoBehaviour;
-        if (panelBehavior == null) panelBehavior = GetComponent<RobotHUD>() as MonoBehaviour;
+        // TaskConfigPanel is special: it has interactive buttons whose hover/highlight
+        // updates require its Update() to keep running. We don't disable the whole
+        // script on grab — we just flip its `followCamera` field.
+        taskConfigPanel = GetComponent<TaskConfigPanel>();
+
+        // For other panels (display-only), find the script so we can disable it during grab.
+        if (taskConfigPanel == null)
+        {
+            panelBehavior = GetComponent<RobotDataPanel>() as MonoBehaviour;
+            if (panelBehavior == null) panelBehavior = GetComponent<BinStatusPanel>() as MonoBehaviour;
+            if (panelBehavior == null) panelBehavior = GetComponent<CoachingPanel>() as MonoBehaviour;
+            if (panelBehavior == null) panelBehavior = GetComponent<RobotHUD>() as MonoBehaviour;
+        }
 
         // Add box collider sized to panel
         grabCollider = GetComponent<BoxCollider>();
@@ -74,8 +83,15 @@ public class PanelPlacer : MonoBehaviour
 
     void OnGrabbed(SelectEnterEventArgs args)
     {
-        // Disable follow-camera while grabbed
-        if (panelBehavior != null && panelBehavior.enabled)
+        // TaskConfigPanel: flip its follow flag, keep the script enabled so per-frame
+        // button hover / status updates keep working while grabbed and after release.
+        if (taskConfigPanel != null && taskConfigPanel.followCamera)
+        {
+            wasFollowing = true;
+            taskConfigPanel.followCamera = false;
+        }
+        // Other panels: disable the entire script to stop their follow loop.
+        else if (panelBehavior != null && panelBehavior.enabled)
         {
             wasFollowing = true;
             panelBehavior.enabled = false;
@@ -94,11 +110,11 @@ public class PanelPlacer : MonoBehaviour
         if (panelRigidbody != null)
             panelRigidbody.constraints = RigidbodyConstraints.FreezeAll;
 
-        // If user wants to re-enable follow when released, do so
-        // Otherwise leave it disabled — panel stays placed
-        if (returnToFollowOnReset && panelBehavior != null && wasFollowing)
+        // Optionally re-enable follow on release (default off — panel stays placed).
+        if (returnToFollowOnReset && wasFollowing)
         {
-            panelBehavior.enabled = true;
+            if (taskConfigPanel != null) taskConfigPanel.followCamera = true;
+            else if (panelBehavior != null) panelBehavior.enabled = true;
         }
 
         Debug.Log($"[PanelPlacer] Released {gameObject.name} at {transform.position}");
@@ -109,8 +125,8 @@ public class PanelPlacer : MonoBehaviour
     /// </summary>
     public void ResetToFollow()
     {
-        if (panelBehavior != null)
-            panelBehavior.enabled = true;
+        if (taskConfigPanel != null) taskConfigPanel.followCamera = true;
+        if (panelBehavior != null) panelBehavior.enabled = true;
         Debug.Log($"[PanelPlacer] Reset {gameObject.name} to follow camera");
     }
 

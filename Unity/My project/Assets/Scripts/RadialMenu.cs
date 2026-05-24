@@ -45,6 +45,7 @@ public class RadialMenu : MonoBehaviour
     public EventBanner eventBanner;
     public EnvironmentCycler environmentCycler;
     public TrolleySurfaceCollider trolleySurface;
+    public TaskConfigPanel taskConfigPanel;
 
     [Header("Initial Visibility")]
     [Tooltip("Hide RobotHUD, RobotDataPanel, and BinStatusPanel at start so the scene isn't cluttered on Quest load. Toggle them back on from the radial menu.")]
@@ -177,6 +178,8 @@ public class RadialMenu : MonoBehaviour
             environmentCycler = EnvironmentCycler.Instance ?? FindFirstUsable<EnvironmentCycler>("environmentCycler");
         if (trolleySurface == null)
             trolleySurface = TrolleySurfaceCollider.Instance ?? FindFirstUsable<TrolleySurfaceCollider>("trolleySurface");
+        if (taskConfigPanel == null)
+            taskConfigPanel = TaskConfigPanel.Instance ?? FindFirstUsable<TaskConfigPanel>("taskConfigPanel");
     }
 
     T FindFirstUsable<T>(string fieldName) where T : Behaviour
@@ -457,6 +460,13 @@ public class RadialMenu : MonoBehaviour
             if (trolleySurface == null)
                 trolleySurface = TrolleySurfaceCollider.Instance ?? FindFirstUsable<TrolleySurfaceCollider>("trolleySurface");
             if (trolleySurface != null) trolleySurface.Toggle();
+        }, 3);
+
+        AddButton("Task\nCfg", taskConfigPanel != null && taskConfigPanel.IsVisible, () =>
+        {
+            if (taskConfigPanel == null)
+                taskConfigPanel = TaskConfigPanel.Instance ?? FindFirstUsable<TaskConfigPanel>("taskConfigPanel");
+            if (taskConfigPanel != null) taskConfigPanel.Toggle();
         }, 3);
 
         // Page nav button — at center, cycles through all pages
@@ -743,6 +753,8 @@ public class RadialMenu : MonoBehaviour
         // Page 3 — workspace physics
         if (trolleySurface == null) trolleySurface = TrolleySurfaceCollider.Instance;
         SyncButtonByLabel("Trolley\nTop", trolleySurface != null && trolleySurface.IsEnabled);
+        if (taskConfigPanel == null) taskConfigPanel = TaskConfigPanel.Instance;
+        SyncButtonByLabel("Task\nCfg", taskConfigPanel != null && taskConfigPanel.IsVisible);
 
         // Refresh dynamic status text (e.g. selected joint name on Prev/Next Joint buttons).
         foreach (var btn in buttons)

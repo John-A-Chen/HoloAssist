@@ -169,7 +169,27 @@ public class CoachingPanel : MonoBehaviour
             "Page 2 - Robot controls (modes, EE Lock,",
             "RMRC Mode, Prev/Next Joint).",
         },
-        // Page 7: Bins + finishing
+        // Page 7: Task Config Panel (TCP)
+        new string[]
+        {
+            "TASK CONFIG PANEL (TCP)",
+            "",
+            "Toggle on/off from radial Page 3 -> Task Cfg.",
+            "Point with right controller, pull trigger.",
+            "",
+            "Fixed Target .. Win when correct = target N",
+            "Sort All ...... Win when every Good obj sorted",
+            "One Each ...... Win when one of each class sorted",
+            "Reset ......... Zero all counts, state -> Idle",
+            "",
+            "TARGET [-]/[+]. Adjust N (Fixed Target only)",
+            "Timer ......... Show/hide floating timer",
+            "Reset Timer ... Set timer back to 0:00",
+            "",
+            "Tip: tag objects with ObjectClass to mark",
+            "them Good (correct) or Bad (wrong) on drop.",
+        },
+        // Page 8: Bins + finishing
         new string[]
         {
             "BINS + GETTING STARTED",
