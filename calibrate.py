@@ -146,7 +146,7 @@ def main():
         " robot_base_frame:=base_link"
         " robot_effector_frame:=tool0"
         " tracking_base_frame:=camera_link"
-        " tracking_marker_frame:=tag36h11:0",
+        " tracking_marker_frame:=tag36h11:1",
     )
 
     # ── Done ────────────────────────────────────────────────────────

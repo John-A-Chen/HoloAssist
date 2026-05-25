@@ -41,6 +41,15 @@ public class RadialMenu : MonoBehaviour
     public PassthroughToggle passthroughToggle;
     public RobotController robotController;
     public RobotHUD robotHUD;
+    public ConfettiBlaster confettiBlaster;
+    public EventBanner eventBanner;
+    public EnvironmentCycler environmentCycler;
+    public TrolleySurfaceCollider trolleySurface;
+    public TaskConfigPanel taskConfigPanel;
+
+    [Header("Initial Visibility")]
+    [Tooltip("Hide RobotHUD, RobotDataPanel, and BinStatusPanel at start so the scene isn't cluttered on Quest load. Toggle them back on from the radial menu.")]
+    public bool hidePanelsOnStart = true;
 
     [Header("Controllers (auto-detected if left blank)")]
     [Tooltip("Drag the left controller transform here for reliable anchoring")]
@@ -57,7 +66,7 @@ public class RadialMenu : MonoBehaviour
     private InputAction selectAction;
     private List<RadialButton> buttons = new List<RadialButton>();
     private int currentPage = 0;
-    private int totalPages = 2;
+    private int totalPages = 4;
     private TextMeshPro pageLabel;
     private GameObject pageButton;
 
@@ -103,6 +112,23 @@ public class RadialMenu : MonoBehaviour
         AutoBindRobotController();
         BuildMenu();
         menuRoot.SetActive(false);
+
+        if (hidePanelsOnStart)
+            StartCoroutine(HideStartupPanelsNextFrame());
+    }
+
+    // Hide one frame later so each panel's own Awake/Start has a chance to run first.
+    // Toggling them back on via the radial menu then gets a fully-initialised panel.
+    System.Collections.IEnumerator HideStartupPanelsNextFrame()
+    {
+        yield return null;
+        if (robotHUD != null && robotHUD.gameObject.activeSelf)
+            robotHUD.gameObject.SetActive(false);
+        if (dataPanel != null && dataPanel.gameObject.activeSelf)
+            dataPanel.gameObject.SetActive(false);
+        if (binStatusPanel != null && binStatusPanel.gameObject.activeSelf)
+            binStatusPanel.gameObject.SetActive(false);
+        Debug.Log("[RadialMenu] Hidden RobotHUD / DataPanel / BinStatus on startup (toggle from radial menu).");
     }
 
     void AutoBindRobotController()
@@ -142,6 +168,18 @@ public class RadialMenu : MonoBehaviour
             coachingPanel = FindFirstUsable<CoachingPanel>("coachingPanel");
         if (robotHUD == null)
             robotHUD = FindFirstUsable<RobotHUD>("robotHUD");
+        if (confettiBlaster == null)
+            confettiBlaster = FindFirstUsable<ConfettiBlaster>("confettiBlaster");
+        // EventBanner can be toggled inactive — fall back to the static singleton
+        // (set in Awake), which survives SetActive(false).
+        if (eventBanner == null)
+            eventBanner = EventBanner.Instance ?? FindFirstUsable<EventBanner>("eventBanner");
+        if (environmentCycler == null)
+            environmentCycler = EnvironmentCycler.Instance ?? FindFirstUsable<EnvironmentCycler>("environmentCycler");
+        if (trolleySurface == null)
+            trolleySurface = TrolleySurfaceCollider.Instance ?? FindFirstUsable<TrolleySurfaceCollider>("trolleySurface");
+        if (taskConfigPanel == null)
+            taskConfigPanel = TaskConfigPanel.Instance ?? FindFirstUsable<TaskConfigPanel>("taskConfigPanel");
     }
 
     T FindFirstUsable<T>(string fieldName) where T : Behaviour
@@ -393,7 +431,45 @@ public class RadialMenu : MonoBehaviour
             RefreshHUD();
         }, 1, isMomentary: true, statusProvider: GetSelectedJointShort);
 
-        // Page nav button — at center, swaps between page 0 and page 1
+        // === PAGE 2: Effects / Extras ===
+        AddButton("Confetti", confettiBlaster != null && confettiBlaster.Enabled, () =>
+        {
+            if (confettiBlaster == null)
+                confettiBlaster = FindFirstUsable<ConfettiBlaster>("confettiBlaster");
+            if (confettiBlaster != null) confettiBlaster.Toggle();
+        }, 2);
+
+        AddButton("Banner", eventBanner != null && eventBanner.IsVisible, () =>
+        {
+            if (eventBanner == null)
+                eventBanner = EventBanner.Instance ?? FindFirstUsable<EventBanner>("eventBanner");
+            if (eventBanner != null) eventBanner.Toggle();
+        }, 2);
+
+        // Momentary cycle button — status text shows the active theme name.
+        AddButton("Theme", false, () =>
+        {
+            if (environmentCycler == null)
+                environmentCycler = EnvironmentCycler.Instance ?? FindFirstUsable<EnvironmentCycler>("environmentCycler");
+            if (environmentCycler != null) environmentCycler.CycleNext();
+        }, 2, isMomentary: true, statusProvider: GetEnvironmentName);
+
+        // === PAGE 3: Physics / Workspace ===
+        AddButton("Trolley\nTop", trolleySurface != null && trolleySurface.IsEnabled, () =>
+        {
+            if (trolleySurface == null)
+                trolleySurface = TrolleySurfaceCollider.Instance ?? FindFirstUsable<TrolleySurfaceCollider>("trolleySurface");
+            if (trolleySurface != null) trolleySurface.Toggle();
+        }, 3);
+
+        AddButton("Task\nCfg", taskConfigPanel != null && taskConfigPanel.IsVisible, () =>
+        {
+            if (taskConfigPanel == null)
+                taskConfigPanel = TaskConfigPanel.Instance ?? FindFirstUsable<TaskConfigPanel>("taskConfigPanel");
+            if (taskConfigPanel != null) taskConfigPanel.Toggle();
+        }, 3);
+
+        // Page nav button — at center, cycles through all pages
         CreatePageButton();
 
         LayoutButtons();
@@ -669,6 +745,17 @@ public class RadialMenu : MonoBehaviour
                 robotController.CurrentMode == RobotController.ControlMode.HandGuide);
         }
 
+        // Page 2 — effects
+        SyncButtonByLabel("Confetti", confettiBlaster != null && confettiBlaster.Enabled);
+        if (eventBanner == null) eventBanner = EventBanner.Instance;
+        SyncButtonByLabel("Banner", eventBanner != null && eventBanner.IsVisible);
+
+        // Page 3 — workspace physics
+        if (trolleySurface == null) trolleySurface = TrolleySurfaceCollider.Instance;
+        SyncButtonByLabel("Trolley\nTop", trolleySurface != null && trolleySurface.IsEnabled);
+        if (taskConfigPanel == null) taskConfigPanel = TaskConfigPanel.Instance;
+        SyncButtonByLabel("Task\nCfg", taskConfigPanel != null && taskConfigPanel.IsVisible);
+
         // Refresh dynamic status text (e.g. selected joint name on Prev/Next Joint buttons).
         foreach (var btn in buttons)
         {
@@ -684,6 +771,12 @@ public class RadialMenu : MonoBehaviour
         // Trim "_joint" suffix so the name fits under the button.
         if (n.EndsWith("_joint")) n = n.Substring(0, n.Length - 6);
         return n;
+    }
+
+    string GetEnvironmentName()
+    {
+        if (environmentCycler == null) environmentCycler = EnvironmentCycler.Instance;
+        return environmentCycler != null ? environmentCycler.CurrentName : "—";
     }
 
     void SyncButton(int index, bool state)

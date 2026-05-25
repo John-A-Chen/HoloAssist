@@ -42,9 +42,25 @@ public class BinDetector : MonoBehaviour
     // Current objects inside the bin
     private HashSet<Collider> objectsInBin = new HashSet<Collider>();
 
+    // Cumulative count — incremented on every new entry, never decremented.
+    private int totalDeposited = 0;
+    private int correctCount = 0;
+    private int wrongCount = 0;
+
     public int ObjectCount => objectsInBin.Count;
+    public int TotalCount => totalDeposited;
+    public int CorrectCount => correctCount;
+    public int WrongCount => wrongCount;
     public bool HasObjects => objectsInBin.Count > 0;
     public string Status => HasObjects ? $"{objectsInBin.Count} object(s)" : "Empty";
+
+    /// <summary>Reset the cumulative scores for this bin (e.g. start of new game).</summary>
+    public void ResetScore()
+    {
+        totalDeposited = 0;
+        correctCount = 0;
+        wrongCount = 0;
+    }
 
     void Start()
     {
@@ -213,10 +229,7 @@ public class BinDetector : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (!ShouldDetect(other)) return;
-
-        objectsInBin.Add(other);
-        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} objects)");
-        UpdatePanel();
+        HandleEntry(other);
     }
 
     void OnTriggerExit(Collider other)
@@ -231,8 +244,43 @@ public class BinDetector : MonoBehaviour
     public void OnChildTriggerEnter(Collider other)
     {
         if (!ShouldDetect(other)) return;
-        objectsInBin.Add(other);
-        Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} ({objectsInBin.Count} objects)");
+        HandleEntry(other);
+    }
+
+    void HandleEntry(Collider other)
+    {
+        bool isNew = objectsInBin.Add(other);
+        if (!isNew) { UpdatePanel(); return; }
+
+        totalDeposited++;
+
+        // Classify: needs ObjectClass on the entering object's hierarchy.
+        // Untagged objects are ignored (no correct/wrong counted, no banner/confetti).
+        var oc = ObjectClass.FindOn(other);
+        if (oc == null)
+        {
+            Debug.Log($"[BinDetector] {other.gameObject.name} entered {binName} (untagged — ignored)");
+            UpdatePanel();
+            return;
+        }
+
+        if (oc.isGood)
+        {
+            correctCount++;
+            Debug.Log($"[BinDetector] CORRECT: {oc.className} entered {binName} (✓{correctCount}, ✗{wrongCount})");
+            ConfettiBlaster.FireIfEnabled();
+            if (EventBanner.Instance != null) EventBanner.Instance.FlashCorrect();
+        }
+        else
+        {
+            wrongCount++;
+            Debug.Log($"[BinDetector] WRONG: {oc.className} entered {binName} (✓{correctCount}, ✗{wrongCount})");
+            if (EventBanner.Instance != null) EventBanner.Instance.FlashWrong();
+        }
+
+        if (TaskTracker.Instance != null)
+            TaskTracker.Instance.OnSort(this, oc, oc.isGood);
+
         UpdatePanel();
     }
 

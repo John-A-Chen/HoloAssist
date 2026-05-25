@@ -30,6 +30,10 @@ public class JointTFVisualizer : MonoBehaviour
     [Tooltip("Automatically find and add axes to all non-static objects with renderers")]
     public bool autoDiscoverMovingObjects = true;
 
+    [Header("Forced Targets (always get axes, bypass all filters)")]
+    [Tooltip("Drop any Transform here to force TF axes on it. Use for interactable spheres / objects auto-discovery misses.")]
+    public Transform[] forcedTargets;
+
     [Header("Visibility")]
     public bool showAxes = false;
 
@@ -69,7 +73,59 @@ public class JointTFVisualizer : MonoBehaviour
         BuildAxes();
         if (autoDiscoverMovingObjects)
             DiscoverMovingObjects();
+        DiscoverForcedTargets();
         SetVisible(showAxes);
+    }
+
+    /// <summary>
+    /// Always-on pass: anything in the forcedTargets array or carrying a TFAxisMarker
+    /// gets axes, bypassing every skip filter. Use this when auto-discovery misses
+    /// an interactable (e.g. the moveable sphere parented under MR Interaction Setup).
+    /// </summary>
+    void DiscoverForcedTargets()
+    {
+        // Inspector-assigned forced targets
+        if (forcedTargets != null)
+        {
+            foreach (var t in forcedTargets)
+            {
+                if (t == null) continue;
+                ForceAxesOn(t);
+            }
+        }
+
+        // Anything tagged with TFAxisMarker (search inactive too — sphere may be parented under a hidden theme root)
+        var markers = FindObjectsByType<TFAxisMarker>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var m in markers)
+        {
+            if (m == null) continue;
+            ForceAxesOn(m.transform);
+        }
+    }
+
+    void ForceAxesOn(Transform t)
+    {
+        if (discoveredObjects.Contains(t)) return;
+        // Don't double-add if it already has TF_ axes children
+        for (int c = 0; c < t.childCount; c++)
+        {
+            if (t.GetChild(c).name.StartsWith("TF_")) return;
+        }
+        CreateAxisSet(t, envAxisLength, envAxisThickness);
+        discoveredObjects.Add(t);
+        Debug.Log($"[JointTFVisualizer] Forced axes on '{t.name}' (path: {GetPath(t)})");
+    }
+
+    static string GetPath(Transform t)
+    {
+        string p = t.name;
+        var c = t.parent;
+        while (c != null)
+        {
+            p = c.name + "/" + p;
+            c = c.parent;
+        }
+        return p;
     }
 
     void BuildAxes()
@@ -249,6 +305,7 @@ public class JointTFVisualizer : MonoBehaviour
     public void RefreshDiscovery()
     {
         DiscoverMovingObjects();
+        DiscoverForcedTargets();
     }
 
     /// <summary>

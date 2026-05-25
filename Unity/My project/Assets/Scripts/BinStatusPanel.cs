@@ -32,9 +32,14 @@ public class BinStatusPanel : MonoBehaviour
     public Color accentColor = new Color(0.2f, 0.6f, 1.0f, 1f);
     public Color emptyColor = new Color(0.6f, 0.6f, 0.6f, 1f);
     public Color occupiedColor = new Color(0.2f, 1f, 0.4f, 1f);
+    public Color scoreColor = new Color(1f, 0.85f, 0.3f, 1f);
+    public Color correctColor = new Color(0.2f, 1f, 0.4f, 1f);
+    public Color wrongColor = new Color(1f, 0.35f, 0.35f, 1f);
 
     private Transform cam;
     private Dictionary<string, TextMeshPro> valueTexts = new Dictionary<string, TextMeshPro>();
+    private Dictionary<string, TextMeshPro> correctTexts = new Dictionary<string, TextMeshPro>();
+    private Dictionary<string, TextMeshPro> wrongTexts = new Dictionary<string, TextMeshPro>();
     private BinDetector[] detectors;
     private bool built;
     private float panelHeight;
@@ -49,6 +54,8 @@ public class BinStatusPanel : MonoBehaviour
                 DestroyImmediate(transform.GetChild(i).gameObject);
         }
         valueTexts.Clear();
+        correctTexts.Clear();
+        wrongTexts.Clear();
         built = false;
     }
 
@@ -77,9 +84,10 @@ public class BinStatusPanel : MonoBehaviour
         float zQuad = -0.02f;
         float zText = -0.05f;
 
-        // Calculate height
+        // Calculate height (extra row for column sub-header)
         int binRows = Mathf.Max(detectors != null ? detectors.Length : 0, 1);
         panelHeight = headerHeight + padding * 2 // header + accent
+            + rowHeight                          // column sub-header (BIN | NOW | TOTAL)
             + binRows * rowHeight
             + padding * 2; // margins
 
@@ -98,19 +106,21 @@ public class BinStatusPanel : MonoBehaviour
             new Vector2(panelWidth - padding * 2, 0.003f), accentColor);
         yPos -= padding;
 
+        // Column sub-header (BIN | NOW | ✓ | ✗)
+        yPos -= rowHeight / 2f;
+        CreateRow("header_cols", "BIN", "NOW", "✓", "✗", ref yPos, isHeader: true);
+
         // Bin rows
         if (detectors == null || detectors.Length == 0)
         {
-            yPos -= rowHeight / 2f;
-            CreateRow("bin_none", "No bins found", "--", ref yPos);
+            CreateRow("bin_none", "No bins found", "--", "--", "--", ref yPos);
         }
         else
         {
             for (int i = 0; i < detectors.Length; i++)
             {
-                yPos -= (i == 0) ? rowHeight / 2f : 0f;
                 string key = $"bin_{i}";
-                CreateRow(key, detectors[i].binName, "Empty", ref yPos);
+                CreateRow(key, detectors[i].binName, "Empty", "0", "0", ref yPos);
                 if (valueTexts.ContainsKey(key))
                     valueTexts[key].color = emptyColor;
             }
@@ -121,23 +131,48 @@ public class BinStatusPanel : MonoBehaviour
             new Vector2(panelWidth, panelHeight), panelColor);
     }
 
-    void CreateRow(string key, string label, string value, ref float yPos)
+    void CreateRow(string key, string label, string value, string correct, string wrong, ref float yPos, bool isHeader = false)
     {
         float halfW = panelWidth / 2f;
-        float labelX = -halfW + padding;
-        float valueX = halfW - padding;
         float zText = -0.05f;
-        float colWidth = halfW - padding;
+
+        // 40% / 20% / 20% / 20% column split — bin name gets the most room.
+        float nameW = panelWidth * 0.4f - padding;
+        float nowW = panelWidth * 0.2f;
+        float correctW = panelWidth * 0.2f;
+        float wrongW = panelWidth * 0.2f - padding;
+
+        float nameCenter = -halfW + padding + nameW / 2f;
+        float nowCenter = -halfW + padding + nameW + nowW / 2f;
+        float correctCenter = -halfW + padding + nameW + nowW + correctW / 2f;
+        float wrongCenter = halfW - padding - wrongW / 2f;
+
+        Color statusColor = isHeader ? labelColor : valueColor;
+        Color cThisRow = isHeader ? labelColor : correctColor;
+        Color wThisRow = isHeader ? labelColor : wrongColor;
 
         CreateText($"{key}_label", label,
-            new Vector3(labelX + colWidth / 2f, yPos, zText),
-            fontSize, labelColor, TextAlignmentOptions.Left, colWidth);
+            new Vector3(nameCenter, yPos, zText),
+            fontSize, labelColor, TextAlignmentOptions.Left, nameW);
 
         var valTmp = CreateText($"{key}_value", value,
-            new Vector3(valueX - colWidth / 2f, yPos, zText),
-            fontSize, valueColor, TextAlignmentOptions.Right, colWidth);
+            new Vector3(nowCenter, yPos, zText),
+            fontSize, statusColor, TextAlignmentOptions.Center, nowW);
 
-        valueTexts[key] = valTmp;
+        var correctTmp = CreateText($"{key}_correct", correct,
+            new Vector3(correctCenter, yPos, zText),
+            fontSize, cThisRow, TextAlignmentOptions.Center, correctW);
+
+        var wrongTmp = CreateText($"{key}_wrong", wrong,
+            new Vector3(wrongCenter, yPos, zText),
+            fontSize, wThisRow, TextAlignmentOptions.Center, wrongW);
+
+        if (!isHeader)
+        {
+            valueTexts[key] = valTmp;
+            correctTexts[key] = correctTmp;
+            wrongTexts[key] = wrongTmp;
+        }
         yPos -= rowHeight;
     }
 
@@ -225,7 +260,7 @@ public class BinStatusPanel : MonoBehaviour
             var txt = valueTexts[key];
             if (detectors[i].HasObjects)
             {
-                txt.text = detectors[i].Status;
+                txt.text = detectors[i].ObjectCount.ToString();
                 txt.color = occupiedColor;
             }
             else
@@ -233,6 +268,11 @@ public class BinStatusPanel : MonoBehaviour
                 txt.text = "Empty";
                 txt.color = emptyColor;
             }
+
+            if (correctTexts.TryGetValue(key, out var cTxt))
+                cTxt.text = detectors[i].CorrectCount.ToString();
+            if (wrongTexts.TryGetValue(key, out var wTxt))
+                wTxt.text = detectors[i].WrongCount.ToString();
         }
     }
 
@@ -250,9 +290,14 @@ public class BinStatusPanel : MonoBehaviour
                 string key = $"bin_{i}";
                 if (valueTexts.ContainsKey(key))
                 {
-                    valueTexts[key].text = status;
-                    valueTexts[key].color = status == "Empty" ? emptyColor : occupiedColor;
+                    bool empty = status == "Empty";
+                    valueTexts[key].text = empty ? "Empty" : detectors[i].ObjectCount.ToString();
+                    valueTexts[key].color = empty ? emptyColor : occupiedColor;
                 }
+                if (correctTexts.ContainsKey(key))
+                    correctTexts[key].text = detectors[i].CorrectCount.ToString();
+                if (wrongTexts.ContainsKey(key))
+                    wrongTexts[key].text = detectors[i].WrongCount.ToString();
                 return;
             }
         }
