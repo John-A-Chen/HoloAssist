@@ -115,6 +115,10 @@ def main():
         "--perception", action="store_true",
         help="Start perception pipeline + cube pose relay (AprilTag cubes in Unity)",
     )
+    parser.add_argument(
+        "--fake-gripper", action="store_true",
+        help="With a real/URSim arm, use fake OnRobot gripper hardware.",
+    )
     args = parser.parse_args()
 
     fake = args.robot_ip is None
@@ -129,6 +133,8 @@ def main():
         print(f"  Robot IP:    {robot_ip}")
     print(f"  ROS IP:      {args.ros_ip}")
     print(f"  WiFi IP:     {wifi_ip}  <-- set this in Unity ROS Settings")
+    if not fake:
+        print(f"  Gripper:     {'fake' if args.fake_gripper else 'real'}")
     print(f"  RViz:        {'off' if args.no_rviz else 'on'}")
     print(f"  Perception:  {'on' if args.perception else 'off (use --perception to enable)'}")
     print("=" * 65)
@@ -146,6 +152,8 @@ def main():
         driver_cmd += " use_fake_hardware:=true"
     else:
         driver_cmd += f" robot_ip:={robot_ip}"
+        if args.fake_gripper:
+            driver_cmd += " use_fake_gripper_hardware:=true"
     run("UR + OnRobot Driver", driver_cmd)
 
     print("\n>>> Waiting 10s for UR driver to initialize...")

@@ -3,6 +3,7 @@ import json
 import math
 import threading
 import time
+import traceback
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
@@ -245,6 +246,7 @@ class PickPlaceSequencer(Node):
 
         self.declare_parameter("pregrasp_z_offset", 0.11)
         self.declare_parameter("grasp_z_offset", 0.05)
+        self.declare_parameter("grasp_z_absolute", -1.0)
         self.declare_parameter("place_above_z_offset", 0.17)
         self.declare_parameter("place_z_offset", 0.05)
         self.declare_parameter("place_descent_enabled", False)
@@ -324,6 +326,7 @@ class PickPlaceSequencer(Node):
             self.get_parameter("pregrasp_z_offset").value
         )
         self.grasp_z_offset = float(self.get_parameter("grasp_z_offset").value)
+        self.grasp_z_absolute = float(self.get_parameter("grasp_z_absolute").value)
         self.place_above_z_offset = float(
             self.get_parameter("place_above_z_offset").value
         )
@@ -377,6 +380,7 @@ class PickPlaceSequencer(Node):
         self.last_failure_state = ""
         self.latest_joint_positions: dict[str, float] = {}
         self.latest_gripper_width: Optional[float] = None
+        self.current_sequence_context: dict[str, Any] = {}
 
         self.target_pose_pub = self.create_publisher(Pose, target_pose_topic, 10)
         self.target_point_pub = self.create_publisher(Point, target_point_topic, 10)
@@ -476,8 +480,43 @@ class PickPlaceSequencer(Node):
             item_bin_map[str(item_name)] = normalized_bin_id
         return item_bin_map
 
+    def set_sequence_step(
+        self,
+        step: str,
+        step_label: str,
+        step_index: int,
+        step_total: int,
+        state: str = "running",
+    ) -> None:
+        with self.sequence_lock:
+            self.current_sequence_context.update(
+                {
+                    "state": state,
+                    "step": step,
+                    "step_label": step_label,
+                    "step_index": step_index,
+                    "step_total": step_total,
+                }
+            )
+
+    def set_sequence_context(self, **fields: Any) -> None:
+        with self.sequence_lock:
+            self.current_sequence_context.update(fields)
+
+    def clear_sequence_context(self) -> None:
+        with self.sequence_lock:
+            self.current_sequence_context.clear()
+
     def publish_status(self, message: str, **fields: Any) -> None:
-        payload = {"message": message, **fields}
+        with self.sequence_lock:
+            context = dict(self.current_sequence_context)
+        payload = {
+            "message": message,
+            "level": fields.pop("level", "info"),
+            "stamp_sec": self.get_clock().now().nanoseconds / 1e9,
+            **context,
+            **fields,
+        }
         msg = String()
         msg.data = json.dumps(payload, sort_keys=True)
         self.status_pub.publish(msg)
@@ -860,8 +899,53 @@ class PickPlaceSequencer(Node):
         frame_id: str,
         destination_id: str,
     ) -> None:
+        sequence_steps = []
+        if self.home_enabled and self.home_before_pick:
+            sequence_steps.append(("home_before_pick", "move to pick-place home before pick"))
+        sequence_steps.extend(
+            [
+                ("move_above_block", "move above block"),
+                ("open_gripper", "open gripper"),
+            ]
+        )
+        if self.remove_block_collision_before_grasp:
+            sequence_steps.append(("remove_block_collision", f"remove {block_id} collision"))
+        sequence_steps.extend(
+            [
+                ("move_down_to_block", "move down onto block"),
+                ("close_gripper", "close gripper"),
+                ("lift_block", "move back above block"),
+                ("move_above_destination", f"move above {destination_id}"),
+            ]
+        )
+        if self.place_descent_enabled:
+            sequence_steps.append(("move_down_to_destination", f"move down to {destination_id}"))
+        sequence_steps.append(("release_block", "drop block"))
+        if self.add_block_at_place_after_release:
+            sequence_steps.append(("add_block_collision", f"add {block_id} at place"))
+        sequence_steps.append(("move_up_after_release", "move up after release"))
+        if self.home_enabled and self.home_after_place:
+            sequence_steps.append(("home_after_place", "move to pick-place home after place"))
+
+        step_total = len(sequence_steps)
+        step_index = 0
+
+        def begin_step(step: str, label: str) -> None:
+            nonlocal step_index
+            step_index += 1
+            self.set_sequence_step(step, label, step_index, step_total)
+
         try:
             self.ensure_not_aborted("pick-place sequence")
+            self.set_sequence_context(
+                state="starting",
+                block_id=block_id,
+                destination=destination_id,
+                step="starting",
+                step_label="Starting pick-place sequence",
+                step_index=0,
+                step_total=step_total,
+            )
             self.publish_status(
                 "Starting pick-place sequence",
                 block_id=block_id,
@@ -879,9 +963,14 @@ class PickPlaceSequencer(Node):
                 block_pose.position.z + self.pregrasp_z_offset,
                 self.use_block_yaw,
             )
+            grasp_z = (
+                self.grasp_z_absolute
+                if self.grasp_z_absolute >= 0.0
+                else block_pose.position.z + self.grasp_z_offset
+            )
             grasp_pose = self.tool_pose(
                 block_pose,
-                block_pose.position.z + self.grasp_z_offset,
+                grasp_z,
                 self.use_block_yaw,
             )
             place_above_pose = self.tool_pose(
@@ -896,43 +985,77 @@ class PickPlaceSequencer(Node):
             )
 
             if self.home_enabled and self.home_before_pick:
+                begin_step("home_before_pick", "move to pick-place home before pick")
                 self.move_to_home("move to pick-place home before pick")
 
             self.ensure_not_aborted("pick-place sequence")
+            begin_step("move_above_block", "move above block")
             self.move_to_pose(pregrasp_pose, "move above block")
+            begin_step("open_gripper", "open gripper")
             self.send_gripper(self.open_width, "open gripper")
 
             self.ensure_not_aborted("pick-place sequence")
             if self.remove_block_collision_before_grasp:
+                begin_step("remove_block_collision", f"remove {block_id} collision")
                 self.remove_block_from_scene(block_id, frame_id)
 
+            begin_step("move_down_to_block", "move down onto block")
             self.move_to_pose(grasp_pose, "move down onto block")
+            begin_step("close_gripper", "close gripper")
             self.send_gripper(self.close_width, "close gripper")
             self.ensure_not_aborted("pick-place sequence")
+            begin_step("lift_block", "move back above block")
             self.move_to_pose(pregrasp_pose, "move back above block")
+            begin_step("move_above_destination", f"move above {destination_id}")
             self.move_to_pose(place_above_pose, f"move above {destination_id}")
 
             if self.place_descent_enabled:
+                begin_step("move_down_to_destination", f"move down to {destination_id}")
                 self.move_to_pose(place_down_pose, f"move down to {destination_id}")
 
             self.ensure_not_aborted("pick-place sequence")
+            begin_step("release_block", "drop block")
             self.send_gripper(self.open_width, "drop block")
 
             self.ensure_not_aborted("pick-place sequence")
             if self.add_block_at_place_after_release:
+                begin_step("add_block_collision", f"add {block_id} at place")
                 final_block_pose = copy_pose(place_pose)
                 self.add_block_to_scene(block_id, frame_id, final_block_pose)
 
+            begin_step("move_up_after_release", "move up after release")
             self.move_to_pose(place_above_pose, "move up after release")
             if self.home_enabled and self.home_after_place:
+                begin_step("home_after_place", "move to pick-place home after place")
                 self.move_to_home("move to pick-place home after place")
 
             self.ensure_not_aborted("pick-place sequence")
-            self.publish_status("Pick-place sequence complete", block_id=block_id)
-        except Exception as exc:
+            self.set_sequence_context(
+                state="complete",
+                step="complete",
+                step_label="Pick-place sequence complete",
+                step_index=step_total,
+                step_total=step_total,
+            )
             self.publish_status(
-                f"Pick-place sequence failed: {exc}",
+                "Pick-place sequence complete",
                 block_id=block_id,
+                destination=destination_id,
+            )
+        except Exception as exc:
+            error_detail = traceback.format_exc()
+            self.set_sequence_context(
+                state="error",
+                error=str(exc),
+                error_detail=error_detail,
+            )
+            self.publish_status(
+                "Pick-place sequence failed",
+                level="error",
+                block_id=block_id,
+                destination=destination_id,
+                error=str(exc),
+                error_detail=error_detail,
             )
         finally:
             with self.sequence_lock:

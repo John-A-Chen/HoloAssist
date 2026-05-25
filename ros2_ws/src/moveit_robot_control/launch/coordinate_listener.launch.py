@@ -190,6 +190,14 @@ def generate_launch_description():
                 description="Trajectory velocity scale from 0.0 to 1.0.",
             ),
             DeclareLaunchArgument(
+                "cartesian_retime_velocity_scale",
+                default_value="0.0",
+                description=(
+                    "Optional velocity scale used only when retiming Cartesian "
+                    "paths before execution. Set 0.0 to follow velocity_scale."
+                ),
+            ),
+            DeclareLaunchArgument(
                 "joint_goal_tolerance",
                 default_value="0.1",
                 description=(
@@ -309,6 +317,10 @@ def generate_launch_description():
                         ),
                         "velocity_scale": ParameterValue(
                             LaunchConfiguration("velocity_scale"),
+                            value_type=float,
+                        ),
+                        "cartesian_retime_velocity_scale": ParameterValue(
+                            LaunchConfiguration("cartesian_retime_velocity_scale"),
                             value_type=float,
                         ),
                         "joint_goal_tolerance": ParameterValue(

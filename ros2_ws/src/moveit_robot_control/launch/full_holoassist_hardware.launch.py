@@ -48,6 +48,13 @@ def generate_launch_description() -> LaunchDescription:
     )
     ur_type_arg = DeclareLaunchArgument("ur_type", default_value="ur3e")
     onrobot_type_arg = DeclareLaunchArgument("onrobot_type", default_value="rg2")
+    use_fake_gripper_hardware_arg = DeclareLaunchArgument(
+        "use_fake_gripper_hardware",
+        default_value="false",
+        description=(
+            "Describe the OnRobot gripper as fake hardware while keeping the UR arm real."
+        ),
+    )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
         default_value="3.14159",
@@ -78,6 +85,14 @@ def generate_launch_description() -> LaunchDescription:
         "velocity_scale",
         default_value="0.05",
     )
+    cartesian_retime_velocity_scale_arg = DeclareLaunchArgument(
+        "cartesian_retime_velocity_scale",
+        default_value="0.0",
+        description=(
+            "Optional cap used only when retiming straight Cartesian paths. "
+            "Set 0.0 to follow velocity_scale."
+        ),
+    )
     orientation_mode_arg = DeclareLaunchArgument(
         "orientation_mode", default_value="auto"
     )
@@ -91,6 +106,19 @@ def generate_launch_description() -> LaunchDescription:
     start_pick_place_arg = DeclareLaunchArgument(
         "start_pick_place",
         default_value="true",
+    )
+    grasp_z_absolute_arg = DeclareLaunchArgument(
+        "grasp_z_absolute",
+        default_value="0.05",
+        description=(
+            "Absolute Z height for the pick descent pose. "
+            "Use -1.0 to fall back to cube_z + grasp_z_offset."
+        ),
+    )
+    cube_pose_topic_prefix_arg = DeclareLaunchArgument(
+        "cube_pose_topic_prefix",
+        default_value="/holoassist/perception",
+        description="Prefix for april_cube_N_pose topics used by the pick-place service.",
     )
 
     use_calibrated_workspace_arg = DeclareLaunchArgument(
@@ -122,6 +150,8 @@ def generate_launch_description() -> LaunchDescription:
                     "name:=ur_onrobot",
                     " ",
                     "use_fake_hardware:=false",
+                    " ",
+                    "use_fake_gripper_hardware:=", LaunchConfiguration("use_fake_gripper_hardware"),
                     " ",
                     "base_yaw_rad:=", LaunchConfiguration("robot_base_yaw_rad"),
                     " ",
@@ -156,6 +186,7 @@ def generate_launch_description() -> LaunchDescription:
             "ur_type": LaunchConfiguration("ur_type"),
             "onrobot_type": LaunchConfiguration("onrobot_type"),
             "use_fake_hardware": "false",
+            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
             "robot_ip": LaunchConfiguration("robot_ip"),
             "launch_rviz": "false",
             "launch_servo": "false",
@@ -197,6 +228,9 @@ def generate_launch_description() -> LaunchDescription:
             "avoid_flange_forearm_clamp": LaunchConfiguration("avoid_flange_forearm_clamp"),
             "pose_goal_planning_time": LaunchConfiguration("pose_goal_planning_time"),
             "velocity_scale": LaunchConfiguration("velocity_scale"),
+            "cartesian_retime_velocity_scale": LaunchConfiguration(
+                "cartesian_retime_velocity_scale"
+            ),
             "trajectory_topic": "/scaled_joint_trajectory_controller/joint_trajectory",
         }.items(),
     )
@@ -214,6 +248,10 @@ def generate_launch_description() -> LaunchDescription:
             "orientation_mode": "auto",
             "pregrasp_z_offset": 0.10,
             "grasp_z_offset": 0.0,
+            "grasp_z_absolute": ParameterValue(
+                LaunchConfiguration("grasp_z_absolute"),
+                value_type=float,
+            ),
             "place_above_z_offset": 0.15,
             "place_z_offset": 0.05,
             "place_descent_enabled": True,
@@ -227,7 +265,7 @@ def generate_launch_description() -> LaunchDescription:
         name="holoassist_pick_place_service",
         output="screen",
         condition=IfCondition(LaunchConfiguration("start_pick_place")),
-        parameters=[{"cube_pose_topic_prefix": "/holoassist/perception"}],
+        parameters=[{"cube_pose_topic_prefix": LaunchConfiguration("cube_pose_topic_prefix")}],
     )
 
     # ── Selected-cube → MoveIt target adapter ────────────────────────────────
@@ -273,6 +311,7 @@ def generate_launch_description() -> LaunchDescription:
             robot_ip_arg,
             ur_type_arg,
             onrobot_type_arg,
+            use_fake_gripper_hardware_arg,
             robot_base_yaw_rad_arg,
             kinematics_config_arg,
             moveit_launch_file_arg,
@@ -281,10 +320,13 @@ def generate_launch_description() -> LaunchDescription:
             frame_arg,
             hw_config_arg,
             velocity_scale_arg,
+            cartesian_retime_velocity_scale_arg,
             orientation_mode_arg,
             avoid_flange_forearm_clamp_arg,
             pose_goal_planning_time_arg,
             start_pick_place_arg,
+            grasp_z_absolute_arg,
+            cube_pose_topic_prefix_arg,
             use_calibrated_workspace_arg,
             calibration_yaml_arg,
             use_rviz_arg,

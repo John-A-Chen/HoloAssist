@@ -327,9 +327,11 @@ def trajectory_duration_sec(trajectory: JointTrajectory) -> float:
     if not trajectory.points:
         return 0.0
     final_point = trajectory.points[-1]
-    return float(final_point.time_from_start.sec) + (
-        float(final_point.time_from_start.nanosec) / 1e9
-    )
+    return duration_to_sec(final_point.time_from_start)
+
+
+def duration_to_sec(duration) -> float:
+    return float(duration.sec) + (float(duration.nanosec) / 1e9)
 
 
 def set_duration_seconds(duration, seconds: float) -> None:
@@ -346,9 +348,7 @@ def trajectory_has_strict_timing(trajectory: JointTrajectory) -> bool:
 
     previous_time = -1.0
     for point in trajectory.points:
-        point_time = float(point.time_from_start.sec) + (
-            float(point.time_from_start.nanosec) / 1e9
-        )
+        point_time = duration_to_sec(point.time_from_start)
         if point_time <= previous_time:
             return False
         previous_time = point_time
@@ -362,7 +362,7 @@ def retime_trajectory_if_needed(
     velocity_scale: float,
     minimum_segment_duration: float = 0.05,
 ) -> None:
-    if trajectory_has_strict_timing(trajectory):
+    if not trajectory.points:
         return
 
     start_by_joint = {
@@ -374,23 +374,36 @@ def retime_trajectory_if_needed(
     scale = max(0.01, min(1.0, velocity_scale))
     max_joint_speed = math.pi * scale
     elapsed = 0.0
+    previous_time = 0.0
+    keep_existing_timing = trajectory_has_strict_timing(trajectory)
 
     for point in trajectory.points:
         current_positions = list(point.positions)
+        if len(current_positions) != len(trajectory.joint_names):
+            raise RuntimeError("MoveIt returned a trajectory point with the wrong joint count")
+
+        original_point_time = duration_to_sec(point.time_from_start)
+        existing_segment_duration = 0.0
+        if keep_existing_timing and original_point_time > previous_time:
+            existing_segment_duration = original_point_time - previous_time
+
         max_joint_delta = max(
             abs(current - previous)
             for current, previous in zip(current_positions, previous_positions)
         )
-        segment_duration = max(
+        required_segment_duration = max(
             minimum_segment_duration, max_joint_delta / max_joint_speed
         )
+        segment_duration = max(existing_segment_duration, required_segment_duration)
         elapsed += segment_duration
         set_duration_seconds(point.time_from_start, elapsed)
         point.velocities = [
             (current - previous) / segment_duration
             for current, previous in zip(current_positions, previous_positions)
         ]
+        point.accelerations = []
         previous_positions = current_positions
+        previous_time = original_point_time
 
 
 def joint_space_path_length(
@@ -1564,6 +1577,9 @@ class MoveItRobotControl(Node):
                 checked_states = self.validate_trajectory_collision_free(
                     trajectory, stride=collision_check_stride
                 )
+                retime_trajectory_if_needed(
+                    trajectory, current_pos, velocity_scale
+                )
                 path_length = joint_space_path_length(trajectory, current_pos)
                 duration_sec = trajectory_duration_sec(trajectory)
             except RuntimeError as exc:
@@ -1661,6 +1677,9 @@ class MoveItRobotControl(Node):
                 checked_states = self.validate_trajectory_collision_free(
                     trajectory, stride=collision_check_stride
                 )
+                retime_trajectory_if_needed(
+                    trajectory, current_pos, velocity_scale
+                )
                 path_length = joint_space_path_length(trajectory, current_pos)
                 duration_sec = trajectory_duration_sec(trajectory)
             except RuntimeError as exc:
@@ -1717,6 +1736,7 @@ class MoveItRobotControl(Node):
         jump_threshold: float = CARTESIAN_JUMP_THRESHOLD,
         min_fraction: float = CARTESIAN_MIN_FRACTION,
         velocity_scale: float = 0.2,
+        retime_velocity_scale: Optional[float] = None,
         collision_check_stride: int = COLLISION_CHECK_STRIDE,
         allow_pose_goal_fallback: bool = True,
         pose_goal_allowed_planning_time: float = POSE_GOAL_PLANNING_TIME,
@@ -1854,13 +1874,19 @@ class MoveItRobotControl(Node):
             )
         except RuntimeError as exc:
             return pose_goal_fallback(str(exc))
-        retime_trajectory_if_needed(trajectory, current_pos, velocity_scale)
+        active_retime_scale = (
+            velocity_scale
+            if retime_velocity_scale is None or retime_velocity_scale <= 0.0
+            else retime_velocity_scale
+        )
+        retime_trajectory_if_needed(trajectory, current_pos, active_retime_scale)
         duration_sec = trajectory_duration_sec(trajectory)
 
         self.get_logger().info(
             f"Cartesian path succeeded: fraction {response.fraction:.3f}, "
             f"{len(trajectory.points)} trajectory points, checked "
-            f"{checked_states} collision-free state(s), duration {duration_sec:.2f} s"
+            f"{checked_states} collision-free state(s), duration {duration_sec:.2f} s, "
+            f"retime velocity scale {active_retime_scale:.3f}"
         )
         return trajectory
 
@@ -2016,6 +2042,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         self.declare_parameter("cartesian_jump_threshold", CARTESIAN_JUMP_THRESHOLD)
         self.declare_parameter("min_cartesian_fraction", CARTESIAN_MIN_FRACTION)
         self.declare_parameter("velocity_scale", 0.2)
+        self.declare_parameter("cartesian_retime_velocity_scale", 0.0)
         self.declare_parameter("collision_check_stride", COLLISION_CHECK_STRIDE)
         self.declare_parameter("allow_pose_goal_fallback", True)
         self.declare_parameter("pose_goal_planning_time", POSE_GOAL_PLANNING_TIME)
@@ -2098,6 +2125,9 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         )
         self.min_fraction = float(self.get_parameter("min_cartesian_fraction").value)
         self.velocity_scale = float(self.get_parameter("velocity_scale").value)
+        self.cartesian_retime_velocity_scale = float(
+            self.get_parameter("cartesian_retime_velocity_scale").value
+        )
         self.collision_check_stride = int(
             self.get_parameter("collision_check_stride").value
         )
@@ -2684,6 +2714,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
                 cartesian_jump_threshold=self.jump_threshold,
                 min_cartesian_fraction=self.min_fraction,
                 velocity_scale=self.velocity_scale,
+                cartesian_retime_velocity_scale=self.cartesian_retime_velocity_scale,
                 collision_check_stride=self.collision_check_stride,
                 allow_pose_goal_fallback=self.allow_pose_goal_fallback,
                 pose_goal_planning_time=self.pose_goal_planning_time,
@@ -2723,6 +2754,7 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
                         jump_threshold=self.jump_threshold,
                         min_fraction=self.min_fraction,
                         velocity_scale=self.velocity_scale,
+                        retime_velocity_scale=self.cartesian_retime_velocity_scale,
                         collision_check_stride=self.collision_check_stride,
                         allow_pose_goal_fallback=self.allow_pose_goal_fallback,
                         pose_goal_allowed_planning_time=self.pose_goal_planning_time,

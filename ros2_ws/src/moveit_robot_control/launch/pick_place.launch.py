@@ -85,6 +85,14 @@ def generate_launch_description():
                 description="Height above block center for the grasp pose.",
             ),
             DeclareLaunchArgument(
+                "grasp_z_absolute",
+                default_value="-1.0",
+                description=(
+                    "Absolute Z height for the grasp pose. "
+                    "Use -1.0 to use block_z + grasp_z_offset."
+                ),
+            ),
+            DeclareLaunchArgument(
                 "place_above_z_offset",
                 default_value="0.17",
                 description="Height above place center before releasing.",
@@ -147,6 +155,10 @@ def generate_launch_description():
                         ),
                         "grasp_z_offset": ParameterValue(
                             LaunchConfiguration("grasp_z_offset"),
+                            value_type=float,
+                        ),
+                        "grasp_z_absolute": ParameterValue(
+                            LaunchConfiguration("grasp_z_absolute"),
                             value_type=float,
                         ),
                         "place_above_z_offset": ParameterValue(
