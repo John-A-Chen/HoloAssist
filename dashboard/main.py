@@ -1469,25 +1469,37 @@ def main():
     no_ros = "--no-ros" in sys.argv
     fullscreen = "--fullscreen" in sys.argv or "-f" in sys.argv
 
-    # Scale UI so it looks right when streaming a HiDPI laptop to a Steam Deck.
-    # The laptop is 3456x2160, the Deck is 1280x800 — without scaling,
-    # everything renders tiny. QT_SCALE_FACTOR makes Qt draw larger.
+    bridge_url = None
+    for i, arg in enumerate(sys.argv):
+        if arg == "--bridge" and i + 1 < len(sys.argv):
+            bridge_url = sys.argv[i + 1]
+
+    # When streaming HiDPI laptop → Steam Deck via Steam Link, scale up.
+    # When running natively on the Deck (--bridge), no scaling needed.
     if fullscreen and "QT_SCALE_FACTOR" not in os.environ:
-        os.environ["QT_SCALE_FACTOR"] = "2.5"
+        if bridge_url:
+            os.environ["QT_SCALE_FACTOR"] = "1.0"
+        else:
+            os.environ["QT_SCALE_FACTOR"] = "2.5"
 
     app = QApplication(sys.argv)
     app.setStyleSheet(GLOBAL_STYLE)
 
-    ros = RosInterface()
-
-    if not no_ros:
-        if ROS_AVAILABLE:
-            ros.start()
-        else:
-            print("WARNING: rclpy not found. Running in offline mode.")
-            print("  Install ROS 2 or run with --no-ros to suppress this warning.")
+    if bridge_url:
+        from net_interface import NetInterface
+        ros = NetInterface(bridge_url)
+        ros.start()
+        print(f"Bridge mode: connecting to {bridge_url}")
     else:
-        print("Running in offline mode (--no-ros)")
+        ros = RosInterface()
+        if not no_ros:
+            if ROS_AVAILABLE:
+                ros.start()
+            else:
+                print("WARNING: rclpy not found. Running in offline mode.")
+                print("  Install ROS 2 or run with --no-ros to suppress this warning.")
+        else:
+            print("Running in offline mode (--no-ros)")
 
     window = MainWindow(ros)
     if fullscreen:
