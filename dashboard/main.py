@@ -1153,6 +1153,8 @@ class CubePickScreen(QWidget):
     def __init__(self, ros: RosInterface, parent=None):
         super().__init__(parent)
         self.ros = ros
+        self.selected_bin_id = 1
+        self._last_status_text = ""
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 8)
@@ -1172,6 +1174,34 @@ class CubePickScreen(QWidget):
         header.addWidget(self.status_label)
         layout.addLayout(header)
 
+        body = QHBoxLayout()
+        body.setSpacing(8)
+        layout.addLayout(body, 1)
+
+        controls = QVBoxLayout()
+        controls.setSpacing(8)
+        body.addLayout(controls, 3)
+
+        bin_row = QHBoxLayout()
+        bin_row.setSpacing(8)
+        bin_label = QLabel("DESTINATION")
+        bin_label.setFont(QFont("monospace", 8, QFont.Bold))
+        bin_label.setStyleSheet(f"color: {TEXT_DIM};")
+        bin_row.addWidget(bin_label)
+
+        self.bin_buttons = []
+        for bin_id in (1, 2):
+            btn = QPushButton(f"BIN {bin_id}")
+            btn.setFont(QFont("monospace", 10, QFont.Bold))
+            btn.setCheckable(True)
+            btn.setFixedHeight(52)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.clicked.connect(lambda checked=False, b=bin_id: self._select_bin(b))
+            bin_row.addWidget(btn, 1)
+            self.bin_buttons.append(btn)
+        controls.addLayout(bin_row)
+        self._update_bin_buttons()
+
         grid = QGridLayout()
         grid.setSpacing(8)
 
@@ -1186,20 +1216,80 @@ class CubePickScreen(QWidget):
             grid.addWidget(btn, (cube_id - 1) // 2, (cube_id - 1) % 2)
             self.cube_buttons.append(btn)
 
-        layout.addLayout(grid, 1)
+        controls.addLayout(grid, 1)
 
         self.service_label = QLabel("Service: /holoassist/pick_cube_to_bin")
         self.service_label.setFont(QFont("monospace", 8))
         self.service_label.setStyleSheet(f"color: {TEXT_DIM};")
         self.service_label.setWordWrap(True)
-        layout.addWidget(self.service_label)
+        controls.addWidget(self.service_label)
+
+        status_panel = QVBoxLayout()
+        status_panel.setSpacing(6)
+        body.addLayout(status_panel, 2)
+
+        status_title = QLabel("PICK/PLACE MONITOR")
+        status_title.setFont(QFont("monospace", 8, QFont.Bold))
+        status_title.setStyleSheet(f"color: {BLUE};")
+        status_panel.addWidget(status_title)
+
+        self.monitor_block = QLabel("Block: ---")
+        self.monitor_block.setFont(QFont("monospace", 8, QFont.Bold))
+        self.monitor_block.setStyleSheet(f"color: {TEXT};")
+        status_panel.addWidget(self.monitor_block)
+
+        self.monitor_step = QLabel("Step: ---")
+        self.monitor_step.setFont(QFont("monospace", 8, QFont.Bold))
+        self.monitor_step.setStyleSheet(f"color: {TEXT};")
+        self.monitor_step.setWordWrap(True)
+        status_panel.addWidget(self.monitor_step)
+
+        self.monitor_state = QLabel("State: waiting")
+        self.monitor_state.setFont(QFont("monospace", 8, QFont.Bold))
+        self.monitor_state.setStyleSheet(f"color: {TEXT_DIM};")
+        status_panel.addWidget(self.monitor_state)
+
+        self.pick_place_status = QTextEdit()
+        self.pick_place_status.setReadOnly(True)
+        self.pick_place_status.setMinimumWidth(360)
+        self.pick_place_status.setFont(QFont("monospace", 8))
+        self.pick_place_status.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {DARK_BG};
+                color: {TEXT};
+                border: 1px solid {BORDER};
+            }}
+        """)
+        status_panel.addWidget(self.pick_place_status, 1)
 
         self._set_buttons_enabled(False)
 
+    def _select_bin(self, bin_id: int):
+        self.selected_bin_id = bin_id
+        self._update_bin_buttons()
+
+    def _update_bin_buttons(self):
+        for idx, btn in enumerate(self.bin_buttons, start=1):
+            active = idx == self.selected_bin_id
+            btn.setChecked(active)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {GREEN if active else DARK_BG};
+                    color: {'white' if active else TEXT};
+                    border: 2px solid {('#6fdd8b' if active else BORDER)};
+                    border-radius: 8px;
+                }}
+                QPushButton:hover {{
+                    border-color: {GREEN};
+                }}
+            """)
+
     def _request_pick(self, cube_id: int):
-        self.status_label.setText(f"REQUESTING: APRIL CUBE {cube_id}")
+        self.status_label.setText(
+            f"REQUESTING: APRIL CUBE {cube_id} -> BIN {self.selected_bin_id}"
+        )
         self.status_label.setStyleSheet(f"color: {YELLOW};")
-        self.ros.pick_cube_to_bin(cube_id, cube_id)
+        self.ros.pick_cube_to_bin(cube_id, self.selected_bin_id)
 
     def update_status(self, status):
         moveit = status.operating_mode == "MOVEIT"
@@ -1242,6 +1332,48 @@ class CubePickScreen(QWidget):
         else:
             self.status_label.setText("SERVICE: READY")
             self.status_label.setStyleSheet(f"color: {GREEN};")
+
+        block = status.pick_place_block_id or "---"
+        destination = status.pick_place_destination or "---"
+        self.monitor_block.setText(f"Block: {block} -> {destination}")
+
+        step_label = (
+            status.pick_place_step_label
+            or status.pick_place_step
+            or status.pick_place_status
+            or "---"
+        )
+        if status.pick_place_step_total > 0:
+            self.monitor_step.setText(
+                f"Step {status.pick_place_step_index}/{status.pick_place_step_total}: {step_label}"
+            )
+        else:
+            self.monitor_step.setText(f"Step: {step_label}")
+
+        state = status.pick_place_state or "waiting"
+        state_color = TEXT_DIM
+        if state.lower() in {"running", "starting"}:
+            state_color = YELLOW
+        elif state.lower() == "complete":
+            state_color = GREEN
+        elif state.lower() == "error":
+            state_color = RED
+        self.monitor_state.setText(f"State: {state.upper()}")
+        self.monitor_state.setStyleSheet(f"color: {state_color};")
+
+        if status.pick_place_error:
+            status_text = "ERROR:\n" + status.pick_place_error
+            if status.pick_place_error_detail:
+                status_text += "\n\nDETAIL:\n" + status.pick_place_error_detail
+        elif status.pick_place_status_lines:
+            status_text = "\n".join(status.pick_place_status_lines[-18:])
+        else:
+            status_text = "Waiting for pick/place status..."
+        if status_text != self._last_status_text:
+            self._last_status_text = status_text
+            self.pick_place_status.setPlainText(status_text)
+            scroll = self.pick_place_status.verticalScrollBar()
+            scroll.setValue(scroll.maximum())
 
     def _set_buttons_enabled(self, enabled: bool):
         for btn in self.cube_buttons:

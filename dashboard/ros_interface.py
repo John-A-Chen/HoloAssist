@@ -107,6 +107,19 @@ class DashboardStatus:
     last_pick_cube: str = ""
     last_pick_success: Optional[bool] = None
     last_pick_message: str = ""
+    pick_place_status: str = ""
+    pick_place_status_raw: str = ""
+    pick_place_status_time: float = 0.0
+    pick_place_status_lines: list = field(default_factory=list)
+    pick_place_block_id: str = ""
+    pick_place_destination: str = ""
+    pick_place_step: str = ""
+    pick_place_step_label: str = ""
+    pick_place_step_index: int = 0
+    pick_place_step_total: int = 0
+    pick_place_state: str = ""
+    pick_place_error: str = ""
+    pick_place_error_detail: str = ""
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -129,6 +142,7 @@ TOPIC_DEFAULTS = {
 }
 
 PICK_PLACE_MODE_TOPIC = "/pick_place/mode"
+PICK_PLACE_STATUS_TOPIC = "/pick_place/status"
 PICK_CUBE_SERVICE = "/holoassist/pick_cube_to_bin"
 
 
@@ -169,6 +183,7 @@ class RosInterface:
         self._rate_history: deque = deque(maxlen=120)       # 2Hz * 60s
         self._latency_history: deque = deque(maxlen=300)    # 10Hz * 30s
         self._session_info: dict = {}
+        self._pick_place_status_lines: deque = deque(maxlen=40)
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
         self._operating_mode: OperatingMode = OperatingMode.TELEOP
         self._pick_cube_client = None
@@ -282,6 +297,12 @@ class RosInterface:
         self._node.create_subscription(
             String, "/session/events",
             self._session_event_cb, 10,
+        )
+
+        # Pick/place sequencer status
+        self._node.create_subscription(
+            String, PICK_PLACE_STATUS_TOPIC,
+            self._pick_place_status_cb, 10,
         )
 
         # Sampling timers for rolling graph data
@@ -424,6 +445,78 @@ class RosInterface:
         except (json.JSONDecodeError, Exception):
             pass
 
+    def _pick_place_status_cb(self, msg):
+        now = time.time()
+        raw = msg.data
+        line = raw
+        block_id = ""
+        destination = ""
+        step = ""
+        step_label = ""
+        step_index = 0
+        step_total = 0
+        state = ""
+        error = ""
+        error_detail = ""
+        try:
+            payload = json.loads(raw)
+            if isinstance(payload, dict):
+                message = str(payload.get("message", "")).strip()
+                block_id = str(payload.get("block_id", "")).strip()
+                destination = str(payload.get("destination", "")).strip()
+                step = str(payload.get("step", "")).strip()
+                step_label = str(payload.get("step_label", "")).strip()
+                state = str(payload.get("state", "")).strip()
+                error = str(payload.get("error", "")).strip()
+                error_detail = str(payload.get("error_detail", "")).strip()
+                try:
+                    step_index = int(payload.get("step_index", 0) or 0)
+                    step_total = int(payload.get("step_total", 0) or 0)
+                except (TypeError, ValueError):
+                    step_index = 0
+                    step_total = 0
+                extras = [
+                    f"{key}={value}"
+                    for key, value in payload.items()
+                    if key
+                    not in {
+                        "message",
+                        "stamp_sec",
+                        "level",
+                        "block_id",
+                        "destination",
+                        "step",
+                        "step_label",
+                        "step_index",
+                        "step_total",
+                        "state",
+                        "error",
+                        "error_detail",
+                    }
+                ]
+                line = message or raw
+                if extras:
+                    line = f"{line} | {' '.join(extras)}"
+        except (json.JSONDecodeError, Exception):
+            pass
+
+        timestamp = datetime.fromtimestamp(now).strftime("%H:%M:%S")
+        display_line = f"[{timestamp}] {line}"
+        with self._lock:
+            self._status.pick_place_status = line
+            self._status.pick_place_status_raw = raw
+            self._status.pick_place_status_time = now
+            self._pick_place_status_lines.append(display_line)
+            self._status.pick_place_block_id = block_id
+            self._status.pick_place_destination = destination
+            self._status.pick_place_step = step
+            self._status.pick_place_step_label = step_label
+            self._status.pick_place_step_index = step_index
+            self._status.pick_place_step_total = step_total
+            self._status.pick_place_state = state
+            self._status.pick_place_error = error
+            self._status.pick_place_error_detail = error_detail
+
     def _sample_velocities(self):
         """Downsample joint velocities + latency to 10Hz for rolling graphs."""
         now = time.time()
@@ -514,22 +607,44 @@ class RosInterface:
 
         self._add_event("Resuming - reactivating controller...")
         self._safety_stop.set()
-        threading.Thread(target=self._activate_controller, daemon=True).start()
+        target_mode = self._operating_mode
+        threading.Thread(
+            target=self._activate_controller,
+            args=(target_mode,),
+            daemon=True,
+        ).start()
 
-    def _activate_controller(self):
+    def _activate_controller(self, target_mode: OperatingMode):
+        if target_mode == OperatingMode.MOVEIT:
+            command = [
+                "ros2", "control", "switch_controllers",
+                "--activate", "scaled_joint_trajectory_controller",
+                "finger_width_trajectory_controller",
+                "--deactivate", "forward_velocity_controller",
+                "finger_width_controller",
+            ]
+            success_message = "MOVEIT controllers reactivated - pick/place live"
+        else:
+            command = [
+                "ros2", "control", "switch_controllers",
+                "--activate", "forward_velocity_controller", "finger_width_controller",
+                "--deactivate", "scaled_joint_trajectory_controller",
+                "finger_width_trajectory_controller",
+            ]
+            success_message = "forward_velocity_controller reactivated - ROBOT LIVE"
+
         try:
             result = subprocess.run(
-                ["ros2", "control", "switch_controllers",
-                 "--activate", "forward_velocity_controller", "finger_width_controller",
-                 "--deactivate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
-                capture_output=True, text=True, timeout=10,
+                command, capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                self._add_event("forward_velocity_controller reactivated - ROBOT LIVE")
+                self._add_event(success_message)
                 with self._lock:
                     self._status.robot_state = RobotState.RUNNING
                     self._status.controller_active = True
                     self._status.estop_zero_count = 0
+                if target_mode == OperatingMode.MOVEIT:
+                    self._publish_pick_place_mode("run")
             else:
                 self._add_event(f"Controller activation failed: {result.stderr.strip()}")
                 with self._lock:
@@ -619,6 +734,19 @@ class RosInterface:
                 last_pick_cube=self._status.last_pick_cube,
                 last_pick_success=self._status.last_pick_success,
                 last_pick_message=self._status.last_pick_message,
+                pick_place_status=self._status.pick_place_status,
+                pick_place_status_raw=self._status.pick_place_status_raw,
+                pick_place_status_time=self._status.pick_place_status_time,
+                pick_place_status_lines=list(self._pick_place_status_lines),
+                pick_place_block_id=self._status.pick_place_block_id,
+                pick_place_destination=self._status.pick_place_destination,
+                pick_place_step=self._status.pick_place_step,
+                pick_place_step_label=self._status.pick_place_step_label,
+                pick_place_step_index=self._status.pick_place_step_index,
+                pick_place_step_total=self._status.pick_place_step_total,
+                pick_place_state=self._status.pick_place_state,
+                pick_place_error=self._status.pick_place_error,
+                pick_place_error_detail=self._status.pick_place_error_detail,
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
