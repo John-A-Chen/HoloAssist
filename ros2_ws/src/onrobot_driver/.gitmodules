@@ -1,3 +1,0 @@
-[submodule "include/onrobot_driver/Modbus"]
-	path = include/onrobot_driver/Modbus
-	url = https://github.com/Mazurel/Modbus.git
