@@ -48,7 +48,8 @@ public class RobotHUD : MonoBehaviour
 
     private bool built = false;
 
-    // Live joint angles (degrees) — updated directly from /joint_states
+    // Live joint angles (degrees) — fallback path. Primary source is the wired
+    // JointStateSubscriber's LastJointAnglesRad (matches what the digital twin shows).
     private float[] hudJointAngles = new float[6];
     private bool hudRosSubscribed = false;
     private static readonly string[] rosJointNames =
@@ -56,6 +57,12 @@ public class RobotHUD : MonoBehaviour
         "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
         "wrist_1_joint", "wrist_2_joint", "wrist_3_joint",
     };
+
+    // The "live" JointStateSubscriber — i.e. one with HasReceivedJointState true.
+    // Branch-merge scenes can have multiple JSS components; the stale ones have
+    // empty jointMaps and never populate LastJointAnglesRad, so we filter by
+    // HasReceivedJointState instead of just "first enabled".
+    private JointStateSubscriber boundJss;
 
     void OnEnable()
     {
@@ -104,19 +111,31 @@ public class RobotHUD : MonoBehaviour
 
     void RebindControllerIfNeeded()
     {
-        if (controller != null && controller.enabled && controller.gameObject.activeInHierarchy)
+        // Stay bound only if the current controller is the WIRED one (enabled + active + has
+        // InputActionAsset). Duplicate stale RobotControllers can be "enabled" but have no
+        // inputActions assigned — their mode field never changes, so the HUD looks frozen.
+        if (controller != null && controller.enabled && controller.gameObject.activeInHierarchy
+            && controller.inputActions != null)
             return;
 
-        RobotController newController = null;
-        foreach (var c in FindObjectsOfType<RobotController>(true))
-        {
-            if (c.enabled && c.gameObject.activeInHierarchy) { newController = c; break; }
-        }
+        RobotController newController = PickBestController();
         if (newController != null && newController != controller)
         {
-            Debug.LogWarning($"[RobotHUD] Rebound controller to '{newController.gameObject.name}' (instance {newController.GetInstanceID()}).");
+            Debug.LogWarning($"[RobotHUD] Rebound controller to '{newController.gameObject.name}' (instance {newController.GetInstanceID()}, inputActions={(newController.inputActions != null ? newController.inputActions.name : "null")}).");
             controller = newController;
         }
+    }
+
+    RobotController PickBestController()
+    {
+        RobotController fallback = null;
+        foreach (var c in FindObjectsOfType<RobotController>(true))
+        {
+            if (!c.enabled || !c.gameObject.activeInHierarchy) continue;
+            if (c.inputActions != null) return c;  // wired one wins
+            if (fallback == null) fallback = c;     // remember any enabled one as fallback
+        }
+        return fallback;
     }
 
     void Start()
@@ -159,13 +178,10 @@ public class RobotHUD : MonoBehaviour
         if (Application.isPlaying)
         {
             var allControllers = FindObjectsOfType<RobotController>(true);
-            RobotController bestActive = null;
-            foreach (var c in allControllers)
-            {
-                if (c.enabled && c.gameObject.activeInHierarchy) { bestActive = c; break; }
-            }
+            RobotController bestActive = PickBestController();
 
-            if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+            if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy
+                || controller.inputActions == null)
             {
                 if (bestActive != null)
                 {
@@ -344,9 +360,61 @@ public class RobotHUD : MonoBehaviour
         return tmp;
     }
 
+    const float JssFreshnessSeconds = 1.0f;
+
+    static bool IsJssFresh(JointStateSubscriber jss)
+    {
+        return jss != null && jss.HasReceivedJointState
+            && (Time.realtimeSinceStartup - jss.LastReceivedRealtime) < JssFreshnessSeconds;
+    }
+
     string JointAnglesLine()
     {
+        // Source priority:
+        // 1) The *fresh* JointStateSubscriber (currently receiving updates) — most reliable.
+        // 2) The wired RobotController's CurrentPositions.
+        // 3) Local hudJointAngles[] from this HUD's own /joint_states subscription.
+        RebindJssIfNeeded();
+        const float r2d = 57.29578f;
+        if (IsJssFresh(boundJss))
+        {
+            var r = boundJss.LastJointAnglesRad;
+            return $"P:{r[0]*r2d:F0}° L:{r[1]*r2d:F0}° E:{r[2]*r2d:F0}°  W1:{r[3]*r2d:F0}° W2:{r[4]*r2d:F0}° W3:{r[5]*r2d:F0}°";
+        }
+        if (controller != null && controller.HasJointState)
+        {
+            var p = controller.CurrentPositions;
+            return $"P:{p[0]*r2d:F0}° L:{p[1]*r2d:F0}° E:{p[2]*r2d:F0}°  W1:{p[3]*r2d:F0}° W2:{p[4]*r2d:F0}° W3:{p[5]*r2d:F0}°";
+        }
         return $"P:{hudJointAngles[0]:F0}° L:{hudJointAngles[1]:F0}° E:{hudJointAngles[2]:F0}°  W1:{hudJointAngles[3]:F0}° W2:{hudJointAngles[4]:F0}° W3:{hudJointAngles[5]:F0}°";
+    }
+
+    void RebindJssIfNeeded()
+    {
+        if (IsJssFresh(boundJss) && boundJss.enabled && boundJss.gameObject.activeInHierarchy)
+            return;
+
+        Transform wiredRoot = (controller != null) ? controller.robotBase : null;
+        JointStateSubscriber freshUnderRoot = null, anyFresh = null,
+                             everUnderRoot = null, anyEver = null, anyEnabled = null;
+        foreach (var jss in FindObjectsOfType<JointStateSubscriber>(true))
+        {
+            if (!jss.enabled || !jss.gameObject.activeInHierarchy) continue;
+            bool fresh = IsJssFresh(jss);
+            bool ever = jss.HasReceivedJointState;
+            bool underRoot = (wiredRoot != null && jss.transform.IsChildOf(wiredRoot));
+            if (fresh && underRoot && freshUnderRoot == null) freshUnderRoot = jss;
+            if (fresh && anyFresh == null) anyFresh = jss;
+            if (ever && underRoot && everUnderRoot == null) everUnderRoot = jss;
+            if (ever && anyEver == null) anyEver = jss;
+            if (anyEnabled == null) anyEnabled = jss;
+        }
+        var picked = freshUnderRoot ?? anyFresh ?? everUnderRoot ?? anyEver ?? anyEnabled;
+        if (picked != null && picked != boundJss)
+        {
+            boundJss = picked;
+            Debug.Log($"[RobotHUD] Bound JointStateSubscriber to '{picked.gameObject.name}' (fresh={IsJssFresh(picked)}, ever={picked.HasReceivedJointState}).");
+        }
     }
 
     private RobotController.ControlMode lastSeenMode;
@@ -413,7 +481,17 @@ public class RobotHUD : MonoBehaviour
             int idx = controller.SelectedJoint;
             string jointName = (idx >= 0 && idx < jointDisplayNames.Length)
                 ? jointDisplayNames[idx] : controller.SelectedJointName;
-            float angle = (idx >= 0 && idx < hudJointAngles.Length) ? hudJointAngles[idx] : 0f;
+            // Pull per-joint angle from the same source as JointAnglesLine.
+            float angle = 0f;
+            if (idx >= 0 && idx < 6)
+            {
+                if (IsJssFresh(boundJss))
+                    angle = boundJss.LastJointAnglesRad[idx] * 57.29578f;
+                else if (controller.HasJointState)
+                    angle = (float)(controller.CurrentPositions[idx] * 57.29578);
+                else if (idx < hudJointAngles.Length)
+                    angle = hudJointAngles[idx];
+            }
 
             titleLabel.text = $"DIRECT JOINT  |  {jointName}  ({idx + 1}/6)  {angle:F1}°";
             titleLabel.color = new Color(1f, 0.8f, 0.3f);

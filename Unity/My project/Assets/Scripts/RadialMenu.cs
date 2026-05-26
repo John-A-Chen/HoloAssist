@@ -383,7 +383,16 @@ public class RadialMenu : MonoBehaviour
         AddButton("RMRC\nMode", false, () =>
         {
             var rc = ResolveRobotController("RMRC Mode");
-            if (rc != null) rc.ToggleRMRCSubMode();
+            if (rc != null)
+            {
+                // If we're already in RMRC, this toggles the Translate↔Rotate
+                // sub-mode. If we're in another main mode (DirectJoint / HandGuide),
+                // enter RMRC first — otherwise a sub-mode toggle silently flips
+                // a flag of an inactive mode and looks like "RMRC doesn't work".
+                bool wasInRMRC = rc.CurrentMode == RobotController.ControlMode.RMRC;
+                if (!wasInRMRC) rc.SetMode(RobotController.ControlMode.RMRC);
+                else rc.ToggleRMRCSubMode();
+            }
             RefreshHUD();
         }, 1);
 

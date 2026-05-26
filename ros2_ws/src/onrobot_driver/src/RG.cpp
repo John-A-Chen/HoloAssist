@@ -32,7 +32,10 @@ RG::RG(const std::string &type, const std::string &ip, int port)
         max_force = 120.0;
         default_fingertip_offset = 0.0; // TODO: Calibrate and set this value.
     }
-    default_force = max_force / 2;
+    // Default grip force lowered to 5 N (was max_force / 2 = 20 N for RG2,
+    // 60 N for RG6). 5 N is the minimum reliable grip force for the RG2 on
+    // light objects — prevents crushing small / soft items.
+    default_force = 5.0f;
 
     // Set these defaults on the gripper.
     setTargetForce(default_force);
@@ -71,7 +74,10 @@ RG::RG(const std::string &type, const std::string &device)
         max_force = 120.0;
         default_fingertip_offset = 0.0; // TODO: Calibrate and set this value.
     }
-    default_force = max_force / 2;
+    // Default grip force lowered to 5 N (was max_force / 2 = 20 N for RG2,
+    // 60 N for RG6). 5 N is the minimum reliable grip force for the RG2 on
+    // light objects — prevents crushing small / soft items.
+    default_force = 5.0f;
 
     // Set these defaults on the gripper.
     setTargetForce(default_force);

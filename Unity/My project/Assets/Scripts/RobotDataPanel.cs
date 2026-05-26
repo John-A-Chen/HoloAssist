@@ -100,24 +100,122 @@ public class RobotDataPanel : MonoBehaviour
     {
         if (Application.isPlaying)
         {
-            if (jointStateSubscriber == null)
-                jointStateSubscriber = FindObjectOfType<JointStateSubscriber>();
-            if (robotController == null)
-                robotController = FindObjectOfType<RobotController>();
-            if (endEffectorTransform == null)
+            if (robotController == null || !robotController.enabled
+                || !robotController.gameObject.activeInHierarchy
+                || robotController.inputActions == null)
             {
-                var t = GameObject.Find("tool0");
-                if (t != null) endEffectorTransform = t.transform;
+                // Pick the WIRED RobotController (the one with InputActionAsset assigned).
+                // Stale duplicates from branch merges can be "enabled" but have null inputActions —
+                // their mode field never changes, so this panel would look frozen.
+                RobotController fallback = null;
+                foreach (var c in FindObjectsOfType<RobotController>(true))
+                {
+                    if (!c.enabled || !c.gameObject.activeInHierarchy) continue;
+                    if (c.inputActions != null) { robotController = c; fallback = null; break; }
+                    if (fallback == null) fallback = c;
+                }
+                if (robotController == null) robotController = fallback;
             }
+            // After fixing the duplicate-RobotController issue, the same merge can leave
+            // duplicate ur3e_rg2 hierarchies — so tool0/base_link/JointStateSubscriber
+            // lookups need to be scoped to the wired robot's hierarchy, not the first
+            // match in the scene. Prefer `robotController.robotBase` (Hand Guide already
+            // requires that field) as the anchor.
+            RebindRobotHierarchy();
+        }
+        Rebuild();
+        if (Application.isPlaying)
+            SubscribeToJointStates();
+    }
+
+    void RebindRobotHierarchy()
+    {
+        Transform wiredRoot = (robotController != null) ? robotController.robotBase : null;
+
+        // Always re-pick — if the previously-bound JSS is stale (jointMap empty,
+        // so LastJointAnglesRad never updates), HasReceivedJointState stays false
+        // and we should rebind to a live one.
+        if (jointStateSubscriber == null || !jointStateSubscriber.HasReceivedJointState)
+        {
+            jointStateSubscriber = PickLiveJointStateSubscriber(wiredRoot);
+        }
+
+        // If RobotController.robotBase wasn't set (Hand Guide hasn't been wired up),
+        // derive the wired robot root from the JointStateSubscriber — per CLAUDE.md
+        // JointStateSubscriber sits on the robot's root `ur` GameObject.
+        if (wiredRoot == null && jointStateSubscriber != null)
+            wiredRoot = jointStateSubscriber.transform;
+
+        if (robotBase == null)
+        {
+            if (wiredRoot != null) robotBase = FindDeepChild(wiredRoot, "base_link");
             if (robotBase == null)
             {
                 var b = GameObject.Find("base_link");
                 if (b != null) robotBase = b.transform;
             }
         }
-        Rebuild();
-        if (Application.isPlaying)
-            SubscribeToJointStates();
+
+        if (endEffectorTransform == null)
+        {
+            if (wiredRoot != null) endEffectorTransform = FindDeepChild(wiredRoot, "tool0");
+            if (endEffectorTransform == null)
+            {
+                var t = GameObject.Find("tool0");
+                if (t != null) endEffectorTransform = t.transform;
+            }
+        }
+
+        Debug.Log($"[RobotDataPanel] Bound: robotController='{robotController?.gameObject.name}', jointStateSubscriber='{jointStateSubscriber?.gameObject.name}', base_link='{robotBase?.name}', tool0='{endEffectorTransform?.name}'.");
+    }
+
+    // Treat a JSS as "fresh" if it received an update within this window. The
+    // bridge publishes /joint_states at ~500Hz, so 1 second is generously tolerant
+    // of bridge stalls without admitting stale duplicates whose Start() ran but
+    // whose GameObject was later deactivated.
+    const float JssFreshnessSeconds = 1.0f;
+
+    static bool IsJssFresh(JointStateSubscriber jss)
+    {
+        return jss != null && jss.HasReceivedJointState
+            && (Time.realtimeSinceStartup - jss.LastReceivedRealtime) < JssFreshnessSeconds;
+    }
+
+    /// <summary>
+    /// Picks the JointStateSubscriber that is *currently* receiving /joint_states updates.
+    /// Priority: fresh under wiredRoot → any fresh → ever-received under wiredRoot →
+    /// any ever-received → any enabled. The "fresh" requirement catches stale
+    /// duplicates that received a single message at scene start and then stopped.
+    /// </summary>
+    static JointStateSubscriber PickLiveJointStateSubscriber(Transform wiredRoot)
+    {
+        JointStateSubscriber freshUnderRoot = null, anyFresh = null,
+                             everUnderRoot = null, anyEver = null, anyEnabled = null;
+        foreach (var jss in FindObjectsOfType<JointStateSubscriber>(true))
+        {
+            if (!jss.enabled || !jss.gameObject.activeInHierarchy) continue;
+            bool fresh = IsJssFresh(jss);
+            bool ever = jss.HasReceivedJointState;
+            bool underRoot = (wiredRoot != null && jss.transform.IsChildOf(wiredRoot));
+            if (fresh && underRoot && freshUnderRoot == null) freshUnderRoot = jss;
+            if (fresh && anyFresh == null) anyFresh = jss;
+            if (ever && underRoot && everUnderRoot == null) everUnderRoot = jss;
+            if (ever && anyEver == null) anyEver = jss;
+            if (anyEnabled == null) anyEnabled = jss;
+        }
+        return freshUnderRoot ?? anyFresh ?? everUnderRoot ?? anyEver ?? anyEnabled;
+    }
+
+    static Transform FindDeepChild(Transform parent, string name)
+    {
+        if (parent == null) return null;
+        if (parent.name == name) return parent;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var found = FindDeepChild(parent.GetChild(i), name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     void SubscribeToJointStates()
@@ -393,6 +491,25 @@ public class RobotDataPanel : MonoBehaviour
 
     void UpdateData()
     {
+        // Rebind if the current JSS isn't actually streaming right now. Two failure
+        // modes this catches: (1) we never bound, (2) we bound to a stale duplicate
+        // that received one message at scene start then went silent.
+        if (jointStateSubscriber == null || !IsJssFresh(jointStateSubscriber))
+        {
+            Transform wiredRoot = (robotController != null) ? robotController.robotBase : null;
+            var newJss = PickLiveJointStateSubscriber(wiredRoot);
+            if (newJss != null && newJss != jointStateSubscriber)
+            {
+                jointStateSubscriber = newJss;
+                // tool0/base_link must move with the same robot as JSS — re-derive
+                // them from the live JSS's transform so EE pose tracks live data.
+                Transform jssRoot = newJss.transform;
+                endEffectorTransform = FindDeepChild(jssRoot, "tool0") ?? endEffectorTransform;
+                robotBase = FindDeepChild(jssRoot, "base_link") ?? robotBase;
+                Debug.Log($"[RobotDataPanel] Rebound to '{newJss.gameObject.name}' (fresh={IsJssFresh(newJss)}, ever={newJss.HasReceivedJointState}). tool0='{endEffectorTransform?.name}', base_link='{robotBase?.name}'.");
+            }
+        }
+
         // Primary source: JointStateSubscriber caches every angle applied to the
         // robot transforms, so the panel always reflects the visual robot state.
         if (jointStateSubscriber != null)

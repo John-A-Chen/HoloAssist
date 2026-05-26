@@ -10,6 +10,12 @@ public class JointStateSubscriber : MonoBehaviour
     // Stays at zero until the first ROS message arrives.
     public float[] LastJointAnglesRad { get; private set; } = new float[6];
     public bool HasReceivedJointState { get; private set; } = false;
+    // Wall-clock time of the most recent /joint_states callback that updated this
+    // JSS's joints. Lets RobotHUD / RobotDataPanel filter for the JSS that's
+    // *currently* receiving messages — `HasReceivedJointState` alone is too sticky
+    // (becomes true on first message and never goes back), so a stale duplicate
+    // that got one message at scene-start and then stopped would still pass.
+    public float LastReceivedRealtime { get; private set; } = -1f;
 
     private static readonly Dictionary<string, int> rosNameToIndex = new Dictionary<string, int>
     {
@@ -113,6 +119,7 @@ public class JointStateSubscriber : MonoBehaviour
                 {
                     LastJointAnglesRad[idx] = angle;
                     HasReceivedJointState = true;
+                    LastReceivedRealtime = Time.realtimeSinceStartup;
                 }
 
                 float angleDeg = angle * Mathf.Rad2Deg;

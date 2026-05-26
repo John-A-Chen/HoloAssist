@@ -49,6 +49,20 @@ public class CubePoseSubscriber : MonoBehaviour
     [Tooltip("Reject incoming poses that differ from the current averaged position by more than this distance (metres). 0 = no rejection (let outliers in).")]
     public float outlierRejectDistance = 0f;
 
+    [Header("Task System Integration")]
+
+    [Tooltip("Master toggle. When off, spawned cubes are untagged (preserves pre-tagging behaviour). When on, each spawned cube gets an ObjectClass component using the arrays below — so it counts for BinDetector / TaskTracker on drop.")]
+    public bool tagSpawnedCubes = false;
+
+    [Tooltip("Class name per cube (index 0 = cube_1). Used by TaskTracker's OneOfEachClass mode + status display. Empty string skips tagging for that one cube. If shorter than cubeCount, missing entries fall back to \"cube_N\".")]
+    public string[] cubeClassNames = { "red", "green", "blue", "yellow" };
+
+    [Tooltip("isGood per cube (index 0 = cube_1). True = sorting this into any bin counts as correct. False = counts as wrong (red flash + ✗ counter). If shorter than cubeCount, missing entries default to true.")]
+    public bool[] cubeIsGood = { true, true, true, true };
+
+    [Tooltip("If a Collider is missing on the spawned instance, add a BoxCollider sized from objectScale so BinDetector triggers fire on entry. Skip if your prefab already has its own collider.")]
+    public bool autoAddCollider = true;
+
     private class CubeState
     {
         public GameObject instance;
@@ -264,6 +278,35 @@ public class CubePoseSubscriber : MonoBehaviour
         }
 
         obj.name = $"VirtualCube_{cubeIndex}";
+
+        // Ensure Collider so BinDetector trigger fires on entry. Skipped if the
+        // prefab already provides one (anywhere in its hierarchy).
+        if (autoAddCollider && obj.GetComponentInChildren<Collider>() == null)
+        {
+            var box = obj.AddComponent<BoxCollider>();
+            box.size = Vector3.one * objectScale;
+        }
+
+        // Tag with ObjectClass so the cube participates in TaskTracker. Prefab-
+        // baked ObjectClass wins automatically — we skip if one already exists
+        // anywhere in the hierarchy. Empty className entries skip a single cube.
+        if (tagSpawnedCubes && obj.GetComponentInChildren<ObjectClass>() == null)
+        {
+            int idx = cubeIndex - 1;
+            string className = (cubeClassNames != null && idx >= 0 && idx < cubeClassNames.Length)
+                ? cubeClassNames[idx]
+                : $"cube_{cubeIndex}";
+            bool isGood = (cubeIsGood != null && idx >= 0 && idx < cubeIsGood.Length)
+                ? cubeIsGood[idx]
+                : true;
+            if (!string.IsNullOrEmpty(className))
+            {
+                var oc = obj.AddComponent<ObjectClass>();
+                oc.className = className;
+                oc.isGood = isGood;
+            }
+        }
+
         obj.SetActive(false);
         return obj;
     }
