@@ -18,6 +18,12 @@ holoassist_cube_pose:
     # Candidate centre agreement threshold for multi-face fusion.
     candidate_consensus_threshold_m: 0.05
 
+    # Bin verification: check if cube XY position (in bin_check_frame) is within
+    # bin_xy_margin_m of any bin defined in moveit_robot_control/config/bin_poses.json.
+    # Publishes to /holoassist/perception/april_cube_N_bin_check at timer_hz.
+    bin_check_frame: base_link
+    bin_xy_margin_m: 0.08
+
     # Each six-tag group is one physical 40 mm cube.
     april_cube_1_tag_ids: [10, 11, 12, 13, 14, 15]
     april_cube_2_tag_ids: [16, 17, 18, 19, 20, 21]

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import math
+import os
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -80,6 +82,10 @@ class CubePoseNode(Node):
         self.declare_parameter("cube_3_ids", [22, 23, 24, 25, 26, 27])
         self.declare_parameter("cube_4_ids", [28, 29, 30, 31, 32, 33])
 
+        self.declare_parameter("bin_check_frame", "base_link")
+        self.declare_parameter("bin_xy_margin_m", 0.08)
+        self.declare_parameter("bin_poses_file", "")
+
         self.detections_topic = str(self.get_parameter("detections_topic").value)
         self.workspace_frame = str(self.get_parameter("workspace_frame").value)
         self.tag_family = str(self.get_parameter("tag_family").value)
@@ -108,6 +114,9 @@ class CubePoseNode(Node):
         self.publish_cube_markers = bool(self.get_parameter("publish_cube_markers").value)
         self.marker_alpha = max(0.05, min(1.0, float(self.get_parameter("marker_alpha").value)))
         self.legacy_cube_pose_topic = str(self.get_parameter("legacy_cube_pose_topic").value)
+        self._bin_check_frame = str(self.get_parameter("bin_check_frame").value)
+        self._bin_xy_margin_m = max(0.01, float(self.get_parameter("bin_xy_margin_m").value))
+        self._bins: Dict[str, np.ndarray] = self._load_bins()
 
         self.face_order = self._read_face_order()
 
@@ -181,6 +190,13 @@ class CubePoseNode(Node):
 
         self.legacy_pose_pub = self.create_publisher(PoseStamped, self.legacy_cube_pose_topic, reliable_qos)
 
+        self.bin_check_pubs = []
+        for idx in range(4):
+            n = idx + 1
+            self.bin_check_pubs.append(
+                self.create_publisher(String, f"/holoassist/perception/april_cube_{n}_bin_check", reliable_qos)
+            )
+
         self._detections_sub = self.create_subscription(
             AprilTagDetectionArray,
             self.detections_topic,
@@ -252,6 +268,7 @@ class CubePoseNode(Node):
             if age_s > self.detections_timeout_s:
                 for idx in range(4):
                     self._freeze_marker(idx)
+            self._run_bin_checks()
             return
 
         if self._latest_detection_stamp is None:
@@ -270,6 +287,7 @@ class CubePoseNode(Node):
                     center=self._last_centers[idx],
                     reason="waiting_for_detections",
                 )
+            self._run_bin_checks()
             return
 
         age_s = (self.get_clock().now() - self._latest_detection_stamp).nanoseconds / 1e9
@@ -294,6 +312,7 @@ class CubePoseNode(Node):
                     reason="detections_timeout",
                 )
                 self._freeze_marker(idx)
+            self._run_bin_checks()
             return
 
         self._last_processed_stamp = self._latest_detection_stamp
@@ -414,6 +433,8 @@ class CubePoseNode(Node):
             else:
                 nearest = min(visible_pose_records, key=lambda item: float(np.linalg.norm(item[2])))
                 self.legacy_pose_pub.publish(nearest[1])
+
+        self._run_bin_checks()
 
     def _collect_observations(self, cube_idx: int, tag_ids: List[int]) -> Tuple[List[Dict[str, object]], str]:
         observations: List[Dict[str, object]] = []
@@ -891,6 +912,80 @@ class CubePoseNode(Node):
                 "cube_id=%d pose looks unreasonable for workspace: position=(%.3f,%.3f,%.3f)"
                 % (cube_id, float(c[0]), float(c[1]), float(c[2])),
             )
+
+    def _load_bins(self) -> Dict[str, np.ndarray]:
+        bin_file = str(self.get_parameter("bin_poses_file").value)
+        if not bin_file:
+            try:
+                from ament_index_python.packages import get_package_share_directory
+                pkg_dir = get_package_share_directory("moveit_robot_control")
+                bin_file = os.path.join(pkg_dir, "config", "bin_poses.json")
+            except Exception as e:
+                self.get_logger().warn("bin check: could not locate moveit_robot_control package: %s" % e)
+                return {}
+        try:
+            with open(bin_file) as f:
+                raw = json.load(f)
+            bins: Dict[str, np.ndarray] = {}
+            for name, data in raw.items():
+                xyz = data["xyz"]
+                bins[name] = np.array([float(xyz[0]), float(xyz[1]), float(xyz[2])], dtype=np.float64)
+            self.get_logger().info("bin check: loaded %d bins from %s (margin %.3f m, frame %s)" % (
+                len(bins), bin_file, self._bin_xy_margin_m, self._bin_check_frame))
+            return bins
+        except Exception as e:
+            self.get_logger().warn("bin check: failed to load bin_poses.json: %s" % e)
+            return {}
+
+    def _run_bin_checks(self) -> None:
+        for idx in range(4):
+            if self._last_centers[idx] is not None:
+                self._publish_bin_check(idx, self._last_centers[idx], self._last_output_frames[idx])
+
+    def _publish_bin_check(self, cube_idx: int, center: np.ndarray, workspace_frame: str) -> None:
+        if not self._bins:
+            return
+        try:
+            tf_msg = self._tf_buffer.lookup_transform(
+                self._bin_check_frame,
+                workspace_frame,
+                rclpy.time.Time(),
+                timeout=Duration(seconds=self.tf_lookup_timeout_s),
+            )
+        except TransformException:
+            self._log_throttled(
+                "warn",
+                "bin_check_tf_unavailable",
+                self.WARNING_THROTTLE_S,
+                "bin check: TF %s→%s not available (calibration loaded?)" % (workspace_frame, self._bin_check_frame),
+            )
+            return
+        t = tf_msg.transform.translation
+        r = tf_msg.transform.rotation
+        rot = rotation_matrix_from_quaternion(float(r.x), float(r.y), float(r.z), float(r.w))
+        center_robot = rot @ center + np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)
+
+        nearest_bin: Optional[str] = None
+        nearest_dist = float("inf")
+        for bin_name, bin_pos in self._bins.items():
+            dist_xy = float(np.linalg.norm(center_robot[:2] - bin_pos[:2]))
+            if dist_xy < nearest_dist:
+                nearest_dist = dist_xy
+                nearest_bin = bin_name
+
+        in_bin = nearest_dist <= self._bin_xy_margin_m
+        msg = String()
+        msg.data = (
+            "cube_id=%d sorted=%s bin=%s distance_xy_m=%.3f margin_m=%.3f"
+            % (
+                cube_idx + 1,
+                str(in_bin).lower(),
+                nearest_bin if in_bin else "none",
+                nearest_dist,
+                self._bin_xy_margin_m,
+            )
+        )
+        self.bin_check_pubs[cube_idx].publish(msg)
 
     def _on_heartbeat(self) -> None:
         self.get_logger().info("perception node is healthy")
