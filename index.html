@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoloAssist — XR Human–Robot Collaboration</title>
+    <style>
+        :root {
+            --purple:       #7c3aed;
+            --purple-light: #a78bfa;
+            --purple-dark:  #5b21b6;
+            --amber:        #f59e0b;
+            --amber-light:  #fcd34d;
+            --dark:         #1e1b2e;
+            --darker:       #13111f;
+            --card-dark:    #2a2540;
+            --light-bg:     #f5f3f7;
+            --mid-bg:       #ede9f4;
+            --border:       #d1c9e8;
+            --text-dark:    #1a1730;
+            --text-muted:   #6b6583;
+            --text-light:   #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--light-bg);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* ── NAV ── */
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(19, 17, 31, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2.5rem; height: 60px;
+            border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+        }
+
+        .nav-logo {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; color: var(--text-light);
+        }
+
+        .nav-logo-mark {
+            width: 34px; height: 34px;
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 13px; color: white; letter-spacing: -0.5px;
+            box-shadow: 0 0 12px rgba(124,58,237,0.4);
+        }
+
+        .nav-logo-text {
+            font-size: 14px; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase; color: var(--text-light);
+        }
+
+        .nav-links { display: flex; list-style: none; gap: 2rem; }
+
+        .nav-links a {
+            color: #8b83a8; text-decoration: none;
+            font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text-light); }
+        .nav-links .nav-gh { color: var(--amber) !important; }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            background: var(--darker);
+            position: relative;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 60% 40%, rgba(124,58,237,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 50% at 20% 70%, rgba(245,158,11,0.08) 0%, transparent 50%),
+                linear-gradient(160deg, #0f0d1a 0%, #1a1530 40%, #0f0d1a 100%);
+        }
+
+        /* Hero screenshot — uncomment once screenshots/hero.jpg exists */
+        /*.hero-screenshot {
+            position: absolute; inset: 0;
+            object-fit: cover; width: 100%; height: 100%; opacity: 0.35;
+        }*/
+
+        .hero-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom,
+                rgba(13,11,20,0.2) 0%,
+                rgba(13,11,20,0.55) 60%,
+                rgba(13,11,20,0.88) 100%);
+        }
+
+        /* Decorative grid lines */
+        .hero-grid {
+            position: absolute; inset: 0; opacity: 0.04;
+            background-image:
+                linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Purple glow orb */
+        .hero-orb {
+            position: absolute; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%);
+            border-radius: 50%;
+            top: 50%; right: 8%; transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative; z-index: 2;
+            padding: 0 4rem 4rem; max-width: 760px;
+        }
+
+        .hero-category {
+            font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+            color: #8b83a8; margin-bottom: 0.75rem;
+        }
+
+        .hero-accent-line {
+            width: 36px; height: 2px;
+            background: linear-gradient(90deg, var(--purple), var(--amber));
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-title {
+            font-size: clamp(2.8rem, 5.5vw, 4.5rem);
+            font-weight: 700; color: var(--text-light);
+            line-height: 1.08; margin-bottom: 1.25rem; letter-spacing: -1px;
+        }
+
+        .hero-title span { color: var(--purple-light); }
+
+        .hero-desc {
+            font-size: 1.05rem; color: #9d96b8;
+            max-width: 560px; margin-bottom: 2.25rem; line-height: 1.75;
+        }
+
+        .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 24px; font-size: 13px; font-weight: 600;
+            letter-spacing: 0.3px; text-decoration: none;
+            border-radius: 4px; transition: all 0.2s; cursor: pointer; border: none;
+        }
+
+        .btn-purple {
+            background: var(--purple); color: white;
+            box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+        }
+        .btn-purple:hover {
+            background: var(--purple-dark);
+            box-shadow: 0 4px 28px rgba(124,58,237,0.5);
+        }
+
+        .btn-amber {
+            background: var(--amber); color: #1a1730;
+            box-shadow: 0 4px 20px rgba(245,158,11,0.25);
+        }
+        .btn-amber:hover { background: var(--amber-light); }
+
+        .btn-outline {
+            background: transparent; color: var(--text-light);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .btn-outline:hover { border-color: rgba(255,255,255,0.55); }
+
+        .hero-subctas {
+            position: relative; z-index: 2;
+            display: grid; grid-template-columns: 1fr 1fr;
+            border-top: 1px solid rgba(124,58,237,0.2);
+        }
+
+        .hero-subcta {
+            padding: 1.4rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            text-decoration: none;
+            border-left: 1px solid rgba(124,58,237,0.2);
+            transition: background 0.2s;
+        }
+        .hero-subcta:first-child { border-left: none; }
+        .hero-subcta:hover { background: rgba(124,58,237,0.08); }
+
+        .hero-subcta h3 {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-light); letter-spacing: 0.3px;
+        }
+        .hero-subcta p { font-size: 11px; color: var(--amber); margin-top: 2px; }
+
+        /* ── GENERIC SECTIONS ── */
+        section { padding: 5rem 4rem; }
+        .section-light  { background: var(--light-bg); }
+        .section-mid    { background: var(--mid-bg); }
+        .section-dark   { background: var(--dark); }
+        .section-darker { background: var(--darker); }
+
+        .section-heading { text-align: center; margin-bottom: 3rem; }
+        .section-heading h2 {
+            font-size: 2rem; font-weight: 700;
+            color: var(--text-dark); margin-bottom: 0.5rem;
+        }
+        .section-dark .section-heading h2,
+        .section-darker .section-heading h2 { color: var(--text-light); }
+
+        .section-heading p { color: var(--text-muted); max-width: 500px; margin: 0 auto; }
+        .section-dark .section-heading p,
+        .section-darker .section-heading p { color: #8b83a8; }
+
+        .section-heading code {
+            background: rgba(124,58,237,0.15); color: var(--purple-light);
+            padding: 2px 6px; border-radius: 4px; font-size: 0.875em;
+        }
+
+        /* ── FEATURE STATUS ── */
+        .feature-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 1px; background: var(--border);
+            border: 1px solid var(--border);
+        }
+
+        .feature-item {
+            background: var(--light-bg);
+            padding: 1.1rem 1.4rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        }
+
+        .feature-name { font-size: 0.875rem; font-weight: 500; color: var(--text-dark); }
+
+        .status-badge {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+            padding: 3px 10px; border-radius: 20px; white-space: nowrap; text-transform: uppercase;
+        }
+        .status-working { background: #e0f0e8; color: #166534; border: 1px solid #a7d4b7; }
+        .status-testing { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+        /* ── SUBSYSTEM CARDS (dark, Saab-style) ── */
+        .subsystems-wrap { padding: 0; }
+        .subsystems-wrap .section-heading { padding: 5rem 4rem 3rem; margin-bottom: 0; }
+
+        .subsystems-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+        }
+
+        .subsystem-card {
+            position: relative; aspect-ratio: 4/5;
+            overflow: hidden; cursor: pointer; text-decoration: none;
+            display: block;
+        }
+
+        .subsystem-card-bg {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            transition: transform 0.5s ease;
+        }
+        .subsystem-card:hover .subsystem-card-bg { transform: scale(1.06); }
+
+        /* Screenshot backgrounds — will show if image exists */
+        .sub-perception .subsystem-card-bg {
+            background-image: url('screenshots/perception.jpg');
+            background-color: #0e1826;
+        }
+        .sub-autonomous .subsystem-card-bg {
+            background-image: url('screenshots/autonomous.jpg');
+            background-color: #0a1a14;
+        }
+        .sub-teleop .subsystem-card-bg {
+            background-image: url('screenshots/teleop.jpg');
+            background-color: #1a0e20;
+        }
+        .sub-visual .subsystem-card-bg {
+            background-image: url('screenshots/visualisation.jpg');
+            background-color: #160e1a;
+        }
+
+        /* Purple tint overlays per card */
+        .sub-perception .subsystem-card-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(37,58,124,0.6) 0%, rgba(10,20,50,0.4) 100%);
+        }
+        .sub-autonomous .subsystem-card-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(58,124,80,0.4) 0%, rgba(10,50,20,0.35) 100%);
+        }
+        .sub-teleop .subsystem-card-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(124,58,237,0.45) 0%, rgba(50,10,80,0.35) 100%);
+        }
+        .sub-visual .subsystem-card-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(124,58,200,0.5) 0%, rgba(50,10,80,0.4) 100%);
+        }
+
+        .subsystem-card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top,
+                rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.35) 50%, transparent 100%);
+        }
+
+        .subsystem-card-content {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 2rem 1.5rem 1.75rem;
+            text-align: center;
+        }
+
+        .subsystem-icon {
+            width: 44px; height: 44px; margin: 0 auto 0.9rem; color: var(--amber);
+            filter: drop-shadow(0 0 8px rgba(245,158,11,0.5));
+        }
+
+        .subsystem-card-content h3 {
+            font-size: 1.1rem; font-weight: 700; color: white; margin-bottom: 0.3rem;
+        }
+
+        .subsystem-card-content .sub-tagline {
+            font-size: 0.78rem; color: var(--amber); margin-bottom: 0.6rem;
+        }
+
+        .subsystem-lead {
+            font-size: 0.72rem; color: rgba(255,255,255,0.45);
+            letter-spacing: 0.8px; text-transform: uppercase;
+        }
+
+        .visit-label {
+            display: block; margin-top: 0.75rem;
+            font-size: 0.78rem; font-weight: 600;
+            color: white; letter-spacing: 0.5px;
+        }
+
+        .card-slider {
+            display: block; height: 2px; margin-top: 0.6rem;
+            background: linear-gradient(90deg, var(--purple), var(--amber));
+            transform: scaleX(0); transform-origin: left;
+            transition: transform 0.35s ease;
+        }
+        .subsystem-card:hover .card-slider { transform: scaleX(1); }
+
+        /* ── TEAM SECTION ── */
+        .team-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+        }
+
+        .team-card {
+            background: white; border: 1px solid var(--border);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .team-card:hover {
+            box-shadow: 0 8px 32px rgba(124,58,237,0.12);
+            transform: translateY(-3px);
+        }
+
+        .team-card-image {
+            aspect-ratio: 4/5; position: relative; overflow: hidden;
+        }
+
+        .team-card-image img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        .team-placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #e8e3f4, #d4cce8);
+        }
+
+        .team-initials {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple-dark), var(--purple));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; font-weight: 800; color: white;
+            box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+        }
+
+        .team-arrow {
+            position: absolute; bottom: 1rem; right: 1rem;
+            width: 28px; height: 28px; background: var(--amber);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+
+        .team-card-body { padding: 1.25rem; }
+        .team-card-body h3 { font-size: 1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 3px; }
+        .team-role { font-size: 0.78rem; font-weight: 600; color: var(--purple); margin-bottom: 0.6rem; letter-spacing: 0.3px; }
+        .team-card-body p { font-size: 0.84rem; color: var(--text-muted); line-height: 1.55; }
+
+        /* ── STATS ── */
+        .stats-grid {
+            display: grid; grid-template-columns: 1fr 2fr 1fr;
+            border: 1px solid var(--border);
+        }
+
+        .stats-col { border-right: 1px solid var(--border); }
+        .stats-col:last-child { border-right: none; }
+
+        .stat-item {
+            padding: 2.25rem 2rem; border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        .stat-item:last-child { border-bottom: none; }
+
+        .stat-icon { color: var(--amber); margin-bottom: 0.6rem; }
+
+        .stat-label {
+            font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 0.4rem;
+        }
+
+        .stat-number {
+            font-size: 3rem; font-weight: 800; color: var(--text-dark);
+            line-height: 1; margin-bottom: 0.2rem;
+        }
+
+        .stat-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+        .stat-quote-wrap {
+            padding: 2.5rem 2.5rem; height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        blockquote.stat-quote {
+            border-left: 3px solid var(--purple);
+            padding-left: 1.25rem;
+            font-size: 0.95rem; font-style: italic;
+            color: var(--text-dark); line-height: 1.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .quote-attr { font-size: 0.8rem; color: var(--text-muted); padding-left: 1.25rem; }
+
+        /* ── ARCHITECTURE ── */
+        .arch-wrap {
+            max-width: 720px; margin: 0 auto;
+        }
+
+        .arch-diagram {
+            background: #0d0b14;
+            border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 6px;
+            padding: 2.5rem;
+            font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+            font-size: 0.83rem; color: #9d96b8;
+            line-height: 1.9; white-space: pre; overflow-x: auto;
+        }
+
+        .arch-node  { color: var(--purple-light); font-weight: 600; }
+        .arch-amber { color: var(--amber); }
+        .arch-dim   { color: #4a4560; }
+        .arch-arrow { color: var(--purple-light); }
+
+        /* ── GALLERY ── */
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+        }
+
+        .gallery-item {
+            aspect-ratio: 16/9;
+            background: var(--mid-bg); border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .gallery-placeholder {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #c4bcd8; gap: 0.6rem;
+        }
+
+        .gallery-placeholder span { font-size: 0.8rem; font-family: monospace; color: #a89ec0; }
+
+        .gallery-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 0.5rem 0.75rem;
+            background: rgba(13,11,20,0.8);
+            font-size: 0.78rem; color: white;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--darker);
+            border-top: 1px solid rgba(124,58,237,0.15);
+            color: #6b6080;
+            padding: 3.5rem 4rem 2rem;
+        }
+
+        .footer-inner {
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 3rem; padding-bottom: 2.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 1.75rem;
+        }
+
+        .footer-brand h3 { color: white; font-size: 1rem; margin-bottom: 0.6rem; }
+        .footer-brand p { font-size: 0.84rem; line-height: 1.65; }
+
+        .footer-col h4 {
+            color: var(--amber); font-size: 0.72rem;
+            letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 1rem;
+        }
+
+        .footer-col ul { list-style: none; }
+        .footer-col li { margin-bottom: 0.5rem; }
+        .footer-col a { color: #6b6080; text-decoration: none; font-size: 0.86rem; transition: color 0.2s; }
+        .footer-col a:hover { color: var(--purple-light); }
+
+        .footer-bottom {
+            font-size: 0.8rem; color: #3d3550;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1024px) {
+            .subsystems-grid { grid-template-columns: repeat(2, 1fr); }
+            .team-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid { grid-template-columns: 1fr; }
+            .stats-col { border-right: none; border-bottom: 1px solid var(--border); }
+            .footer-inner { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            section { padding: 3rem 1.5rem; }
+            .hero-content { padding: 0 1.5rem 3rem; }
+            .nav { padding: 0 1.25rem; }
+            .nav-links { display: none; }
+            .subsystems-grid { grid-template-columns: 1fr 1fr; }
+            .team-grid { grid-template-columns: 1fr 1fr; }
+            .gallery-grid { grid-template-columns: 1fr 1fr; }
+            .hero-subctas { grid-template-columns: 1fr; }
+            .footer { padding: 2.5rem 1.5rem; }
+            .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav">
+    <a href="#" class="nav-logo">
+        <div class="nav-logo-mark">HA</div>
+        <span class="nav-logo-text">HoloAssist</span>
+    </a>
+    <ul class="nav-links">
+        <li><a href="#features">Status</a></li>
+        <li><a href="#subsystems">Subsystems</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="docs/">Docs</a></li>
+        <li><a href="https://github.com/John-A-Chen/HoloAssist" target="_blank" class="nav-gh">GitHub →</a></li>
+    </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero" id="overview">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb"></div>
+    <!--
+        Uncomment once screenshots/hero.jpg exists:
+        <img class="hero-screenshot" src="screenshots/hero.jpg" alt="HoloAssist in action">
+    -->
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+        <p class="hero-category">University of Queensland &mdash; RS2 Capstone 2026</p>
+        <div class="hero-accent-line"></div>
+        <h1 class="hero-title">XR-Based<br><span>Human&ndash;Robot</span><br>Collaboration</h1>
+        <p class="hero-desc">
+            HoloAssist integrates a Meta Quest 3 headset with a UR3e collaborative robot for
+            real-time teleoperation, autonomous pick-and-place, and spatial AR visualisation
+            powered by AprilTag cube detection.
+        </p>
+        <div class="hero-cta">
+            <a href="#gallery" class="btn btn-purple">View Demo Gallery</a>
+            <a href="docs/" class="btn btn-outline">Read the Docs</a>
+            <a href="TESTING_GUIDE.md" class="btn btn-amber">Testing Guide</a>
+        </div>
+    </div>
+
+    <div class="hero-subctas">
+        <a href="#subsystems" class="hero-subcta">
+            <div>
+                <h3>Perception Subsystem</h3>
+                <p>AprilTag cube tracking at 20 Hz — single-tag detection</p>
+            </div>
+            <svg width="20" height="12" viewBox="0 0 26 14" fill="none"><path d="M19.15.28 19.23.2c.29-.26.71-.26 1 0l.08.08 5.49 6.22c.24.27.26.66.07.95l-.07.09-5.49 6.22c-.28.32-.77.35-1.08.06-.29-.26-.33-.69-.13-1.01l.07-.09 4.35-4.93H.76C.37 7.78.05 7.49 0 7.11L0 7c0-.39.29-.72.66-.77L.76 6.22l22.76-.001-4.35-4.92c-.26-.29-.26-.72-.02-1.01L19.23.2l-.08.08z" fill="white"/></svg>
+        </a>
+        <a href="#subsystems" class="hero-subcta">
+            <div>
+                <h3>Autonomous Pick-and-Place</h3>
+                <p>MoveIt + OnRobot RG2 gripper on UR3e</p>
+            </div>
+            <svg width="20" height="12" viewBox="0 0 26 14" fill="none"><path d="M19.15.28 19.23.2c.29-.26.71-.26 1 0l.08.08 5.49 6.22c.24.27.26.66.07.95l-.07.09-5.49 6.22c-.28.32-.77.35-1.08.06-.29-.26-.33-.69-.13-1.01l.07-.09 4.35-4.93H.76C.37 7.78.05 7.49 0 7.11L0 7c0-.39.29-.72.66-.77L.76 6.22l22.76-.001-4.35-4.92c-.26-.29-.26-.72-.02-1.01L19.23.2l-.08.08z" fill="white"/></svg>
+        </a>
+    </div>
+</section>
+
+<!-- ── FEATURE STATUS ── -->
+<section class="section-light" id="features">
+    <div class="section-heading">
+        <h2>System Status</h2>
+        <p>All major subsystems operational &mdash; 26 May 2026</p>
+    </div>
+    <div class="feature-grid">
+        <div class="feature-item"><span class="feature-name">UR3e Driver &mdash; Real Robot</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">UR3e Driver &mdash; URSim Docker</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">OnRobot RG2 Gripper (real)</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">OnRobot RG2 Gripper (fake)</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Brio Camera AprilTag Detection</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Single-Tag Cube Detection</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Cube Pose Estimation (3 cubes)</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Cube Persistence in RViz</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Bin Verification (20 Hz)</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Trolley Scene in RViz</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">MoveIt Pick-and-Place Stack</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">E-Stop Dashboard</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">UDP IP Beacon Auto-Discovery</span><span class="status-badge status-working">Working</span></div>
+        <div class="feature-item"><span class="feature-name">Quest 3 &harr; ROS Bridge (:10000)</span><span class="status-badge status-testing">Testing</span></div>
+    </div>
+</section>
+
+<!-- ── SUBSYSTEMS ── -->
+<section class="section-dark subsystems-wrap" id="subsystems">
+    <div class="section-heading">
+        <h2>Subsystems</h2>
+        <p>Four integrated components working together for seamless human&ndash;robot collaboration.</p>
+    </div>
+    <div class="subsystems-grid">
+
+        <a href="docs/perception.html" class="subsystem-card sub-perception">
+            <div class="subsystem-card-bg"></div>
+            <div class="subsystem-card-overlay"></div>
+            <div class="subsystem-card-content">
+                <!-- Eye icon -->
+                <svg class="subsystem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <h3>Perception</h3>
+                <p class="sub-tagline">AprilTag cube tracking</p>
+                <div class="subsystem-lead">Lead &mdash; John Chen</div>
+                <span class="visit-label">View Perception →</span>
+                <span class="card-slider"></span>
+            </div>
+        </a>
+
+        <a href="#" class="subsystem-card sub-autonomous">
+            <div class="subsystem-card-bg"></div>
+            <div class="subsystem-card-overlay"></div>
+            <div class="subsystem-card-content">
+                <!-- Robot arm icon -->
+                <svg class="subsystem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+                </svg>
+                <h3>Autonomous</h3>
+                <p class="sub-tagline">MoveIt pick-and-place</p>
+                <div class="subsystem-lead">Lead &mdash; Oliver</div>
+                <span class="visit-label">View Autonomous →</span>
+                <span class="card-slider"></span>
+            </div>
+        </a>
+
+        <a href="#" class="subsystem-card sub-teleop">
+            <div class="subsystem-card-bg"></div>
+            <div class="subsystem-card-overlay"></div>
+            <div class="subsystem-card-content">
+                <!-- Hand icon -->
+                <svg class="subsystem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/>
+                    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/>
+                </svg>
+                <h3>Teleoperation</h3>
+                <p class="sub-tagline">Hand-gesture control via Quest&nbsp;3</p>
+                <div class="subsystem-lead">Lead &mdash; Nic</div>
+                <span class="visit-label">View Teleoperation →</span>
+                <span class="card-slider"></span>
+            </div>
+        </a>
+
+        <a href="docs/visualisation.html" class="subsystem-card sub-visual">
+            <div class="subsystem-card-bg"></div>
+            <div class="subsystem-card-overlay"></div>
+            <div class="subsystem-card-content">
+                <!-- Headset / AR icon -->
+                <svg class="subsystem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/>
+                    <path d="M3 12h3l2 5h8l2-5h3"/>
+                </svg>
+                <h3>Visualisation</h3>
+                <p class="sub-tagline">AR overlay on Quest 3</p>
+                <div class="subsystem-lead">Lead &mdash; Sebastian</div>
+                <span class="visit-label">View Visualisation →</span>
+                <span class="card-slider"></span>
+            </div>
+        </a>
+
+    </div>
+</section>
+
+<!-- ── TEAM ── -->
+<section class="section-light" id="team">
+    <div class="section-heading">
+        <h2>Meet the Team</h2>
+        <p>Four engineers building the bridge between humans and robots.<br>
+           Add photos to <code>screenshots/team/</code> to replace the placeholders.</p>
+    </div>
+    <div class="team-grid">
+
+        <div class="team-card">
+            <div class="team-card-image">
+                <!-- <img src="screenshots/team/john.jpg" alt="John Chen"> -->
+                <div class="team-placeholder">
+                    <div class="team-initials">JC</div>
+                </div>
+                <div class="team-arrow">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 8L8 2M8 2H3M8 2v5" stroke="#1a1730" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+            </div>
+            <div class="team-card-body">
+                <h3>John Chen</h3>
+                <div class="team-role">Perception Lead</div>
+                <p>AprilTag detection pipeline, cube pose estimation, hand-eye calibration, and TF race condition fixes.</p>
+            </div>
+        </div>
+
+        <div class="team-card">
+            <div class="team-card-image">
+                <!-- <img src="screenshots/team/oliver.jpg" alt="Oliver"> -->
+                <div class="team-placeholder"><div class="team-initials">OL</div></div>
+                <div class="team-arrow">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 8L8 2M8 2H3M8 2v5" stroke="#1a1730" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+            </div>
+            <div class="team-card-body">
+                <h3>Oliver</h3>
+                <div class="team-role">Autonomous Lead</div>
+                <p>MoveIt pick-and-place stack, trajectory planning, and gripper integration for autonomous cube sorting.</p>
+            </div>
+        </div>
+
+        <div class="team-card">
+            <div class="team-card-image">
+                <!-- <img src="screenshots/team/nic.jpg" alt="Nic"> -->
+                <div class="team-placeholder"><div class="team-initials">NC</div></div>
+                <div class="team-arrow">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 8L8 2M8 2H3M8 2v5" stroke="#1a1730" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+            </div>
+            <div class="team-card-body">
+                <h3>Nic</h3>
+                <div class="team-role">Teleoperation Lead</div>
+                <p>Hand-gesture recognition via Quest 3, ROS-TCP bridge, and real-time robot control from XR input.</p>
+            </div>
+        </div>
+
+        <div class="team-card">
+            <div class="team-card-image">
+                <!-- <img src="screenshots/team/sebastian.jpg" alt="Sebastian"> -->
+                <div class="team-placeholder"><div class="team-initials">SB</div></div>
+                <div class="team-arrow">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 8L8 2M8 2H3M8 2v5" stroke="#1a1730" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+            </div>
+            <div class="team-card-body">
+                <h3>Sebastian</h3>
+                <div class="team-role">Visualisation Lead</div>
+                <p>Unity AR overlays on Quest 3, robot spatial rendering, and the operator HMI interface design.</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ── STATS ── -->
+<section class="section-mid" id="stats">
+    <div class="section-heading">
+        <h2>System Specs</h2>
+    </div>
+    <div class="stats-grid">
+
+        <div class="stats-col">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </div>
+                <div class="stat-label">AprilTag Cubes</div>
+                <div class="stat-number">3</div>
+                <div class="stat-sub">physical 40 mm cubes (36h11)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+                    </svg>
+                </div>
+                <div class="stat-label">Detection Rate</div>
+                <div class="stat-number">20</div>
+                <div class="stat-sub">Hz — timer-based (TF safe)</div>
+            </div>
+        </div>
+
+        <div class="stats-col">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                    </svg>
+                </div>
+                <div class="stat-label">Robot Platform</div>
+                <div class="stat-number" style="font-size:1.8rem; padding: 0.4rem 0;">UR3e</div>
+                <div class="stat-sub">Universal Robots + OnRobot RG2 gripper</div>
+            </div>
+            <div class="stat-item" style="border-bottom: none;">
+                <div class="stat-quote-wrap" style="padding: 0;">
+                    <blockquote class="stat-quote">
+                        "Single-tag detection now works — a cube materialises the moment one face is visible. The TF race condition fix was the key."
+                    </blockquote>
+                    <div class="quote-attr">John Chen, Perception Lead</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-col">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/>
+                    </svg>
+                </div>
+                <div class="stat-label">XR Headset</div>
+                <div class="stat-number" style="font-size:1.8rem; padding: 0.4rem 0;">Quest 3</div>
+                <div class="stat-sub">Meta Quest 3 via ROS-TCP :10000</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                    </svg>
+                </div>
+                <div class="stat-label">Bin XY Margin</div>
+                <div class="stat-number">8</div>
+                <div class="stat-sub">cm tolerance — tunable in cubes.yaml</div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ── ARCHITECTURE ── -->
+<section class="section-darker" id="architecture">
+    <div class="section-heading">
+        <h2>System Architecture</h2>
+        <p>Data flows from Brio camera through ROS 2 to the UR3e and Quest 3.</p>
+    </div>
+    <div class="arch-wrap">
+        <div class="arch-diagram"><span class="arch-node">Brio / RealSense Camera</span>
+<span class="arch-dim">    │  /camera/camera/color/image_raw  (30 fps)</span>
+    ▼
+<span class="arch-node">AprilTag Detector</span>  <span class="arch-amber">[apriltag_ros]</span>
+<span class="arch-dim">    │  /detections_all</span>
+    ▼
+<span class="arch-node">Cube Pose Node</span>  <span class="arch-amber">[20 Hz timer — TF race fix]</span>
+<span class="arch-dim">    │  /holoassist/perception/april_cube_N_pose    (PoseStamped)</span>
+<span class="arch-dim">    │  /holoassist/perception/april_cube_N_bin_check</span>
+<span class="arch-dim">    │  freeze at last pos on tag loss</span>
+    ▼
+<span class="arch-node">MoveIt Pick-and-Place</span>  <span class="arch-amber">[scaled_joint_trajectory_controller]</span>
+    ▼
+<span class="arch-node">UR3e + OnRobot RG2</span>
+<span class="arch-dim">    │  /joint_states  TF tree</span>
+    ▼
+<span class="arch-node">RViz</span>  +  <span class="arch-node">ROS-TCP Endpoint :10000</span>
+              <span class="arch-dim">│</span>
+       <span class="arch-node">Quest 3  (Unity)</span>
+        <span class="arch-amber">AR overlay + teleop controls</span></div>
+    </div>
+</section>
+
+<!-- ── GALLERY ── -->
+<section class="section-light" id="gallery">
+    <div class="section-heading">
+        <h2>Gallery</h2>
+        <p>Add images / GIFs to <code>screenshots/</code> and uncomment the <code>&lt;img&gt;</code> tags below.</p>
+    </div>
+    <div class="gallery-grid">
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/rviz_cubes.png" alt="RViz cube detection"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span>rviz_cubes.png</span>
+            </div>
+            <div class="gallery-label">RViz — 3 cubes detected</div>
+        </div>
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/quest_ar_overlay.png" alt="Quest 3 AR overlay"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span>quest_ar_overlay.png</span>
+            </div>
+            <div class="gallery-label">Quest 3 AR overlay</div>
+        </div>
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/robot_pick_place.png" alt="Robot pick and place"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span>robot_pick_place.png</span>
+            </div>
+            <div class="gallery-label">UR3e pick-and-place</div>
+        </div>
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/dashboard.png" alt="E-stop dashboard"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span>dashboard.png</span>
+            </div>
+            <div class="gallery-label">E-stop dashboard</div>
+        </div>
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/calibration.png" alt="Hand-eye calibration"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span>calibration.png</span>
+            </div>
+            <div class="gallery-label">Hand-eye calibration</div>
+        </div>
+
+        <div class="gallery-item">
+            <!-- <img src="screenshots/april_tag_detection.gif" alt="AprilTag detection GIF"> -->
+            <div class="gallery-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9d8fc4" stroke-width="1.5">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>april_tag_detection.gif</span>
+            </div>
+            <div class="gallery-label">AprilTag single-tag detection</div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <h3>HoloAssist</h3>
+            <p>XR-Based Human–Robot Collaboration Framework integrating a Meta Quest 3
+               headset with a Universal Robots UR3e for spatial AR, teleoperation,
+               and autonomous pick-and-place via AprilTag perception.</p>
+            <p style="margin-top:0.75rem; color: #4a4060;">University of Queensland &mdash; RS2 Capstone 2026</p>
+        </div>
+        <div class="footer-col">
+            <h4>Docs</h4>
+            <ul>
+                <li><a href="docs/">Overview</a></li>
+                <li><a href="docs/running.html">Running the System</a></li>
+                <li><a href="docs/perception.html">Perception</a></li>
+                <li><a href="docs/robot.html">Robot Control</a></li>
+                <li><a href="docs/visualisation.html">Visualisation</a></li>
+                <li><a href="docs/calibration.html">Calibration</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Repository</h4>
+            <ul>
+                <li><a href="https://github.com/John-A-Chen/HoloAssist" target="_blank">GitHub</a></li>
+                <li><a href="https://github.com/John-A-Chen/HoloAssist/issues" target="_blank">Issues</a></li>
+                <li><a href="TESTING_GUIDE.md">Testing Guide</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Quick Start</h4>
+            <ul>
+                <li><a href="docs/running.html#option-a-real-robot">Real Robot</a></li>
+                <li><a href="docs/running.html#option-b-ursim-docker-simulator">URSim</a></li>
+                <li><a href="docs/running.html#option-c-fully-fake-hardware">Fully Fake</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>&copy; 2026 HoloAssist Team &mdash; University of Queensland</span>
+        <span style="color:#3d3550;">Questions &rarr; John Chen</span>
+    </div>
+</footer>
+
+</body>
+</html>
