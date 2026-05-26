@@ -57,7 +57,7 @@ public class RobotController : MonoBehaviour
     [Tooltip("Manipulability threshold — increases damping when near singularities.")]
     public float singularityThreshold = 0.01f;
     [Tooltip("Maximum damping applied near singularities.")]
-    public float maxDamping = 0.5f;
+    public float maxDamping = 0.3f;
 
     [Header("Input")]
     public InputActionAsset inputActions;
@@ -213,11 +213,15 @@ public class RobotController : MonoBehaviour
 
         robotMap.Enable();
 
-        // X button (left controller) — toggle Translate/Rotate sub-mode in RMRC
-        // Disabled — X button is owned by Sebastian's UI features (TF axes toggle via RadialMenu).
-        // RMRC sub-mode toggle is now accessible via RadialMenu → "RMRC Mode" button.
+        // X button (left controller) — toggle Translate/Rotate sub-mode in RMRC.
+        // Verified free across RobotControlActions, MRTemplateInputActions, and
+        // XRI Default Input Actions — no other binding listens to LeftHand/primaryButton.
+        // The handler at HandleModeSwitch (search "RMRC && toggleSubModeAction")
+        // is gated by `mode == ControlMode.RMRC`, so X-press is a no-op in
+        // DirectJoint and HandGuide. The radial menu's "RMRC Mode" button still
+        // works in parallel — both fire ToggleRMRCSubMode in RMRC.
         toggleSubModeAction = new InputAction("ToggleSubMode", InputActionType.Button, "<XRController>{LeftHand}/primaryButton");
-        // toggleSubModeAction.Enable();
+        toggleSubModeAction.Enable();
 
         // Right grip trigger — Hand Guide engage
         gripAction = new InputAction("Grip", InputActionType.Value, "<XRController>{RightHand}/grip");
@@ -259,11 +263,19 @@ public class RobotController : MonoBehaviour
         gripperPressedActionLeft.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/triggerPressed");
         gripperPressedActionLeft.Enable();
 
-        // Y button (left controller) — toggle EE lock-down
-        // Disabled — Y button is owned by Sebastian's RadialMenu (open/close menu).
-        // EE lock-down toggle is now accessible via RadialMenu → "EE Lock" button.
-        lockDownAction = new InputAction("LockDown", InputActionType.Button, "<XRController>{LeftHand}/secondaryButton");
-        // lockDownAction.Enable();
+        // EE Lock-Down — bound to LEFT thumbstick CLICK so the operator can
+        // toggle it without releasing the right trigger (which is the gripper).
+        // Y button is still owned by RadialMenu (open/close); previously the
+        // EE Lock was only reachable via the radial menu, which required the
+        // right trigger to select — incompatible with mid-grip use.
+        lockDownAction = new InputAction("LockDown", InputActionType.Button);
+        lockDownAction.AddBinding("<XRController>{LeftHand}/primary2DAxisClick");
+        lockDownAction.AddBinding("<XRController>{LeftHand}/thumbstickClicked");
+        lockDownAction.AddBinding("<OculusTouchController>{LeftHand}/primary2DAxisClick");
+        lockDownAction.AddBinding("<OculusTouchController>{LeftHand}/thumbstickClicked");
+        lockDownAction.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/primary2DAxisClick");
+        lockDownAction.AddBinding("<MetaQuestTouchPlusController>{LeftHand}/thumbstickClicked");
+        lockDownAction.Enable();
     }
 
     void DisableConflictingXRIActions()

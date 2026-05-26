@@ -24,10 +24,13 @@ public class CubePoseSubscriber : MonoBehaviour
     public GameObject defaultPrefab;
 
     [Header("Settings")]
-    [Tooltip("Seconds without a pose update before hiding the object")]
+    [Tooltip("Seconds without a pose update before hiding the object (only applies when persistOnTagLoss = false)")]
     public float poseTimeout = 3.0f;
 
-    [Tooltip("Position smoothing (0 = snap, higher = smoother)")]
+    [Tooltip("When true, cubes stay visible at their last known pose even after poseTimeout expires — kills the blink-on-occlusion behaviour. When false (legacy), cubes hide after poseTimeout and respawn on next detection.")]
+    public bool persistOnTagLoss = false;
+
+    [Tooltip("Position smoothing (0 = snap to perception update, higher = smoother per-frame lerp). Set to 0 for event-driven visual updates that only move when a new pose arrives.")]
     [Range(0f, 0.95f)]
     public float smoothing = 0.5f;
 
@@ -49,6 +52,20 @@ public class CubePoseSubscriber : MonoBehaviour
     [Tooltip("Reject incoming poses that differ from the current averaged position by more than this distance (metres). 0 = no rejection (let outliers in).")]
     public float outlierRejectDistance = 0f;
 
+    [Header("Task System Integration")]
+
+    [Tooltip("Master toggle. When off, spawned cubes are untagged (preserves pre-tagging behaviour). When on, each spawned cube gets an ObjectClass component using the arrays below — so it counts for BinDetector / TaskTracker on drop.")]
+    public bool tagSpawnedCubes = false;
+
+    [Tooltip("Class name per cube (index 0 = cube_1). Used by TaskTracker's OneOfEachClass mode + status display. Empty string skips tagging for that one cube. If shorter than cubeCount, missing entries fall back to \"cube_N\".")]
+    public string[] cubeClassNames = { "red", "green", "blue", "yellow" };
+
+    [Tooltip("isGood per cube (index 0 = cube_1). True = sorting this into any bin counts as correct. False = counts as wrong (red flash + ✗ counter). If shorter than cubeCount, missing entries default to true.")]
+    public bool[] cubeIsGood = { true, true, true, true };
+
+    [Tooltip("If a Collider is missing on the spawned instance, add a BoxCollider sized from objectScale so BinDetector triggers fire on entry. Skip if your prefab already has its own collider.")]
+    public bool autoAddCollider = true;
+
     private class CubeState
     {
         public GameObject instance;
@@ -56,6 +73,7 @@ public class CubePoseSubscriber : MonoBehaviour
         public Vector3 targetPosition;
         public Quaternion targetRotation;
         public bool visible;
+        public bool stale; // persistOnTagLoss mode: true after poseTimeout, reset on next pose
         public string name;
         public Queue<Vector3> positionBuffer = new Queue<Vector3>();
         public Queue<Quaternion> rotationBuffer = new Queue<Quaternion>();
@@ -101,17 +119,29 @@ public class CubePoseSubscriber : MonoBehaviour
 
             if (now - state.lastReceived > poseTimeout)
             {
-                if (state.visible)
+                if (persistOnTagLoss)
+                {
+                    // Persist mode: leave the cube visible at its last known pose.
+                    // Clear buffers exactly once on the transition so a future
+                    // detection starts a fresh moving average instead of blending
+                    // with poses from before the gap.
+                    if (state.visible && !state.stale)
+                    {
+                        state.positionBuffer.Clear();
+                        state.rotationBuffer.Clear();
+                        state.stale = true;
+                    }
+                }
+                else if (state.visible)
                 {
                     state.instance.SetActive(false);
                     state.visible = false;
-                    // Drop stale samples — when the cube reappears it should
-                    // start a fresh moving average, not blend with old poses.
                     state.positionBuffer.Clear();
                     state.rotationBuffer.Clear();
                 }
                 continue;
             }
+            state.stale = false;
 
             if (!state.visible)
             {
@@ -264,6 +294,35 @@ public class CubePoseSubscriber : MonoBehaviour
         }
 
         obj.name = $"VirtualCube_{cubeIndex}";
+
+        // Ensure Collider so BinDetector trigger fires on entry. Skipped if the
+        // prefab already provides one (anywhere in its hierarchy).
+        if (autoAddCollider && obj.GetComponentInChildren<Collider>() == null)
+        {
+            var box = obj.AddComponent<BoxCollider>();
+            box.size = Vector3.one * objectScale;
+        }
+
+        // Tag with ObjectClass so the cube participates in TaskTracker. Prefab-
+        // baked ObjectClass wins automatically — we skip if one already exists
+        // anywhere in the hierarchy. Empty className entries skip a single cube.
+        if (tagSpawnedCubes && obj.GetComponentInChildren<ObjectClass>() == null)
+        {
+            int idx = cubeIndex - 1;
+            string className = (cubeClassNames != null && idx >= 0 && idx < cubeClassNames.Length)
+                ? cubeClassNames[idx]
+                : $"cube_{cubeIndex}";
+            bool isGood = (cubeIsGood != null && idx >= 0 && idx < cubeIsGood.Length)
+                ? cubeIsGood[idx]
+                : true;
+            if (!string.IsNullOrEmpty(className))
+            {
+                var oc = obj.AddComponent<ObjectClass>();
+                oc.className = className;
+                oc.isGood = isGood;
+            }
+        }
+
         obj.SetActive(false);
         return obj;
     }
