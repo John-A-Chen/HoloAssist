@@ -8,6 +8,7 @@ Runs rclpy in a background thread; all public methods are thread-safe.
 
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -120,6 +121,8 @@ class DashboardStatus:
     pick_place_state: str = ""
     pick_place_error: str = ""
     pick_place_error_detail: str = ""
+    camera_type: str = ""   # "realsense", "webcam", "brio", or ""
+    headset_type: str = ""  # "quest2", "quest3", or ""
     # Rolling graph data (downsampled for display)
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
@@ -186,7 +189,9 @@ class RosInterface:
         self._pick_place_status_lines: deque = deque(maxlen=40)
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
         self._operating_mode: OperatingMode = OperatingMode.TELEOP
+        self._fake_hardware: bool = False  # set by _check_controller_status on startup
         self._pick_cube_client = None
+        self._camera_reconfigure_pub = None
 
     def start(self):
         """Initialize rclpy and start spinning in a background thread."""
@@ -305,9 +310,27 @@ class RosInterface:
             self._pick_place_status_cb, 10,
         )
 
+        # Camera type (published by launch/camera node, or auto-detected)
+        self._node.create_subscription(
+            String, "/holo_assist/camera_type",
+            self._camera_type_cb, 10,
+        )
+
+        # Headset type (published by headset app)
+        self._node.create_subscription(
+            String, "/headset/device_type",
+            self._headset_type_cb, 10,
+        )
+
+        # Camera reconfigure publisher
+        self._camera_reconfigure_pub = self._node.create_publisher(
+            String, "/holo_assist/camera_reconfigure", 10,
+        )
+
         # Sampling timers for rolling graph data
         self._node.create_timer(0.1, self._sample_velocities)   # 10Hz
         self._node.create_timer(0.5, self._sample_rates)        # 2Hz
+        self._node.create_timer(2.0, self._detect_camera_type)  # 0.5Hz node scan
 
         self._running = True
         with self._lock:
@@ -445,6 +468,41 @@ class RosInterface:
         except (json.JSONDecodeError, Exception):
             pass
 
+    def _camera_type_cb(self, msg):
+        with self._lock:
+            self._status.camera_type = msg.data.strip().lower()
+
+    def _headset_type_cb(self, msg):
+        with self._lock:
+            self._status.headset_type = msg.data.strip().lower()
+
+    def _detect_camera_type(self):
+        """Auto-detect camera type from running node names (runs every 2s)."""
+        if not ROS_AVAILABLE or self._node is None:
+            return
+        with self._lock:
+            if self._status.camera_type:
+                return  # already known from explicit topic
+        try:
+            node_names = self._node.get_node_names()
+        except Exception:
+            return
+        cam = ""
+        for name in node_names:
+            n = name.lower()
+            if "realsense" in n or "rs_camera" in n:
+                cam = "realsense"
+                break
+            if "brio" in n:
+                cam = "brio"
+                break
+            if "webcam" in n:
+                cam = "webcam"
+                break
+        if cam:
+            with self._lock:
+                self._status.camera_type = cam
+
     def _pick_place_status_cb(self, msg):
         now = time.time()
         raw = msg.data
@@ -577,25 +635,61 @@ class RosInterface:
             self._publish_zeros(count=1)
             self._safety_stop.wait(timeout=interval)
 
-    def _deactivate_controller(self):
+    def _switch_controllers(self, activate: list, deactivate: list) -> tuple:
+        """Switch controllers via ros2 service call. Returns (success: bool, error: str)."""
+        def _fmt(names):
+            if not names:
+                return "[]"
+            return "[" + ", ".join(f"'{n}'" for n in names) + "]"
+
+        yaml_args = (
+            f"{{activate_controllers: {_fmt(activate)}, "
+            f"deactivate_controllers: {_fmt(deactivate)}, "
+            f"strictness: 1}}"
+        )
         try:
             result = subprocess.run(
-                ["ros2", "control", "switch_controllers",
-                 "--deactivate",
-                 "forward_velocity_controller",
-                 "finger_width_controller",
-                 "scaled_joint_trajectory_controller",
-                 "finger_width_trajectory_controller"],
-                capture_output=True, text=True, timeout=10,
+                ["ros2", "service", "call",
+                 "/controller_manager/switch_controller",
+                 "controller_manager_msgs/srv/SwitchController",
+                 yaml_args],
+                capture_output=True, text=True, timeout=15,
             )
-            if result.returncode == 0:
-                self._add_event("Teleop and MoveIt controllers deactivated")
+            if result.returncode != 0:
+                return False, result.stderr.strip() or result.stdout.strip()
+            if "ok=False" in result.stdout:
+                return False, "controller_manager returned ok=False"
+            return True, ""
+        except subprocess.TimeoutExpired:
+            return False, "service call timed out"
+        except Exception as e:
+            return False, str(e)
+
+    def _deactivate_controller(self):
+        with self._lock:
+            mode = self._operating_mode
+
+        if self._fake_hardware:
+            ok, err = self._switch_controllers([], ["joint_trajectory_controller"])
+            if ok:
+                self._add_event("Fake HW: joint_trajectory_controller deactivated")
                 with self._lock:
                     self._status.controller_active = False
             else:
-                self._add_event(f"Controller deactivation failed: {result.stderr.strip()}")
-        except Exception as e:
-            self._add_event(f"Controller deactivation error: {e}")
+                self._add_event(f"Fake HW: controller deactivation failed: {err}")
+            return
+
+        if mode == OperatingMode.MOVEIT:
+            to_deactivate = ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"]
+        else:
+            to_deactivate = ["forward_velocity_controller", "finger_width_controller"]
+        ok, err = self._switch_controllers([], to_deactivate)
+        if ok:
+            self._add_event(f"{mode.name} controllers deactivated")
+            with self._lock:
+                self._status.controller_active = False
+        else:
+            self._add_event(f"Controller deactivation failed: {err}")
 
     # ── RESUME ──────────────────────────────────────────────────────
 
@@ -615,30 +709,10 @@ class RosInterface:
         ).start()
 
     def _activate_controller(self, target_mode: OperatingMode):
-        if target_mode == OperatingMode.MOVEIT:
-            command = [
-                "ros2", "control", "switch_controllers",
-                "--activate", "scaled_joint_trajectory_controller",
-                "finger_width_trajectory_controller",
-                "--deactivate", "forward_velocity_controller",
-                "finger_width_controller",
-            ]
-            success_message = "MOVEIT controllers reactivated - pick/place live"
-        else:
-            command = [
-                "ros2", "control", "switch_controllers",
-                "--activate", "forward_velocity_controller", "finger_width_controller",
-                "--deactivate", "scaled_joint_trajectory_controller",
-                "finger_width_trajectory_controller",
-            ]
-            success_message = "forward_velocity_controller reactivated - ROBOT LIVE"
-
-        try:
-            result = subprocess.run(
-                command, capture_output=True, text=True, timeout=10,
-            )
-            if result.returncode == 0:
-                self._add_event(success_message)
+        if self._fake_hardware:
+            ok, err = self._switch_controllers(["joint_trajectory_controller"], [])
+            if ok:
+                self._add_event("Fake HW: joint_trajectory_controller reactivated - ROBOT LIVE")
                 with self._lock:
                     self._status.robot_state = RobotState.RUNNING
                     self._status.controller_active = True
@@ -646,11 +720,31 @@ class RosInterface:
                 if target_mode == OperatingMode.MOVEIT:
                     self._publish_pick_place_mode("run")
             else:
-                self._add_event(f"Controller activation failed: {result.stderr.strip()}")
+                self._add_event(f"Fake HW: controller activation failed: {err}")
                 with self._lock:
                     self._status.robot_state = RobotState.ESTOPPED
-        except Exception as e:
-            self._add_event(f"Controller activation error: {e}")
+            return
+
+        if target_mode == OperatingMode.MOVEIT:
+            activate = ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"]
+            deactivate = ["forward_velocity_controller", "finger_width_controller"]
+            success_message = "MOVEIT controllers reactivated - pick/place live"
+        else:
+            activate = ["forward_velocity_controller", "finger_width_controller"]
+            deactivate = ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"]
+            success_message = "forward_velocity_controller reactivated - ROBOT LIVE"
+
+        ok, err = self._switch_controllers(activate, deactivate)
+        if ok:
+            self._add_event(success_message)
+            with self._lock:
+                self._status.robot_state = RobotState.RUNNING
+                self._status.controller_active = True
+                self._status.estop_zero_count = 0
+            if target_mode == OperatingMode.MOVEIT:
+                self._publish_pick_place_mode("run")
+        else:
+            self._add_event(f"Controller activation failed: {err}")
             with self._lock:
                 self._status.robot_state = RobotState.ESTOPPED
 
@@ -659,17 +753,58 @@ class RosInterface:
     def _check_controller_status(self):
         try:
             result = subprocess.run(
-                ["ros2", "control", "list_controllers"],
+                ["ros2", "service", "call",
+                 "/controller_manager/list_controllers",
+                 "controller_manager_msgs/srv/ListControllers",
+                 "{}"],
                 capture_output=True, text=True, timeout=10,
             )
-            if result.returncode == 0:
-                for line in result.stdout.splitlines():
-                    if "forward_velocity_controller" in line:
-                        active = "active" in line and "inactive" not in line
-                        with self._lock:
-                            self._status.controller_active = active
-                        self._add_event(f"forward_velocity_controller is {'active' if active else 'inactive'}")
-                        return
+            if result.returncode != 0:
+                self._add_event(f"Could not check controllers: {result.stderr.strip()}")
+                return
+
+            out = result.stdout
+            # Fake hardware: both joint_trajectory_controller AND
+            # scaled_joint_trajectory_controller are loaded, but
+            # forward_velocity_controller is never activated (UR driver
+            # spawner does not activate teleop controllers on fake hardware).
+            has_fvc = "'forward_velocity_controller'" in out
+            has_scaled_active = (
+                "name='scaled_joint_trajectory_controller'" in out
+                and "label='active'" in out
+            )
+
+            if has_scaled_active and not has_fvc:
+                # scaled controller active but teleop controllers absent → fake HW
+                self._fake_hardware = True
+                self._add_event("Fake hardware detected — controller switching disabled")
+                with self._lock:
+                    self._status.controller_active = True
+                return
+
+            m = re.search(
+                r"name='forward_velocity_controller'.*?label='(\w+)'",
+                out,
+                re.DOTALL,
+            )
+            m_scaled = re.search(
+                r"name='scaled_joint_trajectory_controller'.*?label='(\w+)'",
+                out,
+                re.DOTALL,
+            )
+            if m:
+                fvc_active = m.group(1) == "active"
+                with self._lock:
+                    self._status.controller_active = fvc_active
+                self._add_event(
+                    f"forward_velocity_controller is {'active' if fvc_active else 'inactive'}"
+                )
+                if not fvc_active and m_scaled and m_scaled.group(1) == "active":
+                    self._operating_mode = OperatingMode.MOVEIT
+                    with self._lock:
+                        self._status.controller_active = True
+                    self._add_event("Detected MoveIt startup mode (trajectory controllers active)")
+            else:
                 self._add_event("forward_velocity_controller not found in controller list")
         except Exception as e:
             self._add_event(f"Could not check controllers: {e}")
@@ -750,6 +885,8 @@ class RosInterface:
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
+                camera_type=self._status.camera_type,
+                headset_type=self._status.headset_type,
             )
         return status
 
@@ -883,6 +1020,42 @@ class RosInterface:
             self._status.last_pick_success = success
             self._status.last_pick_message = message
 
+    def reconfigure_camera(self, width: int, height: int, fps: float):
+        """Publish camera reconfigure and attempt ros2 param set on the active camera node."""
+        if ROS_AVAILABLE and self._camera_reconfigure_pub is not None:
+            msg = String()
+            msg.data = f"{width}x{height}@{fps:.0f}"
+            self._camera_reconfigure_pub.publish(msg)
+
+        with self._lock:
+            cam_type = self._status.camera_type
+
+        def _do():
+            profile = f"{width}x{height}x{int(fps)}"
+            if "realsense" in cam_type:
+                for node in ("/camera/camera", "/camera"):
+                    for param in ("color_module.color_profile", "depth_module.depth_profile"):
+                        try:
+                            subprocess.run(
+                                ["ros2", "param", "set", node, param, profile],
+                                capture_output=True, text=True, timeout=3,
+                            )
+                        except Exception:
+                            pass
+            else:
+                for node in ("/holo_assist_webcam_image_publisher", "/usb_cam"):
+                    for param, val in [("width", str(width)), ("height", str(height)), ("fps", str(fps))]:
+                        try:
+                            subprocess.run(
+                                ["ros2", "param", "set", node, param, val],
+                                capture_output=True, text=True, timeout=3,
+                            )
+                        except Exception:
+                            pass
+            self._add_event(f"Camera reconfigure: {width}×{height}@{int(fps)}Hz")
+
+        threading.Thread(target=_do, daemon=True).start()
+
     # ── MODE SWITCHING ─────────────────────────────────────────────
 
     def switch_to_teleop(self):
@@ -898,38 +1071,38 @@ class RosInterface:
         threading.Thread(target=self._do_switch_moveit, daemon=True).start()
 
     def _do_switch_teleop(self):
-        try:
-            result = subprocess.run(
-                ["ros2", "control", "switch_controllers",
-                 "--activate", "forward_velocity_controller", "finger_width_controller",
-                 "--deactivate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
-                capture_output=True, text=True, timeout=10,
-            )
-            if result.returncode == 0:
-                self._add_event("TELEOP mode active (velocity + gripper controllers)")
-                with self._lock:
-                    self._status.controller_active = True
-            else:
-                self._add_event(f"TELEOP switch failed: {result.stderr.strip()}")
-        except Exception as e:
-            self._add_event(f"TELEOP switch error: {e}")
+        if self._fake_hardware:
+            self._add_event("Fake hardware: TELEOP mode (UI only — no controller switch)")
+            with self._lock:
+                self._status.controller_active = True
+            return
+        ok, err = self._switch_controllers(
+            ["forward_velocity_controller", "finger_width_controller"],
+            ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
+        )
+        if ok:
+            self._add_event("TELEOP mode active (velocity + gripper controllers)")
+            with self._lock:
+                self._status.controller_active = True
+        else:
+            self._add_event(f"TELEOP switch failed: {err}")
 
     def _do_switch_moveit(self):
-        try:
-            result = subprocess.run(
-                ["ros2", "control", "switch_controllers",
-                 "--activate", "scaled_joint_trajectory_controller", "finger_width_trajectory_controller",
-                 "--deactivate", "forward_velocity_controller", "finger_width_controller"],
-                capture_output=True, text=True, timeout=10,
-            )
-            if result.returncode == 0:
-                self._add_event("MOVEIT mode active (trajectory controllers)")
-                with self._lock:
-                    self._status.controller_active = True
-            else:
-                self._add_event(f"MOVEIT switch failed: {result.stderr.strip()}")
-        except Exception as e:
-            self._add_event(f"MOVEIT switch error: {e}")
+        if self._fake_hardware:
+            self._add_event("Fake hardware: MOVEIT mode (UI only — no controller switch)")
+            with self._lock:
+                self._status.controller_active = True
+            return
+        ok, err = self._switch_controllers(
+            ["scaled_joint_trajectory_controller", "finger_width_trajectory_controller"],
+            ["forward_velocity_controller", "finger_width_controller"],
+        )
+        if ok:
+            self._add_event("MOVEIT mode active (trajectory controllers)")
+            with self._lock:
+                self._status.controller_active = True
+        else:
+            self._add_event(f"MOVEIT switch failed: {err}")
 
     # ── SHUTDOWN ────────────────────────────────────────────────────
 

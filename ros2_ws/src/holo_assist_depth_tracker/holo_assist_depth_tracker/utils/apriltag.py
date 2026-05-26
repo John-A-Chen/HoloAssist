@@ -15,9 +15,11 @@ def candidate_tag_frame_names(tag_family: str, tag_id: int, explicit_name: str =
     candidates.extend(
         [
             f"tag{tag_family}:{int(tag_id)}",
+            f"tag{tag_family}_{int(tag_id)}",
             f"tag{int(tag_id)}",
             f"tag_{int(tag_id)}",
             f"{tag_family}:{int(tag_id)}",
+            f"{tag_family}_{int(tag_id)}",
             f"apriltag_{int(tag_id)}",
         ]
     )

@@ -36,12 +36,14 @@ def generate_launch_description() -> LaunchDescription:
     )
     use_fake_gripper_hardware_arg = DeclareLaunchArgument(
         "use_fake_gripper_hardware",
-        default_value="true",
-        description="Keep the UR arm real but use fake OnRobot gripper hardware.",
+        default_value="false",
+        description=(
+            "Describe the OnRobot gripper as fake hardware while keeping the UR arm real."
+        ),
     )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
+        default_value="0.0",
     )
     controller_spawner_timeout_arg = DeclareLaunchArgument(
         "controller_spawner_timeout",
@@ -57,7 +59,6 @@ def generate_launch_description() -> LaunchDescription:
             "start_perception": "false",
             "start_rosbridge": "false",
             "start_selected_cube_adapter": "false",
-            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
             "allow_pose_goal_fallback": "false",
             "pick_place_orientation_mode": "fixed",
             "use_rviz": LaunchConfiguration("use_rviz"),
@@ -66,6 +67,7 @@ def generate_launch_description() -> LaunchDescription:
             "cartesian_retime_velocity_scale": LaunchConfiguration(
                 "cartesian_retime_velocity_scale"
             ),
+            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
             "controller_spawner_timeout": LaunchConfiguration(
                 "controller_spawner_timeout"
             ),

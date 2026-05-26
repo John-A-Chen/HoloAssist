@@ -14,6 +14,7 @@ Window: 1280x800 (Steam Deck OLED native resolution)
 """
 
 import math
+import signal
 import sys
 import time
 from datetime import datetime
@@ -23,10 +24,11 @@ from PyQt5.QtGui import QFont, QKeyEvent, QPainter, QColor, QPen
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTabWidget, QTextEdit, QGridLayout,
-    QFrame, QProgressBar, QSizePolicy, QStackedWidget,
+    QFrame, QProgressBar, QSizePolicy, QStackedWidget, QComboBox,
 )
 
 from ros_interface import RosInterface, RobotState, OperatingMode, ROS_AVAILABLE, TOPIC_DEFAULTS
+from net_interface import NetInterface
 
 
 # ── Colours ─────────────────────────────────────────────────────────
@@ -42,48 +44,70 @@ YELLOW = "#d29922"
 BLUE = "#58a6ff"
 ORANGE = "#f0883e"
 
+BASE_WINDOW_WIDTH = 1280
+BASE_WINDOW_HEIGHT = 800
+ESTOP_WIDTH_RATIO = 400 / BASE_WINDOW_WIDTH
 
-GLOBAL_STYLE = f"""
-    QMainWindow, QWidget {{
-        background-color: {DARK_BG};
-        color: {TEXT};
-    }}
-    QLabel {{
-        color: {TEXT};
-    }}
-    QTabWidget::pane {{
-        border: 1px solid {BORDER};
-        background: {PANEL_BG};
-    }}
-    QTabBar::tab {{
-        background: {DARK_BG};
-        color: {TEXT_DIM};
-        padding: 4px 14px;
-        margin-right: 2px;
-        border: 1px solid {BORDER};
-        border-bottom: none;
-        font-size: 8px;
-        font-weight: bold;
-    }}
-    QTabBar::tab:selected {{
-        background: {PANEL_BG};
-        color: {BLUE};
-        border-bottom: 2px solid {BLUE};
-    }}
-    QTabBar::tab:hover {{
-        color: {TEXT};
-    }}
-    QTextEdit {{
-        background-color: {DARK_BG};
-        color: {TEXT};
-        border: 1px solid {BORDER};
-        font-family: monospace;
-        font-size: 8px;
-    }}
-    QFrame#separator {{
-        background-color: {BORDER};
-    }}
-"""
+
+def _clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+def _scaled_px(base_px: float, scale: float, min_px: int = 1) -> int:
+    return max(min_px, int(round(base_px * scale)))
+
+
+def _window_scale(window_width: int) -> float:
+    # Width-first scaling keeps vertical layouts stable while adapting
+    # to wider displays.
+    return _clamp(window_width / BASE_WINDOW_WIDTH, 0.85, 2.4)
+
+
+def build_global_style(scale: float = 1.0) -> str:
+    tab_pad_v = _scaled_px(4, scale, 2)
+    tab_pad_h = _scaled_px(14, scale, 8)
+    tab_font = _scaled_px(8, scale, 7)
+    return f"""
+        QMainWindow, QWidget {{
+            background-color: {DARK_BG};
+            color: {TEXT};
+        }}
+        QLabel {{
+            color: {TEXT};
+        }}
+        QTabWidget::pane {{
+            border: 1px solid {BORDER};
+            background: {PANEL_BG};
+        }}
+        QTabBar::tab {{
+            background: {DARK_BG};
+            color: {TEXT_DIM};
+            padding: {tab_pad_v}px {tab_pad_h}px;
+            margin-right: 2px;
+            border: 1px solid {BORDER};
+            border-bottom: none;
+            font-size: {tab_font}px;
+            font-weight: bold;
+            min-width: 72px;
+        }}
+        QTabBar::tab:selected {{
+            background: {PANEL_BG};
+            color: {BLUE};
+            border-bottom: 2px solid {BLUE};
+        }}
+        QTabBar::tab:hover {{
+            color: {TEXT};
+        }}
+        QTextEdit {{
+            background-color: {DARK_BG};
+            color: {TEXT};
+            border: 1px solid {BORDER};
+            font-family: monospace;
+        }}
+        QFrame#separator {{
+            background-color: {BORDER};
+        }}
+    """
 
 
 # ── Status Bar Widget ───────────────────────────────────────────────
@@ -104,27 +128,9 @@ class StatusBar(QFrame):
 
         layout.addStretch()
 
-        self.ros_indicator = QLabel("ROS: ---")
-        self.ros_indicator.setFont(QFont("monospace", 8))
-        layout.addWidget(self.ros_indicator)
-
-        self._add_separator(layout)
-
-        self.ctrl_indicator = QLabel("CTRL: ---")
-        self.ctrl_indicator.setFont(QFont("monospace", 8))
-        layout.addWidget(self.ctrl_indicator)
-
-        self._add_separator(layout)
-
         self.joint_hz_label = QLabel("JNT: --- Hz")
         self.joint_hz_label.setFont(QFont("monospace", 8))
         layout.addWidget(self.joint_hz_label)
-
-        self._add_separator(layout)
-
-        self.collision_label = QLabel("COL: ---")
-        self.collision_label.setFont(QFont("monospace", 8, QFont.Bold))
-        layout.addWidget(self.collision_label)
 
         self._add_separator(layout)
 
@@ -134,9 +140,15 @@ class StatusBar(QFrame):
 
         self._add_separator(layout)
 
-        self.state_label = QLabel("STATE: ---")
-        self.state_label.setFont(QFont("monospace", 8, QFont.Bold))
-        layout.addWidget(self.state_label)
+        self.camera_label = QLabel("CAM: ---")
+        self.camera_label.setFont(QFont("monospace", 8))
+        layout.addWidget(self.camera_label)
+
+        self._add_separator(layout)
+
+        self.headset_label = QLabel("HEADSET: ---")
+        self.headset_label.setFont(QFont("monospace", 8))
+        layout.addWidget(self.headset_label)
 
     def _add_separator(self, layout):
         sep = QLabel("|")
@@ -144,21 +156,14 @@ class StatusBar(QFrame):
         sep.setFont(QFont("monospace", 8))
         layout.addWidget(sep)
 
+    def apply_scale(self, scale: float):
+        self.setFixedHeight(_scaled_px(22, scale, 18))
+        layout = self.layout()
+        if layout:
+            m = _scaled_px(8, scale, 4)
+            layout.setContentsMargins(m, 0, m, 0)
+
     def update_status(self, status):
-        if status.ros_connected:
-            self.ros_indicator.setText("ROS: CONNECTED")
-            self.ros_indicator.setStyleSheet(f"color: {GREEN};")
-        else:
-            self.ros_indicator.setText("ROS: OFFLINE")
-            self.ros_indicator.setStyleSheet(f"color: {RED};")
-
-        if status.controller_active:
-            self.ctrl_indicator.setText("CTRL: ACTIVE")
-            self.ctrl_indicator.setStyleSheet(f"color: {GREEN};")
-        else:
-            self.ctrl_indicator.setText("CTRL: INACTIVE")
-            self.ctrl_indicator.setStyleSheet(f"color: {YELLOW};")
-
         if status.joint_hz > 0:
             self.joint_hz_label.setText(f"JNT: {status.joint_hz:.0f} Hz")
             self.joint_hz_label.setStyleSheet(f"color: {GREEN};")
@@ -166,42 +171,43 @@ class StatusBar(QFrame):
             self.joint_hz_label.setText("JNT: --- Hz")
             self.joint_hz_label.setStyleSheet(f"color: {TEXT_DIM};")
 
-        # Collision
-        if status.collision_blocked:
-            self.collision_label.setText("COL: BLOCKED")
-            self.collision_label.setStyleSheet(f"color: {RED};")
-        elif status.collision_scale < 1.0:
-            self.collision_label.setText(f"COL: SLOW {status.collision_scale:.0%}")
-            self.collision_label.setStyleSheet(f"color: {YELLOW};")
-        else:
-            self.collision_label.setText("COL: CLEAR")
-            self.collision_label.setStyleSheet(f"color: {GREEN};")
-
-        # Gripper
         g = status.gripper_value
         if g > 0.9:
             self.grip_label.setText("GRIP: CLOSED")
             self.grip_label.setStyleSheet(f"color: {RED};")
         elif g > 0.05:
-            self.grip_label.setText(f"GRIP: {int(g*100)}%")
+            self.grip_label.setText(f"GRIP: {int(g * 100)}%")
             self.grip_label.setStyleSheet(f"color: {YELLOW};")
         else:
             self.grip_label.setText("GRIP: OPEN")
             self.grip_label.setStyleSheet(f"color: {GREEN};")
 
-        state = status.robot_state
-        if state == RobotState.RUNNING:
-            self.state_label.setText("STATE: RUNNING")
-            self.state_label.setStyleSheet(f"color: {GREEN};")
-        elif state == RobotState.ESTOPPED:
-            self.state_label.setText("STATE: E-STOPPED")
-            self.state_label.setStyleSheet(f"color: {RED};")
-        elif state == RobotState.RESUMING:
-            self.state_label.setText("STATE: RESUMING")
-            self.state_label.setStyleSheet(f"color: {YELLOW};")
+        cam_type = str(getattr(status, "camera_type", "")).strip().lower()
+        cam_rate = status.topic_rates.get("debug_image")
+        cam_hz = cam_rate.hz if cam_rate else 0.0
+        if cam_type:
+            self.camera_label.setText(f"CAM: {cam_type.upper()}")
+            self.camera_label.setStyleSheet(f"color: {GREEN};")
+        elif cam_hz > 0:
+            self.camera_label.setText("CAM: ACTIVE")
+            self.camera_label.setStyleSheet(f"color: {YELLOW};")
         else:
-            self.state_label.setText("STATE: DISCONNECTED")
-            self.state_label.setStyleSheet(f"color: {TEXT_DIM};")
+            self.camera_label.setText("CAM: ---")
+            self.camera_label.setStyleSheet(f"color: {TEXT_DIM};")
+
+        headset_type = str(getattr(status, "headset_type", "")).strip().lower()
+        headset_rate = status.topic_rates.get("headset_image")
+        headset_hz = headset_rate.hz if headset_rate else 0.0
+        if headset_type:
+            label = headset_type.upper().replace("QUEST", "QUEST ").strip()
+            self.headset_label.setText(f"HEADSET: {label}")
+            self.headset_label.setStyleSheet(f"color: {GREEN};")
+        elif headset_hz > 0:
+            self.headset_label.setText("HEADSET: QUEST")
+            self.headset_label.setStyleSheet(f"color: {GREEN};")
+        else:
+            self.headset_label.setText("HEADSET: ---")
+            self.headset_label.setStyleSheet(f"color: {TEXT_DIM};")
 
 
 # ── E-Stop Widget ──────────────────────────────────────────────────
@@ -225,9 +231,11 @@ class EstopWidget(QFrame):
         self._resume_elapsed = 0
         self._pulse_phase = 0.0
         self._cooldown_active = False
+        self._resuming = False  # debounce: ignore ESTOPPED from ROS while controller reactivates
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
+        self._outer_layout = layout
 
         # Stacked widget: estop button vs resume button
         self.stack = QStackedWidget()
@@ -238,21 +246,6 @@ class EstopWidget(QFrame):
         self.estop_btn.setFont(QFont("monospace", 11, QFont.Bold))
         self.estop_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.estop_btn.setCursor(Qt.PointingHandCursor)
-        self.estop_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {RED};
-                color: white;
-                border: 3px solid #ff6b6b;
-                border-radius: 12px;
-            }}
-            QPushButton:hover {{
-                background-color: #ff2020;
-                border-color: white;
-            }}
-            QPushButton:pressed {{
-                background-color: #cc0000;
-            }}
-        """)
         self.estop_btn.clicked.connect(self._on_estop)
         self.stack.addWidget(self.estop_btn)
 
@@ -261,6 +254,7 @@ class EstopWidget(QFrame):
         resume_layout = QVBoxLayout(resume_panel)
         resume_layout.setContentsMargins(0, 0, 0, 0)
         resume_layout.setSpacing(8)
+        self._resume_layout = resume_layout
 
         self.stopped_label = QLabel("ROBOT\nSTOPPED")
         self.stopped_label.setAlignment(Qt.AlignCenter)
@@ -272,17 +266,6 @@ class EstopWidget(QFrame):
         self.resume_btn.setFont(QFont("monospace", 8, QFont.Bold))
         self.resume_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.resume_btn.setCursor(Qt.PointingHandCursor)
-        self.resume_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {YELLOW};
-                color: black;
-                border: 3px solid {ORANGE};
-                border-radius: 12px;
-            }}
-            QPushButton:hover {{
-                background-color: {ORANGE};
-            }}
-        """)
         self.resume_btn.pressed.connect(self._on_resume_press)
         self.resume_btn.released.connect(self._on_resume_release)
         resume_layout.addWidget(self.resume_btn)
@@ -292,17 +275,6 @@ class EstopWidget(QFrame):
         self.progress.setRange(0, self.RESUME_HOLD_MS)
         self.progress.setValue(0)
         self.progress.setTextVisible(False)
-        self.progress.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: {DARK_BG};
-                border: 1px solid {BORDER};
-                border-radius: 5px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {GREEN};
-                border-radius: 4px;
-            }}
-        """)
         resume_layout.addWidget(self.progress)
 
         self.stack.addWidget(resume_panel)
@@ -319,6 +291,66 @@ class EstopWidget(QFrame):
         self._cooldown_timer = QTimer()
         self._cooldown_timer.setSingleShot(True)
         self._cooldown_timer.timeout.connect(self._cooldown_done)
+
+        self._resume_debounce_timer = QTimer()
+        self._resume_debounce_timer.setSingleShot(True)
+        self._resume_debounce_timer.timeout.connect(self._resume_debounce_done)
+
+        self.apply_scale(1.0, BASE_WINDOW_WIDTH)
+
+    def _apply_button_styles(self, scale: float):
+        border = _scaled_px(3, scale, 2)
+        radius = _scaled_px(12, scale, 8)
+        self.estop_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {RED};
+                color: white;
+                border: {border}px solid #ff6b6b;
+                border-radius: {radius}px;
+            }}
+            QPushButton:hover {{
+                background-color: #ff2020;
+                border-color: white;
+            }}
+            QPushButton:pressed {{
+                background-color: #cc0000;
+            }}
+        """)
+        self.resume_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {YELLOW};
+                color: black;
+                border: {border}px solid {ORANGE};
+                border-radius: {radius}px;
+            }}
+            QPushButton:hover {{
+                background-color: {ORANGE};
+            }}
+        """)
+        progress_h = _scaled_px(10, scale, 8)
+        progress_radius = _scaled_px(5, scale, 3)
+        progress_chunk_radius = _scaled_px(4, scale, 2)
+        self.progress.setFixedHeight(progress_h)
+        self.progress.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {DARK_BG};
+                border: 1px solid {BORDER};
+                border-radius: {progress_radius}px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {GREEN};
+                border-radius: {progress_chunk_radius}px;
+            }}
+        """)
+
+    def apply_scale(self, scale: float, window_width: int):
+        estop_w = int(window_width * ESTOP_WIDTH_RATIO)
+        estop_w = _clamp(estop_w, _scaled_px(320, scale, 280), _scaled_px(1200, scale, 900))
+        self.setFixedWidth(estop_w)
+        m = _scaled_px(4, scale, 2)
+        self._outer_layout.setContentsMargins(m, m, m, m)
+        self._resume_layout.setSpacing(_scaled_px(8, scale, 4))
+        self._apply_button_styles(scale)
 
     def _on_estop(self):
         if self._cooldown_active:
@@ -342,7 +374,7 @@ class EstopWidget(QFrame):
         self._resume_timer.stop()
         self._resume_elapsed = 0
         self.progress.setValue(0)
-        self.resume_btn.setText("HOLD TO\nRESUME\n(5s)")
+        self.resume_btn.setText("HOLD TO\nRESUME\n(3s)")
 
     def _resume_tick(self):
         if not self._resume_held:
@@ -357,9 +389,9 @@ class EstopWidget(QFrame):
             self._pulse_timer.stop()
             self._estopped = False
             self._resume_held = False
+            self._resuming = True
+            self._resume_debounce_timer.start(5000)  # 5s grace while controller reactivates
             self.ros.resume()
-            # Start cooldown — block estop clicks briefly so the
-            # mouse-release from the resume hold doesn't re-trigger it
             self._cooldown_active = True
             self.estop_btn.setEnabled(False)
             self._cooldown_timer.start(self.COOLDOWN_MS)
@@ -370,128 +402,305 @@ class EstopWidget(QFrame):
         self._cooldown_active = False
         self.estop_btn.setEnabled(True)
 
+    def _resume_debounce_done(self):
+        self._resuming = False
+
     def _pulse_tick(self):
         self._pulse_phase += 0.15
         intensity = int(20 + 15 * (1 + math.sin(self._pulse_phase)))
         self.setStyleSheet(f"background-color: rgb({intensity}, 0, 0);")
 
     def sync_state(self, status):
-        if status.robot_state == RobotState.ESTOPPED and not self._estopped:
+        if status.robot_state == RobotState.ESTOPPED and not self._estopped and not self._resuming:
             self._estopped = True
             self.stack.setCurrentIndex(1)
             self._pulse_timer.start()
         elif status.robot_state == RobotState.RUNNING and self._estopped:
             self._estopped = False
+            self._resuming = False
+            self._resume_debounce_timer.stop()
             self.stack.setCurrentIndex(0)
             self._pulse_timer.stop()
             self.setStyleSheet("")
             self.progress.setValue(0)
+        elif status.robot_state == RobotState.RUNNING and self._resuming:
+            self._resuming = False
+            self._resume_debounce_timer.stop()
 
 
 # ── Screen: Status ──────────────────────────────────────────────────
 
-class StatusScreen(QWidget):
+class MergedStatusScreen(QWidget):
+    """STATUS tab — joint table + session/safety/connection | event log."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
         layout.setSpacing(8)
 
-        # Left: joint states
+        # ── Left column: joint table + session + safety + connection ──
         left = QVBoxLayout()
-        left.setSpacing(1)
-        left_title = QLabel("JOINT STATES")
-        left_title.setFont(QFont("monospace", 8, QFont.Bold))
-        left_title.setStyleSheet(f"color: {BLUE};")
-        left.addWidget(left_title)
+        left.setSpacing(4)
 
-        self.joint_labels = []
-        for i in range(6):
-            lbl = QLabel(f"joint_{i}: ---")
-            lbl.setFont(QFont("monospace", 8))
-            lbl.setStyleSheet(f"color: {TEXT};")
+        def _heading(text):
+            lbl = QLabel(text)
+            lbl.setFont(QFont("monospace", 10, QFont.Bold))
+            lbl.setStyleSheet(f"color: {BLUE};")
             left.addWidget(lbl)
-            self.joint_labels.append(lbl)
 
-        # Gripper status
-        grip_sep = QLabel("─" * 28)
-        grip_sep.setFont(QFont("monospace", 8))
-        grip_sep.setStyleSheet(f"color: {BORDER};")
-        left.addWidget(grip_sep)
+        def _row(text, color=TEXT):
+            lbl = QLabel(text)
+            lbl.setFont(QFont("monospace", 9))
+            lbl.setStyleSheet(f"color: {color};")
+            left.addWidget(lbl)
+            return lbl
+
+        # Joint states table
+        _heading("JOINT STATES")
+
+        table = QFrame()
+        table.setStyleSheet(
+            f"QFrame {{ background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 3px; }}"
+        )
+        tl = QGridLayout(table)
+        tl.setContentsMargins(6, 4, 6, 4)
+        tl.setSpacing(2)
+        tl.setColumnStretch(0, 4)
+        tl.setColumnStretch(1, 3)
+        tl.setColumnStretch(2, 3)
+
+        for col, txt in enumerate(("JOINT", "POS", "VEL")):
+            h = QLabel(txt)
+            h.setFont(QFont("monospace", 8, QFont.Bold))
+            h.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
+            if col > 0:
+                h.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            tl.addWidget(h, 0, col)
+
+        self.joint_name_lbls = []
+        self.joint_pos_lbls = []
+        self.joint_vel_lbls = []
+        for i in range(6):
+            name_l = QLabel(f"joint_{i}")
+            pos_l = QLabel("---")
+            vel_l = QLabel("---")
+            name_l.setFont(QFont("monospace", 9))
+            name_l.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
+            for cell in (pos_l, vel_l):
+                cell.setFont(QFont("monospace", 9, QFont.Bold))
+                cell.setStyleSheet(f"color: {TEXT}; border: none;")
+                cell.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            tl.addWidget(name_l, i + 1, 0)
+            tl.addWidget(pos_l,  i + 1, 1)
+            tl.addWidget(vel_l,  i + 1, 2)
+            self.joint_name_lbls.append(name_l)
+            self.joint_pos_lbls.append(pos_l)
+            self.joint_vel_lbls.append(vel_l)
+
+        hsep = QFrame()
+        hsep.setFrameShape(QFrame.HLine)
+        hsep.setStyleSheet(f"color: {BORDER};")
+        tl.addWidget(hsep, 7, 0, 1, 3)
+
         self.gripper_label = QLabel("Gripper: ---")
-        self.gripper_label.setFont(QFont("monospace", 8))
-        self.gripper_label.setStyleSheet(f"color: {TEXT};")
-        left.addWidget(self.gripper_label)
+        self.gripper_label.setFont(QFont("monospace", 9))
+        self.gripper_label.setStyleSheet(f"color: {TEXT}; border: none;")
+        tl.addWidget(self.gripper_label, 8, 0, 1, 3)
+
+        left.addWidget(table)
+        left.addSpacing(8)
+
+        # Session
+        _heading("SESSION")
+        self.duration_lbl = _row("Duration: ---")
+        self.mode_lbl     = _row("Mode: ---")
+        self.submode_lbl  = _row("Sub-mode: ---")
+        self.switches_lbl = _row("Switches: ---")
+        self.estops_lbl   = _row("E-stops: 0")
+
+        left.addSpacing(4)
+
+        # Safety
+        _heading("SAFETY")
+        self.collision_status_lbl = _row("Collision: ---")
+        self.ee_lock_lbl          = _row("EE lock: off")
+
+        left.addSpacing(4)
+
+        # Connection
+        _heading("CONNECTION")
+        self.ros_lbl    = _row("ROS: ---")
+        self.ctrl_lbl   = _row("Controller: ---")
+        self.state_lbl  = _row("Robot state: ---")
+        self.moveit_lbl = _row("MoveIt service: ---")
 
         left.addStretch()
         layout.addLayout(left, 1)
 
-        # Vertical separator
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setStyleSheet(f"color: {BORDER};")
         layout.addWidget(sep)
 
-        # Right: event log
+        # ── Right column: event log ──
         right = QVBoxLayout()
-        right_title = QLabel("EVENT LOG")
-        right_title.setFont(QFont("monospace", 8, QFont.Bold))
-        right_title.setStyleSheet(f"color: {BLUE};")
-        right.addWidget(right_title)
+        right.setSpacing(3)
+
+        log_title = QLabel("EVENT LOG")
+        log_title.setFont(QFont("monospace", 10, QFont.Bold))
+        log_title.setStyleSheet(f"color: {BLUE};")
+        right.addWidget(log_title)
 
         self.event_log = QTextEdit()
         self.event_log.setReadOnly(True)
-        right.addWidget(self.event_log)
-        layout.addLayout(right, 2)
+        self.event_log.setFont(QFont("monospace", 10))
+        right.addWidget(self.event_log, 1)
+        layout.addLayout(right, 1)
 
     def update_status(self, status):
-        for i, lbl in enumerate(self.joint_labels):
+        # Joint table
+        for i in range(6):
             if i < len(status.joint_names):
-                name = status.joint_names[i]
-                pos_deg = math.degrees(status.joint_positions[i]) if i < len(status.joint_positions) else 0
-                vel = status.joint_velocities[i] if i < len(status.joint_velocities) else 0
-                lbl.setText(f"{name}: {pos_deg:+7.1f}°  v:{vel:+.2f}")
+                name = status.joint_names[i].removesuffix("_joint")
+                pos_deg = math.degrees(status.joint_positions[i]) if i < len(status.joint_positions) else 0.0
+                vel = status.joint_velocities[i] if i < len(status.joint_velocities) else 0.0
+                self.joint_name_lbls[i].setText(name)
+                self.joint_pos_lbls[i].setText(f"{pos_deg:+7.1f}°")
+                abs_vel = abs(vel)
+                vel_color = TEXT if abs_vel < 0.05 else (YELLOW if abs_vel < 0.5 else RED)
+                self.joint_vel_lbls[i].setText(f"{vel:+.3f}")
+                self.joint_vel_lbls[i].setStyleSheet(f"color: {vel_color}; border: none;")
             else:
-                lbl.setText(f"joint_{i}: waiting...")
+                self.joint_name_lbls[i].setText(f"joint_{i}")
+                self.joint_pos_lbls[i].setText("---")
+                self.joint_vel_lbls[i].setText("---")
 
-        # Gripper
         g = status.gripper_value
         pct = int(g * 100)
         bar = "|" * int(g * 10) + "." * (10 - int(g * 10))
         grip_color = GREEN if g < 0.05 else (RED if g > 0.9 else TEXT)
         self.gripper_label.setText(f"Gripper [{bar}] {pct}%")
-        self.gripper_label.setStyleSheet(f"color: {grip_color};")
+        self.gripper_label.setStyleSheet(f"color: {grip_color}; border: none;")
 
-        lines = []
-        for ts, msg in status.events:
-            t = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
-            lines.append(f"[{t}] {msg}")
+        # Session
+        info = status.session_info
+        if info:
+            secs = info.get("session_s", 0)
+            self.duration_lbl.setText(f"Duration: {int(secs)//60:02d}:{int(secs)%60:02d}")
+            mode = info.get("mode", "---")
+            sub  = info.get("sub_mode", "")
+            mode_text = f"RMRC ({sub})" if mode == "RMRC" and sub else mode
+            mode_colors = {"RMRC": GREEN, "DirectJoint": YELLOW, "HandGuide": ORANGE}
+            self.mode_lbl.setText(f"Mode: {mode_text}")
+            self.mode_lbl.setStyleSheet(f"color: {mode_colors.get(mode, TEXT)};")
+            self.submode_lbl.setText(f"Sub-mode: {sub or '---'}")
+            self.switches_lbl.setText(f"Switches: {info.get('mode_switches', 0)}")
+        else:
+            self.duration_lbl.setText("Duration: waiting for Unity...")
+            self.duration_lbl.setStyleSheet(f"color: {TEXT_DIM};")
+
+        estop_count = sum(1 for _, msg in status.events if "EMERGENCY STOP" in msg)
+        self.estops_lbl.setText(f"E-stops: {estop_count}")
+        self.estops_lbl.setStyleSheet(f"color: {RED if estop_count > 0 else TEXT};")
+
+        # Safety
+        if status.collision_blocked:
+            self.collision_status_lbl.setText("Collision: BLOCKED")
+            self.collision_status_lbl.setStyleSheet(f"color: {RED};")
+        elif status.collision_scale < 1.0:
+            self.collision_status_lbl.setText(f"Collision: slow ({status.collision_scale:.0%})")
+            self.collision_status_lbl.setStyleSheet(f"color: {YELLOW};")
+        else:
+            self.collision_status_lbl.setText("Collision: clear")
+            self.collision_status_lbl.setStyleSheet(f"color: {GREEN};")
+
+        ee_text = "EE lock: ON" if status.ee_locked else "EE lock: off"
+        self.ee_lock_lbl.setText(f"{ee_text} ({status.ee_lock_count})")
+        self.ee_lock_lbl.setStyleSheet(f"color: {BLUE if status.ee_locked else TEXT_DIM};")
+
+        # Connection
+        self.ros_lbl.setText("ROS: CONNECTED" if status.ros_connected else "ROS: OFFLINE")
+        self.ros_lbl.setStyleSheet(f"color: {GREEN if status.ros_connected else RED};")
+
+        self.ctrl_lbl.setText("Controller: ACTIVE" if status.controller_active else "Controller: INACTIVE")
+        self.ctrl_lbl.setStyleSheet(f"color: {GREEN if status.controller_active else YELLOW};")
+
+        state_map = {
+            RobotState.RUNNING:      (GREEN,    "RUNNING"),
+            RobotState.ESTOPPED:     (RED,      "E-STOPPED"),
+            RobotState.RESUMING:     (YELLOW,   "RESUMING"),
+            RobotState.DISCONNECTED: (TEXT_DIM, "DISCONNECTED"),
+        }
+        c, lbl_txt = state_map.get(status.robot_state, (TEXT_DIM, "UNKNOWN"))
+        self.state_lbl.setText(f"Robot state: {lbl_txt}")
+        self.state_lbl.setStyleSheet(f"color: {c};")
+
+        moveit_ready = getattr(status, "pick_service_ready", False)
+        self.moveit_lbl.setText("MoveIt service: READY" if moveit_ready else "MoveIt service: ---")
+        self.moveit_lbl.setStyleSheet(f"color: {GREEN if moveit_ready else TEXT_DIM};")
+
+        # Event log
+        lines = [
+            f"[{datetime.fromtimestamp(ts).strftime('%H:%M:%S')}] {msg}"
+            for ts, msg in status.events
+        ]
         text = "\n".join(lines)
         if text != self.event_log.toPlainText():
             self.event_log.setPlainText(text)
-            scrollbar = self.event_log.verticalScrollBar()
-            scrollbar.setValue(scrollbar.maximum())
+            self.event_log.verticalScrollBar().setValue(
+                self.event_log.verticalScrollBar().maximum()
+            )
 
 
 # ── Screen: Camera (debug image from depth tracker) ────────────────
 
 class CameraScreen(QWidget):
-    def __init__(self, parent=None):
+    _PRESETS = [
+        ("640×480 @ 15 Hz",    640,  480,  15.0),
+        ("640×480 @ 30 Hz",    640,  480,  30.0),
+        ("848×480 @ 30 Hz",    848,  480,  30.0),   # RealSense wide-FOV depth
+        ("1280×720 @ 15 Hz",  1280,  720,  15.0),
+        ("1280×720 @ 30 Hz",  1280,  720,  30.0),
+        ("1280×800 @ 30 Hz",  1280,  800,  30.0),   # RealSense D415 native
+        ("1920×1080 @ 15 Hz", 1920, 1080,  15.0),
+        ("1920×1080 @ 30 Hz", 1920, 1080,  30.0),
+    ]
+
+    def __init__(self, ros=None, parent=None):
         super().__init__(parent)
+        self._ros = ros
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
         layout.setSpacing(4)
 
         header = QHBoxLayout()
-        title = QLabel("DEPTH CAMERA")
-        title.setFont(QFont("monospace", 8, QFont.Bold))
-        title.setStyleSheet(f"color: {BLUE};")
-        header.addWidget(title)
-        header.addStretch()
         self.camera_info = QLabel("Waiting for image...")
         self.camera_info.setFont(QFont("monospace", 8))
         self.camera_info.setStyleSheet(f"color: {TEXT_DIM};")
         header.addWidget(self.camera_info)
+        header.addStretch()
+        self.res_combo = QComboBox()
+        self.res_combo.setFont(QFont("monospace", 8))
+        self.res_combo.setStyleSheet(f"""
+            QComboBox {{
+                background: {PANEL_BG};
+                color: {TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 3px;
+                padding: 1px 6px;
+            }}
+            QComboBox::drop-down {{ border: none; }}
+            QComboBox QAbstractItemView {{
+                background: {PANEL_BG};
+                color: {TEXT};
+                selection-background-color: {BLUE};
+            }}
+        """)
+        for label, *_ in self._PRESETS:
+            self.res_combo.addItem(label)
+        self.res_combo.activated.connect(self._on_reconfigure)
+        header.addWidget(self.res_combo)
         layout.addLayout(header)
 
         self.image_label = QLabel()
@@ -505,6 +714,12 @@ class CameraScreen(QWidget):
         topic_label.setStyleSheet(f"color: {TEXT_DIM};")
         layout.addWidget(topic_label)
 
+    def _on_reconfigure(self, index: int):
+        if self._ros is None or index < 0 or index >= len(self._PRESETS):
+            return
+        _, w, h, fps = self._PRESETS[index]
+        self._ros.reconfigure_camera(w, h, fps)
+
     def update_status(self, status):
         rate = status.topic_rates.get("debug_image")
         hz = rate.hz if rate else 0
@@ -514,22 +729,39 @@ class CameraScreen(QWidget):
             )
             try:
                 from PyQt5.QtGui import QImage, QPixmap
-                encoding = getattr(status, '_camera_encoding', 'rgb8')
+                encoding = str(getattr(status, "_camera_encoding", "")).strip().lower()
                 w, h = status.camera_width, status.camera_height
                 data = status.camera_jpeg
-                if encoding in ('rgb8', 'bgr8'):
-                    fmt = QImage.Format_RGB888
-                    img = QImage(data, w, h, w * 3, fmt)
-                    if encoding == 'bgr8':
-                        img = img.rgbSwapped()
-                elif encoding == 'mono8':
+                pixels = max(1, w * h)
+                channels = len(data) // pixels
+                img = None
+
+                if encoding in ("bgr8", "8uc3") or (not encoding and channels == 3):
+                    img = QImage(data, w, h, w * 3, QImage.Format_RGB888).rgbSwapped()
+                elif encoding == "rgb8":
+                    img = QImage(data, w, h, w * 3, QImage.Format_RGB888)
+                elif encoding in ("bgra8", "8uc4") or (not encoding and channels == 4):
+                    img = QImage(data, w, h, w * 4, QImage.Format_RGBA8888).rgbSwapped()
+                elif encoding == "rgba8":
+                    img = QImage(data, w, h, w * 4, QImage.Format_RGBA8888)
+                elif encoding in ("mono8", "8uc1") or (not encoding and channels == 1):
                     img = QImage(data, w, h, w, QImage.Format_Grayscale8)
                 else:
-                    self.camera_info.setText(f"Unsupported encoding: {encoding}")
+                    # Heuristic fallback for transport/type wrappers that omit canonical names.
+                    if channels == 3:
+                        img = QImage(data, w, h, w * 3, QImage.Format_RGB888).rgbSwapped()
+                    elif channels == 4:
+                        img = QImage(data, w, h, w * 4, QImage.Format_RGBA8888).rgbSwapped()
+                    elif channels == 1:
+                        img = QImage(data, w, h, w, QImage.Format_Grayscale8)
+                    else:
+                        self.camera_info.setText(f"Unsupported encoding: {encoding or f'{channels}ch'}")
+                        return
+                if img is None:
                     return
                 pixmap = QPixmap.fromImage(img)
                 scaled = pixmap.scaled(
-                    self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    self.image_label.size(), Qt.KeepAspectRatio, Qt.FastTransformation
                 )
                 self.image_label.setPixmap(scaled)
             except Exception as e:
@@ -616,8 +848,14 @@ class RollingGraph(QWidget):
         self.auto_y = auto_y
         self.series = series or [("value", GREEN)]
         self._data = []
+        self._ui_scale = 1.0
         self.setMinimumHeight(60)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+    def apply_scale(self, scale: float):
+        self._ui_scale = scale
+        self.setMinimumHeight(_scaled_px(60, scale, 48))
+        self.update()
 
     def set_data(self, data):
         self._data = data
@@ -628,7 +866,11 @@ class RollingGraph(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
-        ML, MR, MT, MB = 36, 6, 16, 12
+        scale = self._ui_scale
+        ML = _scaled_px(36, scale, 22)
+        MR = _scaled_px(6, scale, 4)
+        MT = _scaled_px(16, scale, 10)
+        MB = _scaled_px(12, scale, 8)
         pw, ph = w - ML - MR, h - MT - MB
 
         if pw <= 0 or ph <= 0:
@@ -640,24 +882,32 @@ class RollingGraph(QWidget):
 
         # Title
         p.setPen(QColor(BLUE))
-        p.setFont(QFont("monospace", 7, QFont.Bold))
-        p.drawText(ML, MT - 4, self.title)
+        p.setFont(QFont("monospace", _scaled_px(8, scale, 7), QFont.Bold))
+        p.drawText(ML, MT - _scaled_px(4, scale, 2), self.title)
 
         # Legend (right side of title bar)
         legend_x = w - MR
-        p.setFont(QFont("monospace", 6))
+        p.setFont(QFont("monospace", _scaled_px(6, scale, 5)))
+        legend_swatch = _scaled_px(6, scale, 4)
+        legend_gap = _scaled_px(10, scale, 6)
         for name, color in reversed(self.series):
             text = f" {name}"
-            tw = p.fontMetrics().horizontalAdvance(text) + 10
+            tw = p.fontMetrics().horizontalAdvance(text) + legend_gap
             legend_x -= tw
             p.setPen(QColor(color))
-            p.drawText(legend_x + 10, MT - 4, text)
-            p.fillRect(legend_x + 2, MT - 10, 6, 6, QColor(color))
+            p.drawText(legend_x + legend_gap, MT - _scaled_px(4, scale, 2), text)
+            p.fillRect(
+                legend_x + _scaled_px(2, scale, 1),
+                MT - _scaled_px(10, scale, 6),
+                legend_swatch,
+                legend_swatch,
+                QColor(color),
+            )
 
         if not self._data:
             p.setPen(QColor(TEXT_DIM))
-            p.setFont(QFont("monospace", 8))
-            p.drawText(ML + pw // 2 - 20, MT + ph // 2, "No data")
+            p.setFont(QFont("monospace", _scaled_px(8, scale, 7)))
+            p.drawText(ML + pw // 2 - _scaled_px(20, scale, 12), MT + ph // 2, "No data")
             p.end()
             return
 
@@ -685,15 +935,23 @@ class RollingGraph(QWidget):
             y_max = y_min + 1
 
         # Grid lines + Y labels
-        p.setFont(QFont("monospace", 6))
+        p.setFont(QFont("monospace", _scaled_px(6, scale, 5)))
+        y_label_h = _scaled_px(12, scale, 8)
+        y_label_y_offset = _scaled_px(4, scale, 2)
         for i in range(5):
             gy = MT + int(ph * i / 4)
             p.setPen(QPen(QColor(BORDER), 1))
             p.drawLine(ML, gy, ML + pw, gy)
             val = y_max - (y_max - y_min) * i / 4
             p.setPen(QColor(TEXT_DIM))
-            p.drawText(0, gy - 4, ML - 2, 12, Qt.AlignRight | Qt.AlignVCenter,
-                        f"{val:.1f}" if abs(val) < 10 else f"{val:.0f}")
+            p.drawText(
+                0,
+                gy - y_label_y_offset,
+                ML - _scaled_px(2, scale, 1),
+                y_label_h,
+                Qt.AlignRight | Qt.AlignVCenter,
+                f"{val:.1f}" if abs(val) < 10 else f"{val:.0f}",
+            )
 
         # Zero line
         if y_min < 0 < y_max:
@@ -724,24 +982,26 @@ class RollingGraph(QWidget):
         p.end()
 
 
-class StatsScreen(QWidget):
-    """Session metrics + rolling graphs for the STATS tab."""
+class DebugScreen(QWidget):
+    """Merged STATS + LATENCY → DEBUG tab — session strip, latency strip, 2×2 graph grid."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
-        layout.setSpacing(4)
+        layout.setSpacing(3)
 
-        # ── Session info panel (top strip) ──
+        # ── Session info strip ──
         session = QFrame()
-        session.setFixedHeight(42)
+        session.setFixedHeight(28)
         session.setStyleSheet(
             f"background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 4px;"
         )
+        self.session_panel = session
         sl = QHBoxLayout(session)
         sl.setContentsMargins(8, 2, 8, 2)
-        sl.setSpacing(12)
+        sl.setSpacing(10)
+        self.session_layout = sl
 
         self.sess_time = QLabel("00:00")
         self.sess_time.setFont(QFont("monospace", 9, QFont.Bold))
@@ -749,69 +1009,127 @@ class StatsScreen(QWidget):
         sl.addWidget(self.sess_time)
 
         self.sess_mode = QLabel("Mode: ---")
-        self.sess_mode.setFont(QFont("monospace", 8))
+        self.sess_mode.setFont(QFont("monospace", 9))
         self.sess_mode.setStyleSheet(f"color: {TEXT}; border: none;")
         sl.addWidget(self.sess_mode)
-
-        self.sess_switches = QLabel("Switches: 0")
-        self.sess_switches.setFont(QFont("monospace", 8))
-        self.sess_switches.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
-        sl.addWidget(self.sess_switches)
-
-        self.sess_estops = QLabel("E-stops: 0")
-        self.sess_estops.setFont(QFont("monospace", 8, QFont.Bold))
-        self.sess_estops.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
-        sl.addWidget(self.sess_estops)
 
         sl.addStretch()
 
         self.sess_breakdown = QLabel("")
-        self.sess_breakdown.setFont(QFont("monospace", 7))
+        self.sess_breakdown.setFont(QFont("monospace", 8))
         self.sess_breakdown.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
         sl.addWidget(self.sess_breakdown)
 
         layout.addWidget(session)
 
-        # ── Joint velocity rolling graph ──
+        # ── Latency live strip ──
+        latency = QFrame()
+        latency.setFixedHeight(24)
+        latency.setStyleSheet(
+            f"background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 4px;"
+        )
+        self.latency_panel = latency
+        ll = QHBoxLayout(latency)
+        ll.setContentsMargins(8, 2, 8, 2)
+        ll.setSpacing(16)
+        self.latency_layout = ll
+
+        self.joint_age_lbl = QLabel("Jt age: ---")
+        self.joint_age_lbl.setFont(QFont("monospace", 8))
+        self.joint_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
+        ll.addWidget(self.joint_age_lbl)
+
+        self.cmd_age_lbl = QLabel("Cmd age: ---")
+        self.cmd_age_lbl.setFont(QFont("monospace", 8))
+        self.cmd_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
+        ll.addWidget(self.cmd_age_lbl)
+
+        self.cmd_interval_lbl = QLabel("Interval: ---")
+        self.cmd_interval_lbl.setFont(QFont("monospace", 8))
+        self.cmd_interval_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
+        ll.addWidget(self.cmd_interval_lbl)
+
+        ll.addStretch()
+        layout.addWidget(latency)
+
+        # ── 2×2 graph grid ──
+        grid = QHBoxLayout()
+        grid.setSpacing(4)
+
+        left_col = QVBoxLayout()
+        left_col.setSpacing(3)
+        right_col = QVBoxLayout()
+        right_col.setSpacing(3)
+
         self.vel_graph = RollingGraph(
-            title="JOINT VELOCITIES (rad/s)",
+            title="JOINT VEL (rad/s)",
             window_s=30.0,
             y_range=(-2.0, 2.0),
-            series=list(zip(
-                ["pan", "lift", "elbow", "wr1", "wr2", "wr3"],
-                JOINT_COLORS,
-            )),
+            series=list(zip(["pan", "lift", "elbow", "wr1", "wr2", "wr3"], JOINT_COLORS)),
             auto_y=True,
         )
-        layout.addWidget(self.vel_graph, 2)
+        self.vel_graph.setMinimumHeight(85)
+        left_col.addWidget(self.vel_graph, 1)
 
-        # ── Topic health rolling graph ──
         self.rate_graph = RollingGraph(
             title="TOPIC HEALTH (%)",
             window_s=60.0,
             y_range=(0, 120),
-            series=[
-                ("joints", GREEN),
-                ("vel_cmd", BLUE),
-                ("headset", ORANGE),
-            ],
+            series=[("joints", GREEN), ("vel_cmd", BLUE), ("headset", ORANGE)],
         )
-        layout.addWidget(self.rate_graph, 1)
+        self.rate_graph.setMinimumHeight(65)
+        left_col.addWidget(self.rate_graph, 1)
+
+        self.age_graph = RollingGraph(
+            title="MSG AGE (ms)",
+            window_s=30.0,
+            y_range=(0, 100),
+            series=[("jt_state", GREEN), ("vel_cmd", BLUE)],
+            auto_y=True,
+        )
+        self.age_graph.setMinimumHeight(85)
+        right_col.addWidget(self.age_graph, 1)
+
+        self.interval_graph = RollingGraph(
+            title="CMD INTERVAL (ms)",
+            window_s=30.0,
+            y_range=(0, 50),
+            series=[("interval", ORANGE)],
+            auto_y=True,
+        )
+        self.interval_graph.setMinimumHeight(65)
+        right_col.addWidget(self.interval_graph, 1)
+
+        grid.addLayout(left_col, 1)
+        grid.addLayout(right_col, 1)
+        layout.addLayout(grid, 1)
+
+    def apply_scale(self, scale: float):
+        self.session_panel.setFixedHeight(_scaled_px(28, scale, 22))
+        self.session_layout.setContentsMargins(
+            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
+            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
+        )
+        self.session_layout.setSpacing(_scaled_px(10, scale, 6))
+        self.latency_panel.setFixedHeight(_scaled_px(24, scale, 20))
+        self.latency_layout.setContentsMargins(
+            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
+            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
+        )
+        self.latency_layout.setSpacing(_scaled_px(16, scale, 8))
+        for g in (self.vel_graph, self.rate_graph, self.age_graph, self.interval_graph):
+            g.apply_scale(scale)
 
     def update_status(self, status):
-        # Session info from Unity SessionLogger
+        # Session strip
         info = status.session_info
         if info:
             secs = info.get("session_s", 0)
-            self.sess_time.setText(f"{int(secs) // 60:02d}:{int(secs) % 60:02d}")
-
+            self.sess_time.setText(f"{int(secs)//60:02d}:{int(secs)%60:02d}")
             mode = info.get("mode", "---")
-            sub = info.get("sub_mode", "")
+            sub  = info.get("sub_mode", "")
             mode_text = f"RMRC ({sub})" if mode == "RMRC" and sub else mode
             self.sess_mode.setText(f"Mode: {mode_text}")
-
-            self.sess_switches.setText(f"Switches: {info.get('mode_switches', 0)}")
-
             durations = info.get("mode_durations", {})
             total = sum(durations.values()) or 1
             parts = []
@@ -822,327 +1140,57 @@ class StatsScreen(QWidget):
                     parts.append(f"{short}:{pct:.0f}%")
             self.sess_breakdown.setText("  ".join(parts))
 
-        # E-stop count from dashboard events
-        estop_count = sum(1 for _, msg in status.events if "EMERGENCY STOP" in msg)
-        self.sess_estops.setText(f"E-stops: {estop_count}")
-        color = RED if estop_count > 0 else TEXT_DIM
-        self.sess_estops.setStyleSheet(f"color: {color}; border: none;")
-
-        # Feed rolling graphs
-        self.vel_graph.set_data(status.velocity_history)
-        self.rate_graph.set_data(status.rate_history)
-
-
-# ── Screen: Latency ────────────────────────────────────────────────
-
-class LatencyScreen(QWidget):
-    """Rolling latency graphs — joint state freshness, command timing."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 4, 6, 4)
-        layout.setSpacing(4)
-
-        # ── Live numbers strip ──
-        strip = QFrame()
-        strip.setFixedHeight(36)
-        strip.setStyleSheet(
-            f"background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 4px;"
-        )
-        sl = QHBoxLayout(strip)
-        sl.setContentsMargins(8, 2, 8, 2)
-        sl.setSpacing(16)
-
-        self.joint_age_lbl = QLabel("Joint age: ---")
-        self.joint_age_lbl.setFont(QFont("monospace", 8))
-        self.joint_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        sl.addWidget(self.joint_age_lbl)
-
-        self.cmd_age_lbl = QLabel("Cmd age: ---")
-        self.cmd_age_lbl.setFont(QFont("monospace", 8))
-        self.cmd_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        sl.addWidget(self.cmd_age_lbl)
-
-        self.cmd_interval_lbl = QLabel("Cmd interval: ---")
-        self.cmd_interval_lbl.setFont(QFont("monospace", 8))
-        self.cmd_interval_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        sl.addWidget(self.cmd_interval_lbl)
-
-        sl.addStretch()
-        layout.addWidget(strip)
-
-        # ── Joint state age graph (how fresh is the latest joint data) ──
-        self.age_graph = RollingGraph(
-            title="MESSAGE AGE (ms) — lower is better",
-            window_s=30.0,
-            y_range=(0, 100),
-            series=[
-                ("joint_state", GREEN),
-                ("vel_cmd", BLUE),
-            ],
-            auto_y=True,
-        )
-        layout.addWidget(self.age_graph, 1)
-
-        # ── Command interval graph (time between velocity commands) ──
-        self.interval_graph = RollingGraph(
-            title="COMMAND INTERVAL (ms) — expected ~20ms at 50Hz",
-            window_s=30.0,
-            y_range=(0, 50),
-            series=[
-                ("interval", ORANGE),
-            ],
-            auto_y=True,
-        )
-        layout.addWidget(self.interval_graph, 1)
-
-    def update_status(self, status):
+        # Latency strip
         data = status.latency_history
         if data:
             latest = data[-1][1]
-            joint_ms = latest[0]
-            vel_ms = latest[1]
-            interval_ms = latest[2]
+            joint_ms, vel_ms, interval_ms = latest[0], latest[1], latest[2]
 
             def fmt(ms):
-                if ms < 0:
-                    return "---"
-                return f"{ms:.0f} ms"
+                return "---" if ms < 0 else f"{ms:.0f}ms"
 
             def age_color(ms):
-                if ms < 0:
-                    return TEXT_DIM
-                if ms < 50:
-                    return GREEN
-                if ms < 200:
-                    return YELLOW
+                if ms < 0: return TEXT_DIM
+                if ms < 50: return GREEN
+                if ms < 200: return YELLOW
                 return RED
 
-            self.joint_age_lbl.setText(f"Joint age: {fmt(joint_ms)}")
+            self.joint_age_lbl.setText(f"Jt age: {fmt(joint_ms)}")
             self.joint_age_lbl.setStyleSheet(f"color: {age_color(joint_ms)}; border: none;")
 
             self.cmd_age_lbl.setText(f"Cmd age: {fmt(vel_ms)}")
             self.cmd_age_lbl.setStyleSheet(f"color: {age_color(vel_ms)}; border: none;")
 
-            self.cmd_interval_lbl.setText(f"Cmd interval: {fmt(interval_ms)}")
-            interval_color = GREEN if 0 < interval_ms < 30 else (YELLOW if 0 < interval_ms < 50 else TEXT_DIM)
-            self.cmd_interval_lbl.setStyleSheet(f"color: {interval_color}; border: none;")
+            self.cmd_interval_lbl.setText(f"Interval: {fmt(interval_ms)}")
+            iv_color = GREEN if 0 < interval_ms < 30 else (YELLOW if 0 < interval_ms < 50 else TEXT_DIM)
+            self.cmd_interval_lbl.setStyleSheet(f"color: {iv_color}; border: none;")
 
-        # Feed age graph (series 0 = joint age, series 1 = vel cmd age)
-        # Filter out negative values for clean display
-        age_data = []
-        for t, vals in data:
-            j = max(vals[0], 0) if vals[0] >= 0 else 0
-            v = max(vals[1], 0) if vals[1] >= 0 else 0
-            age_data.append((t, [j, v]))
+            # Dynamic graph titles with live values
+            self.age_graph.title = f"MSG AGE (ms)   jt={fmt(joint_ms)} cmd={fmt(vel_ms)}"
+            self.interval_graph.title = f"CMD INTERVAL (ms)   now={fmt(interval_ms)}"
+
+        # Vel graph title with recent max
+        vel_data = status.velocity_history
+        if vel_data:
+            recent_vels = [abs(v) for _, vs in vel_data[-10:] for v in vs]
+            max_vel = max(recent_vels) if recent_vels else 0.0
+            self.vel_graph.title = f"JOINT VEL (rad/s)   max={max_vel:.2f}"
+
+        # Rate graph title with latest values
+        rate_data = status.rate_history
+        if rate_data:
+            lr = rate_data[-1][1]
+            self.rate_graph.title = f"TOPIC HEALTH (%)   jt={lr[0]:.0f}% vel={lr[1]:.0f}%"
+
+        # Feed graphs
+        self.vel_graph.set_data(vel_data if vel_data else [])
+        self.rate_graph.set_data(rate_data if rate_data else [])
+
+        age_data = [(t, [max(v[0], 0), max(v[1], 0)]) for t, v in data]
         self.age_graph.set_data(age_data)
 
-        # Feed interval graph (series 0 = cmd interval)
-        interval_data = []
-        for t, vals in data:
-            iv = max(vals[2], 0) if vals[2] >= 0 else 0
-            interval_data.append((t, [iv]))
+        interval_data = [(t, [max(v[2], 0)]) for t, v in data]
         self.interval_graph.set_data(interval_data)
-
-
-# ── Screen: Session ────────────────────────────────────────────────
-
-class SessionScreen(QWidget):
-    """Text-based session overview — mode, connection, topic rates, durations."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(6, 4, 6, 4)
-        layout.setSpacing(8)
-
-        # ── Left column: session & control info ──
-        left = QVBoxLayout()
-        left.setSpacing(2)
-
-        sess_title = QLabel("SESSION")
-        sess_title.setFont(QFont("monospace", 8, QFont.Bold))
-        sess_title.setStyleSheet(f"color: {BLUE};")
-        left.addWidget(sess_title)
-
-        self.duration_lbl = self._metric(left, "Duration: ---")
-        self.mode_lbl = self._metric(left, "Control mode: ---")
-        self.submode_lbl = self._metric(left, "Sub-mode: ---")
-        self.handguide_lbl = self._metric(left, "Hand guide: ---")
-        self.switches_lbl = self._metric(left, "Mode switches: ---")
-        self.estops_lbl = self._metric(left, "E-stop count: ---")
-
-        left.addSpacing(8)
-
-        col_title = QLabel("COLLISION & GRIPPER")
-        col_title.setFont(QFont("monospace", 8, QFont.Bold))
-        col_title.setStyleSheet(f"color: {BLUE};")
-        left.addWidget(col_title)
-
-        self.collision_status_lbl = self._metric(left, "Collision: ---")
-        self.collision_count_lbl = self._metric(left, "Collision blocks: 0")
-        self.gripper_count_lbl = self._metric(left, "Gripper grips: 0")
-        self.ee_lock_lbl = self._metric(left, "EE lock: ---")
-
-        left.addSpacing(8)
-
-        dur_title = QLabel("MODE DURATIONS")
-        dur_title.setFont(QFont("monospace", 8, QFont.Bold))
-        dur_title.setStyleSheet(f"color: {BLUE};")
-        left.addWidget(dur_title)
-
-        self.dur_rmrc_t = self._metric(left, "RMRC Translate: ---")
-        self.dur_rmrc_r = self._metric(left, "RMRC Rotate:    ---")
-        self.dur_joint = self._metric(left, "Direct Joint:   ---")
-        self.dur_hand = self._metric(left, "Hand Guide:     ---")
-
-        left.addStretch()
-        layout.addLayout(left, 1)
-
-        # Separator
-        sep = QFrame()
-        sep.setFrameShape(QFrame.VLine)
-        sep.setStyleSheet(f"color: {BORDER};")
-        layout.addWidget(sep)
-
-        # ── Right column: connection & topic rates ──
-        right = QVBoxLayout()
-        right.setSpacing(2)
-
-        conn_title = QLabel("CONNECTION")
-        conn_title.setFont(QFont("monospace", 8, QFont.Bold))
-        conn_title.setStyleSheet(f"color: {BLUE};")
-        right.addWidget(conn_title)
-
-        self.ros_lbl = self._metric(right, "ROS: ---")
-        self.ctrl_lbl = self._metric(right, "Controller: ---")
-        self.state_lbl = self._metric(right, "Robot state: ---")
-
-        right.addSpacing(8)
-
-        rates_title = QLabel("TOPIC RATES")
-        rates_title.setFont(QFont("monospace", 8, QFont.Bold))
-        rates_title.setStyleSheet(f"color: {BLUE};")
-        right.addWidget(rates_title)
-
-        self.rate_labels = {}
-        for name in TOPIC_DEFAULTS:
-            lbl = self._metric(right, f"{name}: ---")
-            self.rate_labels[name] = lbl
-
-        right.addStretch()
-        layout.addLayout(right, 1)
-
-    def _metric(self, parent_layout, text):
-        lbl = QLabel(text)
-        lbl.setFont(QFont("monospace", 8))
-        lbl.setStyleSheet(f"color: {TEXT};")
-        parent_layout.addWidget(lbl)
-        return lbl
-
-    def update_status(self, status):
-        info = status.session_info
-
-        # ── Session info ──
-        if info:
-            secs = info.get("session_s", 0)
-            mins, s = int(secs) // 60, int(secs) % 60
-            self.duration_lbl.setText(f"Duration: {mins:02d}:{s:02d}")
-
-            mode = info.get("mode", "---")
-            self.mode_lbl.setText(f"Control mode: {mode}")
-            mode_colors = {"RMRC": GREEN, "DirectJoint": YELLOW, "HandGuide": ORANGE}
-            self.mode_lbl.setStyleSheet(f"color: {mode_colors.get(mode, TEXT)};")
-
-            self.submode_lbl.setText(f"Sub-mode: {info.get('sub_mode', '---')}")
-
-            hg = info.get("hand_guide_active", False)
-            self.handguide_lbl.setText(f"Hand guide: {'ACTIVE' if hg else 'inactive'}")
-            self.handguide_lbl.setStyleSheet(f"color: {ORANGE if hg else TEXT_DIM};")
-
-            self.switches_lbl.setText(f"Mode switches: {info.get('mode_switches', 0)}")
-
-            durations = info.get("mode_durations", {})
-            self.dur_rmrc_t.setText(f"RMRC Translate: {self._fmt_dur(durations.get('RMRC_Translate', 0))}")
-            self.dur_rmrc_r.setText(f"RMRC Rotate:    {self._fmt_dur(durations.get('RMRC_Rotate', 0))}")
-            self.dur_joint.setText(f"Direct Joint:   {self._fmt_dur(durations.get('DirectJoint', 0))}")
-            self.dur_hand.setText(f"Hand Guide:     {self._fmt_dur(durations.get('HandGuide', 0))}")
-        else:
-            self.duration_lbl.setText("Duration: waiting for Unity...")
-            self.duration_lbl.setStyleSheet(f"color: {TEXT_DIM};")
-
-        # E-stop count
-        estop_count = sum(1 for _, msg in status.events if "EMERGENCY STOP" in msg)
-        self.estops_lbl.setText(f"E-stop count: {estop_count}")
-        self.estops_lbl.setStyleSheet(f"color: {RED if estop_count > 0 else TEXT};")
-
-        # Collision & gripper
-        if status.collision_blocked:
-            self.collision_status_lbl.setText("Collision: BLOCKED")
-            self.collision_status_lbl.setStyleSheet(f"color: {RED};")
-        elif status.collision_scale < 1.0:
-            self.collision_status_lbl.setText(f"Collision: slowing ({status.collision_scale:.0%})")
-            self.collision_status_lbl.setStyleSheet(f"color: {YELLOW};")
-        else:
-            self.collision_status_lbl.setText("Collision: clear")
-            self.collision_status_lbl.setStyleSheet(f"color: {GREEN};")
-
-        self.collision_count_lbl.setText(f"Collision blocks: {status.collision_events}")
-        col_color = RED if status.collision_events > 0 else TEXT
-        self.collision_count_lbl.setStyleSheet(f"color: {col_color};")
-
-        self.gripper_count_lbl.setText(f"Gripper grips: {status.gripper_grips}")
-
-        ee_text = "EE lock: ON" if status.ee_locked else "EE lock: off"
-        ee_color = BLUE if status.ee_locked else TEXT_DIM
-        self.ee_lock_lbl.setText(f"{ee_text} ({status.ee_lock_count} toggles)")
-        self.ee_lock_lbl.setStyleSheet(f"color: {ee_color};")
-
-        # ── Connection ──
-        if status.ros_connected:
-            self.ros_lbl.setText("ROS: CONNECTED")
-            self.ros_lbl.setStyleSheet(f"color: {GREEN};")
-        else:
-            self.ros_lbl.setText("ROS: OFFLINE")
-            self.ros_lbl.setStyleSheet(f"color: {RED};")
-
-        if status.controller_active:
-            self.ctrl_lbl.setText("Controller: ACTIVE")
-            self.ctrl_lbl.setStyleSheet(f"color: {GREEN};")
-        else:
-            self.ctrl_lbl.setText("Controller: INACTIVE")
-            self.ctrl_lbl.setStyleSheet(f"color: {YELLOW};")
-
-        state_colors = {
-            RobotState.RUNNING: (GREEN, "RUNNING"),
-            RobotState.ESTOPPED: (RED, "E-STOPPED"),
-            RobotState.RESUMING: (YELLOW, "RESUMING"),
-            RobotState.DISCONNECTED: (TEXT_DIM, "DISCONNECTED"),
-        }
-        color, label = state_colors.get(status.robot_state, (TEXT_DIM, "UNKNOWN"))
-        self.state_lbl.setText(f"Robot state: {label}")
-        self.state_lbl.setStyleSheet(f"color: {color};")
-
-        # ── Topic rates ──
-        for name, lbl in self.rate_labels.items():
-            rate = status.topic_rates.get(name)
-            hz = rate.hz if rate else 0.0
-            if hz > 0:
-                lbl.setText(f"{name}: {hz:.0f} Hz")
-                lbl.setStyleSheet(f"color: {GREEN};")
-            else:
-                lbl.setText(f"{name}: ---")
-                lbl.setStyleSheet(f"color: {TEXT_DIM};")
-
-    @staticmethod
-    def _fmt_dur(secs):
-        if secs <= 0:
-            return "---"
-        mins, s = int(secs) // 60, int(secs) % 60
-        if mins > 0:
-            return f"{mins}m {s}s"
-        return f"{s}s"
 
 
 # ── Screen: MoveIt Cube Pick/Place ─────────────────────────────────
@@ -1155,6 +1203,8 @@ class CubePickScreen(QWidget):
         self.ros = ros
         self.selected_bin_id = 1
         self._last_status_text = ""
+        self._style_scale = 1.0
+        self._cube_buttons_enabled = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 8)
@@ -1162,30 +1212,30 @@ class CubePickScreen(QWidget):
 
         header = QHBoxLayout()
         title = QLabel("CUBE PICK & PLACE")
-        title.setFont(QFont("monospace", 8, QFont.Bold))
+        title.setFont(QFont("monospace", 11, QFont.Bold))
         title.setStyleSheet(f"color: {BLUE};")
         header.addWidget(title)
 
         header.addStretch()
 
         self.status_label = QLabel("SERVICE: ---")
-        self.status_label.setFont(QFont("monospace", 8, QFont.Bold))
+        self.status_label.setFont(QFont("monospace", 10, QFont.Bold))
         self.status_label.setStyleSheet(f"color: {TEXT_DIM};")
         header.addWidget(self.status_label)
         layout.addLayout(header)
 
         body = QHBoxLayout()
-        body.setSpacing(8)
+        body.setSpacing(12)
         layout.addLayout(body, 1)
 
         controls = QVBoxLayout()
-        controls.setSpacing(8)
+        controls.setSpacing(10)
         body.addLayout(controls, 3)
 
         bin_row = QHBoxLayout()
         bin_row.setSpacing(8)
         bin_label = QLabel("DESTINATION")
-        bin_label.setFont(QFont("monospace", 8, QFont.Bold))
+        bin_label.setFont(QFont("monospace", 9, QFont.Bold))
         bin_label.setStyleSheet(f"color: {TEXT_DIM};")
         bin_row.addWidget(bin_label)
 
@@ -1252,7 +1302,7 @@ class CubePickScreen(QWidget):
         self.pick_place_status = QTextEdit()
         self.pick_place_status.setReadOnly(True)
         self.pick_place_status.setMinimumWidth(360)
-        self.pick_place_status.setFont(QFont("monospace", 8))
+        self.pick_place_status.setFont(QFont("monospace", 10))
         self.pick_place_status.setStyleSheet(f"""
             QTextEdit {{
                 background-color: {DARK_BG};
@@ -1263,12 +1313,15 @@ class CubePickScreen(QWidget):
         status_panel.addWidget(self.pick_place_status, 1)
 
         self._set_buttons_enabled(False)
+        self.apply_scale(1.0)
 
     def _select_bin(self, bin_id: int):
         self.selected_bin_id = bin_id
         self._update_bin_buttons()
 
     def _update_bin_buttons(self):
+        border = _scaled_px(2, self._style_scale, 1)
+        radius = _scaled_px(8, self._style_scale, 5)
         for idx, btn in enumerate(self.bin_buttons, start=1):
             active = idx == self.selected_bin_id
             btn.setChecked(active)
@@ -1276,8 +1329,8 @@ class CubePickScreen(QWidget):
                 QPushButton {{
                     background-color: {GREEN if active else DARK_BG};
                     color: {'white' if active else TEXT};
-                    border: 2px solid {('#6fdd8b' if active else BORDER)};
-                    border-radius: 8px;
+                    border: {border}px solid {('#6fdd8b' if active else BORDER)};
+                    border-radius: {radius}px;
                 }}
                 QPushButton:hover {{
                     border-color: {GREEN};
@@ -1376,14 +1429,17 @@ class CubePickScreen(QWidget):
             scroll.setValue(scroll.maximum())
 
     def _set_buttons_enabled(self, enabled: bool):
+        self._cube_buttons_enabled = enabled
+        border = _scaled_px(3, self._style_scale, 2)
+        radius = _scaled_px(8, self._style_scale, 5)
         for btn in self.cube_buttons:
             btn.setEnabled(enabled)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {BLUE if enabled else DARK_BG};
                     color: {'white' if enabled else TEXT_DIM};
-                    border: 3px solid {('#79bbff' if enabled else BORDER)};
-                    border-radius: 8px;
+                    border: {border}px solid {('#79bbff' if enabled else BORDER)};
+                    border-radius: {radius}px;
                 }}
                 QPushButton:hover {{
                     background-color: #79bbff;
@@ -1394,6 +1450,16 @@ class CubePickScreen(QWidget):
                 }}
             """)
 
+    def apply_scale(self, scale: float):
+        self._style_scale = scale
+        for btn in self.bin_buttons:
+            btn.setFixedHeight(_scaled_px(52, scale, 38))
+        for btn in self.cube_buttons:
+            btn.setMinimumHeight(_scaled_px(120, scale, 84))
+        self.pick_place_status.setMinimumWidth(_scaled_px(360, scale, 260))
+        self._update_bin_buttons()
+        self._set_buttons_enabled(self._cube_buttons_enabled)
+
 
 # ── Main Window ─────────────────────────────────────────────────────
 
@@ -1403,8 +1469,9 @@ class MainWindow(QMainWindow):
     def __init__(self, ros: RosInterface):
         super().__init__()
         self.ros = ros
+        self._ui_scale = 1.0
         self.setWindowTitle("HoloAssist Dashboard")
-        self.resize(1280, 800)
+        self.resize(BASE_WINDOW_WIDTH, BASE_WINDOW_HEIGHT)
         self.setMinimumSize(800, 600)
 
         # Central widget
@@ -1432,23 +1499,17 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.setFont(QFont("monospace", 8))
 
-        self.status_screen = StatusScreen()
+        self.status_screen = MergedStatusScreen()
         self.tabs.addTab(self.status_screen, "STATUS")
 
         self.headset_screen = HeadsetScreen()
         self.tabs.addTab(self.headset_screen, "HEADSET")
 
-        self.camera_screen = CameraScreen()
+        self.camera_screen = CameraScreen(ros)
         self.tabs.addTab(self.camera_screen, "CAMERA")
 
-        self.stats_screen = StatsScreen()
-        self.tabs.addTab(self.stats_screen, "STATS")
-
-        self.latency_screen = LatencyScreen()
-        self.tabs.addTab(self.latency_screen, "LATENCY")
-
-        self.session_screen = SessionScreen()
-        self.tabs.addTab(self.session_screen, "SESSION")
+        self.debug_screen = DebugScreen()
+        self.tabs.addTab(self.debug_screen, "DEBUG")
 
         self.cube_screen = CubePickScreen(ros)
         self._cube_tab_index = None
@@ -1460,6 +1521,7 @@ class MainWindow(QMainWindow):
         mode_row = QHBoxLayout()
         mode_row.setContentsMargins(4, 4, 4, 4)
         mode_row.setSpacing(4)
+        self.mode_row = mode_row
 
         self.teleop_btn = QPushButton("TELEOP")
         self.teleop_btn.setFont(QFont("monospace", 11, QFont.Bold))
@@ -1484,6 +1546,7 @@ class MainWindow(QMainWindow):
 
         # E-stop (right side, always visible)
         self.estop = EstopWidget(ros)
+        self.estop.setProperty("_skip_font_scale", True)
         body.addWidget(self.estop)
 
         main_layout.addLayout(body, 1)
@@ -1493,6 +1556,67 @@ class MainWindow(QMainWindow):
         self._poll_timer.setInterval(self.POLL_INTERVAL_MS)
         self._poll_timer.timeout.connect(self._poll)
         self._poll_timer.start()
+        self._capture_base_fonts()
+        self._apply_scale(force=True)
+
+    def _capture_base_fonts(self):
+        for widget in self._iter_font_widgets():
+            font = widget.font()
+            point_size = font.pointSizeF()
+            if point_size <= 0:
+                point_size = float(font.pointSize())
+            if point_size > 0:
+                widget.setProperty("_base_font_pt", point_size)
+
+    def _apply_scaled_fonts(self, scale: float):
+        for widget in self._iter_font_widgets():
+            if widget.property("_skip_font_scale"):
+                continue
+            base_pt = widget.property("_base_font_pt")
+            if base_pt is None:
+                continue
+            target_pt = _clamp(float(base_pt) * scale, 7.0, 42.0)
+            font = widget.font()
+            if abs(font.pointSizeF() - target_pt) > 0.05:
+                font.setPointSizeF(target_pt)
+                widget.setFont(font)
+
+    def _iter_font_widgets(self):
+        widgets = []
+        for cls in (QLabel, QPushButton, QTextEdit, QTabWidget):
+            widgets.extend(self.findChildren(cls))
+        return widgets
+
+    def _apply_scale(self, force: bool = False):
+        width = self.width() if self.width() > 0 else BASE_WINDOW_WIDTH
+        scale = _window_scale(width)
+        if not force and abs(scale - self._ui_scale) < 0.01:
+            return
+        self._ui_scale = scale
+
+        app = QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(build_global_style(scale))
+
+        self._apply_scaled_fonts(scale)
+        self.status_bar.apply_scale(scale)
+        self.estop.apply_scale(scale, self.width())
+        self.debug_screen.apply_scale(scale)
+        self.cube_screen.apply_scale(scale)
+        self.mode_row.setContentsMargins(
+            _scaled_px(4, scale, 2),
+            _scaled_px(4, scale, 2),
+            _scaled_px(4, scale, 2),
+            _scaled_px(4, scale, 2),
+        )
+        self.mode_row.setSpacing(_scaled_px(4, scale, 2))
+        self.teleop_btn.setFixedHeight(_scaled_px(80, scale, 56))
+        self.moveit_btn.setFixedHeight(_scaled_px(80, scale, 56))
+        self._update_mode_buttons()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_scale()
 
     def _poll(self):
         status = self.ros.get_status()
@@ -1500,9 +1624,7 @@ class MainWindow(QMainWindow):
         self.status_screen.update_status(status)
         self.headset_screen.update_status(status)
         self.camera_screen.update_status(status)
-        self.stats_screen.update_status(status)
-        self.latency_screen.update_status(status)
-        self.session_screen.update_status(status)
+        self.debug_screen.update_status(status)
         self.cube_screen.update_status(status)
         self.estop.sync_state(status)
         if status.operating_mode != self._active_mode:
@@ -1533,21 +1655,23 @@ class MainWindow(QMainWindow):
             self._cube_tab_index = None
 
     def _update_mode_buttons(self):
+        border = _scaled_px(3, self._ui_scale, 2)
+        radius = _scaled_px(12, self._ui_scale, 8)
         if self._active_mode == "TELEOP":
             self.teleop_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {GREEN};
                     color: white;
-                    border: 3px solid #6fdd8b;
-                    border-radius: 12px;
+                    border: {border}px solid #6fdd8b;
+                    border-radius: {radius}px;
                 }}
             """)
             self.moveit_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {DARK_BG};
                     color: {BLUE};
-                    border: 3px solid {BLUE};
-                    border-radius: 12px;
+                    border: {border}px solid {BLUE};
+                    border-radius: {radius}px;
                 }}
                 QPushButton:hover {{
                     background-color: #1a2332;
@@ -1559,8 +1683,8 @@ class MainWindow(QMainWindow):
                 QPushButton {{
                     background-color: {DARK_BG};
                     color: {GREEN};
-                    border: 3px solid {GREEN};
-                    border-radius: 12px;
+                    border: {border}px solid {GREEN};
+                    border-radius: {radius}px;
                 }}
                 QPushButton:hover {{
                     background-color: #1a2332;
@@ -1571,8 +1695,8 @@ class MainWindow(QMainWindow):
                 QPushButton {{
                     background-color: {BLUE};
                     color: white;
-                    border: 3px solid #79bbff;
-                    border-radius: 12px;
+                    border: {border}px solid #79bbff;
+                    border-radius: {radius}px;
                 }}
             """)
 
@@ -1597,29 +1721,40 @@ class MainWindow(QMainWindow):
 # ── Entry Point ─────────────────────────────────────────────────────
 
 def main():
-    import os
     no_ros = "--no-ros" in sys.argv
     fullscreen = "--fullscreen" in sys.argv or "-f" in sys.argv
 
-    # Scale UI so it looks right when streaming a HiDPI laptop to a Steam Deck.
-    # The laptop is 3456x2160, the Deck is 1280x800 — without scaling,
-    # everything renders tiny. QT_SCALE_FACTOR makes Qt draw larger.
-    if fullscreen and "QT_SCALE_FACTOR" not in os.environ:
-        os.environ["QT_SCALE_FACTOR"] = "2.5"
+    bridge_url = None
+    for arg in sys.argv:
+        if arg.startswith("--bridge="):
+            bridge_url = arg[len("--bridge="):]
+        elif arg == "--bridge" and sys.argv.index(arg) + 1 < len(sys.argv):
+            bridge_url = sys.argv[sys.argv.index(arg) + 1]
 
     app = QApplication(sys.argv)
-    app.setStyleSheet(GLOBAL_STYLE)
+    app.setStyleSheet(build_global_style(1.0))
 
-    ros = RosInterface()
+    # Allow Ctrl+C in terminal to close the app. PyQt5 blocks Python signals
+    # while in the event loop, so a short timer wakes the interpreter regularly.
+    signal.signal(signal.SIGINT, lambda *_: app.quit())
+    sigint_timer = QTimer()
+    sigint_timer.timeout.connect(lambda: None)
+    sigint_timer.start(200)
 
-    if not no_ros:
-        if ROS_AVAILABLE:
-            ros.start()
-        else:
-            print("WARNING: rclpy not found. Running in offline mode.")
-            print("  Install ROS 2 or run with --no-ros to suppress this warning.")
+    if bridge_url:
+        print(f"Network mode: connecting to bridge at {bridge_url}")
+        ros = NetInterface(url=bridge_url)
+        ros.start()
     else:
-        print("Running in offline mode (--no-ros)")
+        ros = RosInterface()
+        if not no_ros:
+            if ROS_AVAILABLE:
+                ros.start()
+            else:
+                print("WARNING: rclpy not found. Running in offline mode.")
+                print("  Install ROS 2 or run with --no-ros to suppress this warning.")
+        else:
+            print("Running in offline mode (--no-ros)")
 
     window = MainWindow(ros)
     if fullscreen:

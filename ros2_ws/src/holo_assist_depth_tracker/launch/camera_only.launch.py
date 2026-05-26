@@ -26,7 +26,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     color_profile_arg = DeclareLaunchArgument(
         "color_profile",
-        default_value="640,480,15",
+        default_value="848,480,30",
         description="Color stream profile W,H,FPS",
     )
     enable_color_arg = DeclareLaunchArgument(
@@ -38,6 +38,11 @@ def generate_launch_description() -> LaunchDescription:
         "align_depth",
         default_value="false",
         description="Enable depth alignment filter.",
+    )
+    pointcloud_arg = DeclareLaunchArgument(
+        "pointcloud",
+        default_value="false",
+        description="Enable native RealSense pointcloud on /camera/camera/depth/color/points.",
     )
 
     rs_launch = IncludeLaunchDescription(
@@ -54,13 +59,13 @@ def generate_launch_description() -> LaunchDescription:
         launch_configurations={
             "camera_name": LaunchConfiguration("camera_name"),
             "enable_color": LaunchConfiguration("enable_color"),
-            "enable_depth": "true",
+            "enable_depth": "false",
             "enable_infra": "false",
             "enable_infra1": "false",
             "enable_infra2": "false",
             "enable_gyro": "false",
             "enable_accel": "false",
-            "pointcloud.enable": "false",
+            "pointcloud.enable": LaunchConfiguration("pointcloud"),
             "align_depth.enable": LaunchConfiguration("align_depth"),
             "depth_module.depth_profile": LaunchConfiguration("depth_profile"),
             "rgb_camera.color_profile": LaunchConfiguration("color_profile"),
@@ -74,5 +79,6 @@ def generate_launch_description() -> LaunchDescription:
         color_profile_arg,
         enable_color_arg,
         align_depth_arg,
+        pointcloud_arg,
         scoped_rs_launch,
     ])

@@ -1,14 +1,14 @@
 holoassist_cube_pose:
   ros__parameters:
     detections_topic: /detections_all
-    workspace_frame: workspace_frame
+    workspace_frame: camera_color_optical_frame
     tag_family: 36h11
     cube_edge_size_m: 0.040
     cube_tag_size_m: 0.032
     cube_face_offset_m: 0.020
     # Backward-compatible alias. Keep equal to cube_edge_size_m.
     cube_size_m: 0.040
-    detections_timeout_s: 1.0
+    detections_timeout_s: 0.5
     tf_lookup_timeout_s: 0.05
     timer_hz: 20.0
     publish_cube_tf: true

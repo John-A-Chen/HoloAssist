@@ -88,8 +88,8 @@ def generate_launch_description():
                 "grasp_z_absolute",
                 default_value="-1.0",
                 description=(
-                    "Absolute Z height for the grasp pose. "
-                    "Use -1.0 to use block_z + grasp_z_offset."
+                    "Absolute Z height for the pick descent pose. "
+                    "Use -1.0 to fall back to cube_z + grasp_z_offset."
                 ),
             ),
             DeclareLaunchArgument(

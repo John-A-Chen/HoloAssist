@@ -57,7 +57,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
+        default_value="0.0",
     )
     kinematics_config_arg = DeclareLaunchArgument(
         "kinematics_config",
@@ -121,9 +121,32 @@ def generate_launch_description() -> LaunchDescription:
         description="Prefix for april_cube_N_pose topics used by the pick-place service.",
     )
 
+    trajectory_topic_arg = DeclareLaunchArgument(
+        "trajectory_topic",
+        default_value="/scaled_joint_trajectory_controller/joint_trajectory",
+        description="JointTrajectory topic for MoveIt execution. "
+                    "Use /joint_trajectory_controller/joint_trajectory for fake hardware.",
+    )
+    arm_trajectory_topic_arg = DeclareLaunchArgument(
+        "arm_trajectory_topic",
+        default_value="/scaled_joint_trajectory_controller/joint_trajectory",
+        description="JointTrajectory topic for the pick-place sequencer. "
+                    "Use /joint_trajectory_controller/joint_trajectory for fake hardware.",
+    )
+    require_robot_status_arg = DeclareLaunchArgument(
+        "require_robot_status",
+        default_value="true",
+        description="Set false for fake hardware (no UR driver status topics).",
+    )
+    require_controller_check_arg = DeclareLaunchArgument(
+        "require_controller_check",
+        default_value="true",
+        description="Set false for fake hardware.",
+    )
+
     use_calibrated_workspace_arg = DeclareLaunchArgument(
         "use_calibrated_workspace",
-        default_value="true",
+        default_value="false",
     )
     calibration_yaml_arg = DeclareLaunchArgument(
         "calibration_yaml",
@@ -186,11 +209,11 @@ def generate_launch_description() -> LaunchDescription:
             "ur_type": LaunchConfiguration("ur_type"),
             "onrobot_type": LaunchConfiguration("onrobot_type"),
             "use_fake_hardware": "false",
-            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
             "robot_ip": LaunchConfiguration("robot_ip"),
             "launch_rviz": "false",
             "launch_servo": "false",
             "base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
+            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
         }.items(),
     )
 
@@ -221,17 +244,15 @@ def generate_launch_description() -> LaunchDescription:
             "move_group_name": LaunchConfiguration("move_group_name"),
             "ee_link": LaunchConfiguration("ee_link"),
             "frame": LaunchConfiguration("frame"),
-            "require_robot_status": "true",
-            "require_controller_check": "true",
+            "require_robot_status": LaunchConfiguration("require_robot_status"),
+            "require_controller_check": LaunchConfiguration("require_controller_check"),
             "allow_pose_goal_fallback": "true",
             "orientation_mode": LaunchConfiguration("orientation_mode"),
             "avoid_flange_forearm_clamp": LaunchConfiguration("avoid_flange_forearm_clamp"),
             "pose_goal_planning_time": LaunchConfiguration("pose_goal_planning_time"),
             "velocity_scale": LaunchConfiguration("velocity_scale"),
-            "cartesian_retime_velocity_scale": LaunchConfiguration(
-                "cartesian_retime_velocity_scale"
-            ),
-            "trajectory_topic": "/scaled_joint_trajectory_controller/joint_trajectory",
+            "cartesian_retime_velocity_scale": LaunchConfiguration("cartesian_retime_velocity_scale"),
+            "trajectory_topic": LaunchConfiguration("trajectory_topic"),
         }.items(),
     )
 
@@ -248,13 +269,11 @@ def generate_launch_description() -> LaunchDescription:
             "orientation_mode": "auto",
             "pregrasp_z_offset": 0.10,
             "grasp_z_offset": 0.0,
-            "grasp_z_absolute": ParameterValue(
-                LaunchConfiguration("grasp_z_absolute"),
-                value_type=float,
-            ),
+            "grasp_z_absolute": LaunchConfiguration("grasp_z_absolute"),
             "place_above_z_offset": 0.15,
             "place_z_offset": 0.05,
             "place_descent_enabled": True,
+            "arm_trajectory_topic": LaunchConfiguration("arm_trajectory_topic"),
         }],
     )
 
@@ -327,6 +346,10 @@ def generate_launch_description() -> LaunchDescription:
             start_pick_place_arg,
             grasp_z_absolute_arg,
             cube_pose_topic_prefix_arg,
+            trajectory_topic_arg,
+            arm_trajectory_topic_arg,
+            require_robot_status_arg,
+            require_controller_check_arg,
             use_calibrated_workspace_arg,
             calibration_yaml_arg,
             use_rviz_arg,

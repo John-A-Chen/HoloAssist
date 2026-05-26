@@ -20,7 +20,7 @@ def _validate_apriltag_params(context, *args):
     except Exception as exc:
         return [LogInfo(msg=f"[WARN] unable to read apriltag params file '{path}': {exc}")]
 
-    match = re.search(r"^\\s*size\\s*:\\s*([-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)\\s*$", text, re.MULTILINE)
+    match = re.search(r"^\s*size\s*:\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*$", text, re.MULTILINE)
     if not match:
         messages.append(
             LogInfo(
@@ -62,6 +62,7 @@ def generate_launch_description() -> LaunchDescription:
     start_camera_arg = DeclareLaunchArgument("start_camera", default_value="false")
     image_topic_arg = DeclareLaunchArgument("image_topic", default_value="/camera/camera/color/image_raw")
     camera_info_topic_arg = DeclareLaunchArgument("camera_info_topic", default_value="/camera/camera/color/camera_info")
+    start_workspace_arg = DeclareLaunchArgument("start_workspace", default_value="false")
     start_tracker_arg = DeclareLaunchArgument("start_tracker", default_value="true")
     start_overlay_arg = DeclareLaunchArgument("start_overlay", default_value="true")
 
@@ -105,6 +106,7 @@ def generate_launch_description() -> LaunchDescription:
         name="holoassist_workspace_board",
         output="screen",
         parameters=[LaunchConfiguration("workspace_params_file")],
+        condition=IfCondition(LaunchConfiguration("start_workspace")),
     )
 
     cube_pose_node = Node(
@@ -144,6 +146,7 @@ def generate_launch_description() -> LaunchDescription:
             start_camera_arg,
             image_topic_arg,
             camera_info_topic_arg,
+            start_workspace_arg,
             start_tracker_arg,
             start_overlay_arg,
             apriltag_params_arg,

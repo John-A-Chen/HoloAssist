@@ -323,15 +323,14 @@ class SimpleRobotKinematics:
         return resolve(resolved_name)
 
 
+def duration_to_sec(duration) -> float:
+    return float(duration.sec) + float(duration.nanosec) / 1e9
+
+
 def trajectory_duration_sec(trajectory: JointTrajectory) -> float:
     if not trajectory.points:
         return 0.0
-    final_point = trajectory.points[-1]
-    return duration_to_sec(final_point.time_from_start)
-
-
-def duration_to_sec(duration) -> float:
-    return float(duration.sec) + (float(duration.nanosec) / 1e9)
+    return duration_to_sec(trajectory.points[-1].time_from_start)
 
 
 def set_duration_seconds(duration, seconds: float) -> None:
@@ -362,9 +361,6 @@ def retime_trajectory_if_needed(
     velocity_scale: float,
     minimum_segment_duration: float = 0.05,
 ) -> None:
-    if not trajectory.points:
-        return
-
     start_by_joint = {
         joint_name: joint_position
         for joint_name, joint_position in zip(UR_JOINT_ORDER, start_positions)
@@ -374,18 +370,12 @@ def retime_trajectory_if_needed(
     scale = max(0.01, min(1.0, velocity_scale))
     max_joint_speed = math.pi * scale
     elapsed = 0.0
-    previous_time = 0.0
-    keep_existing_timing = trajectory_has_strict_timing(trajectory)
+    previous_point_time = 0.0
 
     for point in trajectory.points:
         current_positions = list(point.positions)
-        if len(current_positions) != len(trajectory.joint_names):
-            raise RuntimeError("MoveIt returned a trajectory point with the wrong joint count")
-
-        original_point_time = duration_to_sec(point.time_from_start)
-        existing_segment_duration = 0.0
-        if keep_existing_timing and original_point_time > previous_time:
-            existing_segment_duration = original_point_time - previous_time
+        existing_point_time = duration_to_sec(point.time_from_start)
+        existing_segment_duration = existing_point_time - previous_point_time
 
         max_joint_delta = max(
             abs(current - previous)
@@ -401,9 +391,8 @@ def retime_trajectory_if_needed(
             (current - previous) / segment_duration
             for current, previous in zip(current_positions, previous_positions)
         ]
-        point.accelerations = []
         previous_positions = current_positions
-        previous_time = original_point_time
+        previous_point_time = existing_point_time
 
 
 def joint_space_path_length(
@@ -1577,9 +1566,6 @@ class MoveItRobotControl(Node):
                 checked_states = self.validate_trajectory_collision_free(
                     trajectory, stride=collision_check_stride
                 )
-                retime_trajectory_if_needed(
-                    trajectory, current_pos, velocity_scale
-                )
                 path_length = joint_space_path_length(trajectory, current_pos)
                 duration_sec = trajectory_duration_sec(trajectory)
             except RuntimeError as exc:
@@ -1618,6 +1604,7 @@ class MoveItRobotControl(Node):
             f"{successful_candidates} successful candidate(s): joint path length "
             f"{best_score.path_length:.3f} rad, duration {best_score.duration_sec:.2f} s"
         )
+        retime_trajectory_if_needed(best_score.trajectory, current_pos, velocity_scale)
         return best_score.trajectory
 
     def plan_pose_motion(
@@ -1677,9 +1664,6 @@ class MoveItRobotControl(Node):
                 checked_states = self.validate_trajectory_collision_free(
                     trajectory, stride=collision_check_stride
                 )
-                retime_trajectory_if_needed(
-                    trajectory, current_pos, velocity_scale
-                )
                 path_length = joint_space_path_length(trajectory, current_pos)
                 duration_sec = trajectory_duration_sec(trajectory)
             except RuntimeError as exc:
@@ -1723,6 +1707,7 @@ class MoveItRobotControl(Node):
             f"{successful_candidates} successful candidate(s): joint path length "
             f"{best_score.path_length:.3f} rad, duration {best_score.duration_sec:.2f} s"
         )
+        retime_trajectory_if_needed(best_score.trajectory, current_pos, velocity_scale)
         return best_score.trajectory
 
     def plan_cartesian_motion(
@@ -1875,9 +1860,9 @@ class MoveItRobotControl(Node):
         except RuntimeError as exc:
             return pose_goal_fallback(str(exc))
         active_retime_scale = (
-            velocity_scale
-            if retime_velocity_scale is None or retime_velocity_scale <= 0.0
-            else retime_velocity_scale
+            retime_velocity_scale
+            if retime_velocity_scale is not None and retime_velocity_scale > 0.0
+            else velocity_scale
         )
         retime_trajectory_if_needed(trajectory, current_pos, active_retime_scale)
         duration_sec = trajectory_duration_sec(trajectory)
@@ -1885,8 +1870,7 @@ class MoveItRobotControl(Node):
         self.get_logger().info(
             f"Cartesian path succeeded: fraction {response.fraction:.3f}, "
             f"{len(trajectory.points)} trajectory points, checked "
-            f"{checked_states} collision-free state(s), duration {duration_sec:.2f} s, "
-            f"retime velocity scale {active_retime_scale:.3f}"
+            f"{checked_states} collision-free state(s), duration {duration_sec:.2f} s"
         )
         return trajectory
 
@@ -2714,7 +2698,6 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
                 cartesian_jump_threshold=self.jump_threshold,
                 min_cartesian_fraction=self.min_fraction,
                 velocity_scale=self.velocity_scale,
-                cartesian_retime_velocity_scale=self.cartesian_retime_velocity_scale,
                 collision_check_stride=self.collision_check_stride,
                 allow_pose_goal_fallback=self.allow_pose_goal_fallback,
                 pose_goal_planning_time=self.pose_goal_planning_time,

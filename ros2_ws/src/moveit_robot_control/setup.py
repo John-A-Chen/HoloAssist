@@ -27,6 +27,9 @@ setup(
                 "launch/real_robot_moveit_sim_view.launch.py",
                 "launch/real_robot_no_camera.launch.py",
                 "launch/workspace_scene.launch.py",
+                "launch/real_robot_moveit_sim_view.launch.py",
+                "launch/real_robot_no_camera.launch.py",
+                "launch/real_robot_pick_place_only.launch.py",
             ],
         ),
         (

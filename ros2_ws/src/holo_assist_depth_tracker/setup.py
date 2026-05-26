@@ -47,8 +47,6 @@ setup(
             "depth_tracker_node = holo_assist_depth_tracker.depth_tracker_node:main",
             "holo_assist_depth_tracker_dashboard_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
             "depth_tracker_dashboard_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
-            "holo_assist_depth_tracker_foxglove_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
-            "foxglove_relay = holo_assist_depth_tracker.dashboard_relay_node:main",
             "holo_assist_webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
             "webcam_image_publisher = holo_assist_depth_tracker.webcam_image_publisher_node:main",
             "workspace_perception_node = holo_assist_depth_tracker.workspace_perception_node:main",
@@ -58,6 +56,7 @@ setup(
             "holoassist_cube_pose_node = holo_assist_depth_tracker.nodes.cube_pose_node:main",
             "holoassist_overlay_node = holo_assist_depth_tracker.nodes.overlay_node:main",
             "holoassist_sim_apriltag_publisher_node = holo_assist_depth_tracker.nodes.sim_apriltag_publisher_node:main",
+            "holoassist_trolley_scene_publisher = holo_assist_depth_tracker.trolley_scene_publisher_node:main",
         ],
     },
 )
