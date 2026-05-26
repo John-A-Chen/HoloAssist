@@ -1,0 +1,30 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/humble/include/**",
+        "/home/nic/git/HoloAssist-AI/ros2_ws/src/onrobot_driver/include/**",
+        "/home/nic/git/RS2-HoloAssist/main/ros2_ws/src/onrobot_driver/include/**",
+        "/home/nic/git/RS2-HoloAssist/main/ros2_ws/src/sensorstream_driver/include/**",
+        "/home/nic/git/RS2-HoloAssist/nic/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_calibration/include/**",
+        "/home/nic/git/RS2-HoloAssist/nic/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_controllers/include/**",
+        "/home/nic/git/RS2-HoloAssist/nic/ros2_ws/src/Universal_Robots_ROS2_Driver/ur_robot_driver/include/**",
+        "/home/nic/git/RS2-HoloAssist/nic/ros2_ws/src/onrobot_driver/include/**",
+        "/home/nic/git/RS2-HoloAssist/seb/ros2_ws/src/holoassist_manager/include/**",
+        "/home/nic/git/RsHDeez/navigation/include/**",
+        "/home/nic/git/src/onrobot_driver/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

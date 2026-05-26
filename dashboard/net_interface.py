@@ -152,6 +152,19 @@ class NetInterface:
                 last_pick_cube=d.get("last_pick_cube", ""),
                 last_pick_success=d.get("last_pick_success"),
                 last_pick_message=d.get("last_pick_message", ""),
+                pick_place_status=d.get("pick_place_status", ""),
+                pick_place_status_lines=d.get("pick_place_status_lines", []),
+                pick_place_block_id=d.get("pick_place_block_id", ""),
+                pick_place_destination=d.get("pick_place_destination", ""),
+                pick_place_step=d.get("pick_place_step", ""),
+                pick_place_step_label=d.get("pick_place_step_label", ""),
+                pick_place_step_index=d.get("pick_place_step_index", 0),
+                pick_place_step_total=d.get("pick_place_step_total", 0),
+                pick_place_state=d.get("pick_place_state", ""),
+                pick_place_error=d.get("pick_place_error", ""),
+                pick_place_error_detail=d.get("pick_place_error_detail", ""),
+                camera_type=d.get("camera_type", ""),
+                headset_type=d.get("headset_type", ""),
                 velocity_history=d.get("velocity_history", []),
                 rate_history=d.get("rate_history", []),
                 latency_history=d.get("latency_history", []),
@@ -175,6 +188,10 @@ class NetInterface:
             "cube_id": cube_id,
             "bin_id": bin_id if bin_id is not None else cube_id,
         })
+
+    def reconfigure_camera(self, width: int, height: int, fps: float):
+        self._send_cmd({"cmd": "reconfigure_camera", "width": width,
+                        "height": height, "fps": fps})
 
     def shutdown(self):
         self._running = False

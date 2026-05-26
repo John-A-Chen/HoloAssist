@@ -69,6 +69,12 @@ class BridgeServer:
             self.ros.switch_to_moveit()
         elif cmd == "pick_cube":
             self.ros.pick_cube_to_bin(msg.get("cube_id"), msg.get("bin_id"))
+        elif cmd == "reconfigure_camera":
+            self.ros.reconfigure_camera(
+                int(msg.get("width", 640)),
+                int(msg.get("height", 480)),
+                float(msg.get("fps", 30)),
+            )
 
     async def _push_loop(self):
         while True:
@@ -135,16 +141,37 @@ class BridgeServer:
             "last_pick_cube": status.last_pick_cube,
             "last_pick_success": status.last_pick_success,
             "last_pick_message": status.last_pick_message,
+            "pick_place_status": status.pick_place_status,
+            "pick_place_status_lines": status.pick_place_status_lines,
+            "pick_place_block_id": status.pick_place_block_id,
+            "pick_place_destination": status.pick_place_destination,
+            "pick_place_step": status.pick_place_step,
+            "pick_place_step_label": status.pick_place_step_label,
+            "pick_place_step_index": status.pick_place_step_index,
+            "pick_place_step_total": status.pick_place_step_total,
+            "pick_place_state": status.pick_place_state,
+            "pick_place_error": status.pick_place_error,
+            "pick_place_error_detail": status.pick_place_error_detail,
+            "camera_type": status.camera_type,
+            "headset_type": status.headset_type,
             "velocity_history": status.velocity_history,
             "rate_history": status.rate_history,
             "latency_history": status.latency_history,
         }
 
     async def run(self):
-        async with serve(self._handler, self.host, self.port,
-                         max_size=10 * 1024 * 1024):
-            print(f"[bridge] listening on ws://{self.host}:{self.port}")
-            await self._push_loop()
+        try:
+            async with serve(self._handler, self.host, self.port,
+                             max_size=10 * 1024 * 1024):
+                print(f"[bridge] listening on ws://{self.host}:{self.port}", flush=True)
+                await self._push_loop()
+        except OSError as e:
+            if e.errno == 98:
+                print(f"[bridge] ERROR: port {self.port} already in use — "
+                      f"run: fuser -k {self.port}/tcp", flush=True)
+            else:
+                print(f"[bridge] ERROR: {e}", flush=True)
+            raise
 
 
 def main():

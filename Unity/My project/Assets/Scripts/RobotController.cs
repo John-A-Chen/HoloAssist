@@ -53,9 +53,9 @@ public class RobotController : MonoBehaviour
 
     [Header("RMRC")]
     [Tooltip("Damping factor for singularity robustness. Higher = safer near singularities but less precise.")]
-    public float damping = 0.01f;
+    public float damping = 0.05f;
     [Tooltip("Manipulability threshold — increases damping when near singularities.")]
-    public float singularityThreshold = 0.01f;
+    public float singularityThreshold = 0.04f;
     [Tooltip("Maximum damping applied near singularities.")]
     public float maxDamping = 0.5f;
 
