@@ -113,7 +113,6 @@ class BridgeServer:
             "last_joint_time": status.last_joint_time,
             "joint_hz": status.joint_hz,
             "events": status.events,
-            "estop_zero_count": status.estop_zero_count,
             "topic_rates": topic_rates,
             "camera_width": status.camera_width,
             "camera_height": status.camera_height,

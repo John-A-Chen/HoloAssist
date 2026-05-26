@@ -129,7 +129,6 @@ class NetInterface:
                 last_joint_time=d.get("last_joint_time", 0.0),
                 joint_hz=d.get("joint_hz", 0.0),
                 events=[(t, m) for t, m in d.get("events", [])],
-                estop_zero_count=d.get("estop_zero_count", 0),
                 topic_rates=topic_rates,
                 camera_width=d.get("camera_width", 0),
                 camera_height=d.get("camera_height", 0),
