@@ -7,6 +7,7 @@
     <xacro:arg name="tf_prefix" default=""/>
     <xacro:arg name="name" default="ur_onrobot"/>
     <xacro:arg name="use_fake_hardware" default="false"/>
+    <xacro:arg name="use_fake_gripper_hardware" default="false"/>
     <xacro:arg name="sim_gazebo" default="false"/>
     <!-- Yaw of the world→base mounting joint. 0 = default UR orientation.
          Set to 3.14159 for the HoloAssist trolley where the arm faces 180° from the UR default. -->
@@ -31,6 +32,7 @@
         onrobot_type="$(arg onrobot_type)"
         tf_prefix="$(arg tf_prefix)"
         use_fake_hardware="$(arg use_fake_hardware)"
+        use_fake_gripper_hardware="$(arg use_fake_gripper_hardware)"
         sim_gazebo="$(arg sim_gazebo)"
         joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
         kinematics_parameters_file="$(arg kinematics_parameters_file)"

@@ -24,6 +24,7 @@ holoassist_cube_pose:
     april_cube_3_tag_ids: [22, 23, 24, 25, 26, 27]
     april_cube_4_tag_ids: [28, 29, 30, 31, 32, 33]
 
+
     # Tag-to-face mapping order applied to every april_cube_N_tag_ids list.
     # The first tag is +X face, second is -X, third is +Y, fourth is -Y,
     # fifth is +Z, and sixth is -Z.

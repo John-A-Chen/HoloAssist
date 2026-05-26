@@ -12,6 +12,7 @@
         onrobot_type
         tf_prefix
         use_fake_hardware:=false
+        use_fake_gripper_hardware:=false
         sim_gazebo:=false
         cable_connector:=true
         joint_limits_parameters_file
@@ -46,7 +47,7 @@
         <xacro:onrobot
             onrobot_type="${onrobot_type}"
             prefix="${tf_prefix}"
-            use_fake_hardware="${use_fake_hardware}"
+            use_fake_hardware="${use_fake_gripper_hardware}"
             sim_gazebo="${sim_gazebo}"
         />
 

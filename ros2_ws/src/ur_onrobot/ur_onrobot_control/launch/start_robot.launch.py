@@ -24,6 +24,7 @@ def launch_setup(context, *args, **kwargs):
     tf_prefix = LaunchConfiguration("tf_prefix")
     base_yaw_rad = LaunchConfiguration("base_yaw_rad")
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
+    use_fake_gripper_hardware = LaunchConfiguration("use_fake_gripper_hardware")
     kinematics_config = LaunchConfiguration("kinematics_config")
 
     controller_spawner_timeout = LaunchConfiguration("controller_spawner_timeout")
@@ -56,6 +57,9 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "use_fake_hardware:=",
             use_fake_hardware,
+            " ",
+            "use_fake_gripper_hardware:=",
+            use_fake_gripper_hardware,
             " ",
             "base_yaw_rad:=",
             base_yaw_rad,
@@ -139,7 +143,7 @@ def launch_setup(context, *args, **kwargs):
         executable="tool_communication.py",
         name="ur_tool_comm",
         output="screen",
-        condition=UnlessCondition(use_fake_hardware),
+        condition=IfCondition(AndSubstitution(NotSubstitution(use_fake_hardware), NotSubstitution(use_fake_gripper_hardware))),
         parameters=[
             {
                 "robot_ip": robot_ip,
@@ -326,6 +330,13 @@ def generate_launch_description():
             "use_fake_hardware",
             default_value="false",
             description="Start robot with fake hardware mirroring command to its states.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "use_fake_gripper_hardware",
+            default_value="false",
+            description="Use fake gripper plugin (skips Modbus/serial). Safe with URSim.",
         )
     )
     declared_arguments.append(

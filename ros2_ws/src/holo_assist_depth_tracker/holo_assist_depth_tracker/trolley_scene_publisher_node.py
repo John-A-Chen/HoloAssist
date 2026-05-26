@@ -25,7 +25,7 @@ _MESH_URI = "package://holo_assist_depth_tracker/worlds/UR3eTrolley(1).dae"
 _X_OFFSET = 0.0
 _Y_OFFSET = 0.20
 _Z_OFFSET = -0.05
-_YAW_DEG  = 0.0    # rotation around Z axis (degrees)
+_YAW_DEG  = 180.0  # rotation around Z axis (degrees)
 
 
 def _deleteall_marker(stamp) -> Marker:

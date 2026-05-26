@@ -251,7 +251,7 @@ class CubePoseNode(Node):
             age_s = (self.get_clock().now() - self._latest_detection_stamp).nanoseconds / 1e9
             if age_s > self.detections_timeout_s:
                 for idx in range(4):
-                    self._delete_marker(idx)
+                    self._freeze_marker(idx)
             return
 
         if self._latest_detection_stamp is None:
@@ -293,7 +293,7 @@ class CubePoseNode(Node):
                     center=self._last_centers[idx],
                     reason="detections_timeout",
                 )
-                self._delete_marker(idx)
+                self._freeze_marker(idx)
             return
 
         self._last_processed_stamp = self._latest_detection_stamp
@@ -321,7 +321,7 @@ class CubePoseNode(Node):
                     center=self._last_centers[idx],
                     reason=reason,
                 )
-                self._delete_marker(idx)
+                self._freeze_marker(idx)
                 continue
 
             solved = self._solve_pose(observations, idx)
@@ -340,7 +340,7 @@ class CubePoseNode(Node):
                     center=self._last_centers[idx],
                     reason="failed_to_solve_cube_pose",
                 )
-                self._delete_marker(idx)
+                self._freeze_marker(idx)
                 continue
 
             center = np.asarray(solved["center"], dtype=np.float64)
@@ -756,6 +756,42 @@ class CubePoseNode(Node):
             )
         )
         self.status_pubs[cube_idx].publish(msg)
+
+    def _freeze_marker(self, cube_idx: int) -> None:
+        """Keep cube visible at last known position when tags are lost. Deletes only if never seen."""
+        center = self._last_centers[cube_idx]
+        rot = self._last_rotations[cube_idx]
+        if center is None or not self.publish_cube_markers:
+            self._delete_marker(cube_idx)
+            return
+        qx, qy, qz, qw = quaternion_from_rotation_matrix(rot) if rot is not None else (0.0, 0.0, 0.0, 1.0)
+        stamp = self.get_clock().now().to_msg()
+        marker = Marker()
+        marker.header.frame_id = self._last_output_frames[cube_idx]
+        marker.header.stamp = stamp
+        marker.ns = f"holoassist_april_cube_{cube_idx + 1}"
+        marker.id = 0
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.pose.position.x = float(center[0])
+        marker.pose.position.y = float(center[1])
+        marker.pose.position.z = float(center[2])
+        marker.pose.orientation.x = float(qx)
+        marker.pose.orientation.y = float(qy)
+        marker.pose.orientation.z = float(qz)
+        marker.pose.orientation.w = float(qw)
+        marker.scale.x = float(self.cube_edge_size_m)
+        marker.scale.y = float(self.cube_edge_size_m)
+        marker.scale.z = float(self.cube_edge_size_m)
+        color = self.cube_defs[cube_idx]["marker_color"]
+        marker.color.r = float(color[0])
+        marker.color.g = float(color[1])
+        marker.color.b = float(color[2])
+        marker.color.a = max(0.05, min(1.0, float(color[3]) * float(self.marker_alpha))) * 0.5
+        marker.lifetime.sec = 0
+        marker.lifetime.nanosec = 0  # never auto-expires
+        self.marker_pubs[cube_idx].publish(marker)
+        self._marker_active[cube_idx] = True
 
     def _delete_marker(self, cube_idx: int) -> None:
         if not self._marker_active[cube_idx]:

@@ -282,6 +282,16 @@ def cleanup(*_):
             else:
                 _pinfo(f"force kill {name}")
             _kill_group(proc, signal.SIGKILL)
+    # ros2 launch spawns children in their own process groups — sweep known stragglers
+    _STRAY_PATTERNS = [
+        "ur_ros2_control_node",
+        "ros2_control_node",
+        "move_group",
+        "robot_state_publisher",
+        "controller_manager",
+    ]
+    for pat in _STRAY_PATTERNS:
+        subprocess.run(["pkill", "-9", "-f", pat], capture_output=True)
     if _verbose:
         print(">>> All stopped.")
     else:
@@ -310,10 +320,6 @@ def main():
         "--perception", action="store_true",
         help="Start perception pipeline. Camera is auto-detected (RealSense > Brio > webcam). "
              "Falls back to sim if no camera is found and robot is fake.",
-    )
-    parser.add_argument(
-        "--fake-gripper", action="store_true",
-        help="With a real/URSim arm, use fake OnRobot gripper hardware.",
     )
     parser.add_argument(
         "--moveit",
