@@ -38,14 +38,14 @@ Physical size: **40 mm** cubes, **32 mm** printed tags, family **36h11**.
 | Cube 2 | 16, 17, 18, 19, 20, 21 |
 | Cube 3 | 22, 23, 24, 25, 26, 27 |
 
-At least one face must be visible for a cube to be detected. Once detected, the position **freezes** in RViz even if tags go out of view.
+At least one face must be visible for a cube to be detected — single-tag detection is fully supported. Once detected, the position **freezes** in RViz even if tags go out of view.
 
 ---
 
 ## Prerequisites
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 
 # Source and build (first time or after changes)
 source /opt/ros/humble/setup.bash
@@ -54,6 +54,8 @@ cd ros2_ws && colcon build --symlink-install && cd ..
 
 If the workspace is already built, just sourcing is enough — `./launch.sh` does it automatically.
 
+> **Note:** demo now has its own self-contained workspace. Do not source `main/ros2_ws/install/setup.bash` — just demo's.
+
 ---
 
 ## Option A — Real Robot
@@ -61,7 +63,7 @@ If the workspace is already built, just sourcing is enough — `./launch.sh` doe
 **Robot IP:** `192.168.0.194` (check the robot's touchscreen if different)
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard
 ```
 
@@ -110,14 +112,16 @@ In Polyscope: navigate to **Run Program → External Control**. **Do not click P
 ### Terminal 1 — launch
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard
 ```
 
 > **`--fake-gripper` is required with URSim.** URSim doesn't expose port 54321 (OnRobot
 > serial relay). Without it, the controller hangs waiting for a Modbus connection.
 
-Once you see `✓  UR + OnRobot Driver`, click **Play** in Polyscope. The driver log confirms:
+Once the launcher prints `waiting for UR driver…` and the log settles, click **Play** in Polyscope. The driver log confirms:
+
+> **Timing note:** the launcher polls for controller readiness for up to 30 s. With URSim this may print `warning: UR driver readiness check timed out` — this is normal. The system continues and works correctly once External Control is playing.
 
 ```
 Robot connected to reverse interface. Ready to receive control commands.
@@ -128,7 +132,7 @@ Robot connected to reverse interface. Ready to receive control commands.
 ## Option C — Fully Fake (no robot at all)
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --perception --dashboard
 ```
 

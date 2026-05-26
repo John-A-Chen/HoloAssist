@@ -19,6 +19,10 @@ The perception pipeline tracks up to 4 physical 40 mm cubes using AprilTag stick
 
 Each face maps to a cube axis in order: `+X, -X, +Y, -Y, +Z, -Z`.
 
+### Single-tag detection
+
+A cube is detected and published as soon as **one face** is visible. The node processes detections on a 20 Hz timer rather than in the detection callback, which avoids a TF race condition that previously caused the first detection frame to be silently dropped.
+
 ### Multi-face fusion
 
 When multiple faces are visible simultaneously, the node:
@@ -41,11 +45,11 @@ Once a cube is detected for the first time, its last known position is remembere
 
 | Topic | Type | Rate | Description |
 |---|---|---|---|
-| `/holoassist/perception/april_cube_N_pose` | `PoseStamped` | 30 Hz | Cube N centre pose in `camera_color_optical_frame` |
-| `/holoassist/perception/april_cube_N_marker` | `Marker` | 30 Hz | RViz cube marker |
-| `/holoassist/perception/april_cube_N_status` | `String` | 30 Hz | Detection state, visible tags, spread, method |
+| `/holoassist/perception/april_cube_N_pose` | `PoseStamped` | 20 Hz | Cube N centre pose in `camera_color_optical_frame` |
+| `/holoassist/perception/april_cube_N_marker` | `Marker` | 20 Hz | RViz cube marker |
+| `/holoassist/perception/april_cube_N_status` | `String` | 20 Hz | Detection state, visible tags, spread, method |
 | `/holoassist/perception/april_cube_N_bin_check` | `String` | 20 Hz | Bin verification result (see below) |
-| `/holoassist/perception/april_cube_pose` | `PoseStamped` | 30 Hz | Legacy: cube 1 pose (or nearest detected cube) |
+| `/holoassist/perception/april_cube_pose` | `PoseStamped` | 20 Hz | Legacy: cube 1 pose (or nearest detected cube) |
 
 ---
 

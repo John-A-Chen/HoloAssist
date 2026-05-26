@@ -5,13 +5,13 @@
 ```bash
 # Source ROS 2 Humble and workspace
 source /opt/ros/humble/setup.bash
-source ~/git/RS2-HoloAssist/main/ros2_ws/install/setup.bash
+source ~/git/RS2-HoloAssist/demo/ros2_ws/install/setup.bash
 ```
 
 Build (first time or after source changes):
 
 ```bash
-cd ~/git/RS2-HoloAssist/main/ros2_ws
+cd ~/git/RS2-HoloAssist/demo/ros2_ws
 colcon build --symlink-install
 ```
 
@@ -36,7 +36,7 @@ colcon build --symlink-install
 **Default IP:** `192.168.0.194` (check the robot's touchscreen if different)
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard
 ```
 
@@ -86,7 +86,7 @@ In Polyscope: navigate to **Run Program → External Control**. **Do not click P
 ### Terminal 1 — main launch
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard
 ```
 
@@ -94,11 +94,14 @@ cd ~/git/RS2-HoloAssist/main
     URSim does not expose port 54321 (OnRobot serial relay). Without `--fake-gripper`,
     the controller manager blocks waiting for the gripper Modbus connection.
 
-Once the driver shows `✓  UR + OnRobot Driver`, click **Play** in Polyscope. The log will confirm:
+Once the launcher prints `waiting for UR driver…` and the driver log settles, click **Play** in Polyscope. The log will confirm:
 
 ```
 Robot connected to reverse interface. Ready to receive control commands.
 ```
+
+!!! note "Driver wait timing"
+    The launcher polls for `joint_state_broadcaster [active]` for up to 30 s. With URSim this may time out before External Control is played — the system continues regardless and works normally once Play is clicked.
 
 ---
 
@@ -107,7 +110,7 @@ Robot connected to reverse interface. Ready to receive control commands.
 No robot IP = fully simulated arm. Perception still runs.
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 ./launch.sh --perception --dashboard
 ```
 

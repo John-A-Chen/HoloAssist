@@ -27,12 +27,12 @@ Quest 3 (Unity) — AR overlay, teleop controls
 | Perception (AprilTag cubes) | John | Working |
 | Autonomous Pick-and-Place | Oliver | Working |
 | Teleoperation | Nic | Working |
-| Visualisation (Quest 3 / Unity) | Sebastian | In testing |
+| Visualisation (Quest 3 / Unity) | Sebastian | Testing |
 
 ## Quick Start
 
 ```bash
-cd ~/git/RS2-HoloAssist/main
+cd ~/git/RS2-HoloAssist/demo
 
 # URSim (simulated robot)
 ./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard
