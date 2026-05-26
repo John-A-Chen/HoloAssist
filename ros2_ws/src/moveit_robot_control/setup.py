@@ -23,7 +23,13 @@ setup(
                 "launch/full_holoassist_hardware.launch.py",
                 "launch/pick_place_system.launch.py",
                 "launch/pick_place.launch.py",
+                "launch/real_robot_pick_place_only.launch.py",
+                "launch/real_robot_moveit_sim_view.launch.py",
+                "launch/real_robot_no_camera.launch.py",
                 "launch/workspace_scene.launch.py",
+                "launch/real_robot_moveit_sim_view.launch.py",
+                "launch/real_robot_no_camera.launch.py",
+                "launch/real_robot_pick_place_only.launch.py",
             ],
         ),
         (

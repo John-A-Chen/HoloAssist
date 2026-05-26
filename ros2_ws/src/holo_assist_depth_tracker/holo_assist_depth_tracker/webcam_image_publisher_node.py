@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import math
+import sys
 from typing import Optional
 
 import cv2
@@ -78,6 +79,12 @@ class WebcamImagePublisherNode(Node):
         if not self.camera_info_frame_id:
             self.camera_info_frame_id = self.frame_id
 
+        # After this many consecutive read failures (~1 second) the node exits so
+        # the launcher can detect and report the camera being unplugged.
+        self._max_read_failures = max(10, int(self.fps))
+        self._consecutive_read_failures = 0
+        self._camera_lost = False
+
         self.bridge = CvBridge()
         if self.use_sensor_data_qos:
             pub_qos = QoSProfile(
@@ -116,7 +123,7 @@ class WebcamImagePublisherNode(Node):
 
         period_s = 1.0 / self.fps
         self.timer = self.create_timer(period_s, self._publish_frame_cb)
-        self.status_timer = self.create_timer(2.0, self._status_cb)
+        self.status_timer = self.create_timer(30.0, self._status_cb)
 
         self.get_logger().info(
             f"Webcam publisher started. topic={self.image_topic}, device_index={self.device_index}, "
@@ -158,8 +165,18 @@ class WebcamImagePublisherNode(Node):
 
         ok, frame = self.capture.read()
         if not ok or frame is None:
-            self.get_logger().warn("Failed to read webcam frame.")
+            self._consecutive_read_failures += 1
+            if self._consecutive_read_failures == 1:
+                self.get_logger().warn("Failed to read webcam frame.")
+            if self._consecutive_read_failures >= self._max_read_failures:
+                self.get_logger().error(
+                    f"Camera lost after {self._consecutive_read_failures} consecutive "
+                    f"failures — shutting down."
+                )
+                self._camera_lost = True
+                rclpy.shutdown()
             return
+        self._consecutive_read_failures = 0
 
         msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -209,9 +226,12 @@ def main(args=None) -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        camera_lost = getattr(node, "_camera_lost", False)
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
+    if camera_lost:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

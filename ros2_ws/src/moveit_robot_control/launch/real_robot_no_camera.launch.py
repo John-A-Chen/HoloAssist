@@ -26,9 +26,24 @@ def generate_launch_description() -> LaunchDescription:
     )
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     velocity_scale_arg = DeclareLaunchArgument("velocity_scale", default_value="0.02")
+    cartesian_retime_velocity_scale_arg = DeclareLaunchArgument(
+        "cartesian_retime_velocity_scale",
+        default_value="0.0",
+        description=(
+            "Optional cap used only when retiming straight Cartesian paths. "
+            "Set 0.0 to follow velocity_scale."
+        ),
+    )
+    use_fake_gripper_hardware_arg = DeclareLaunchArgument(
+        "use_fake_gripper_hardware",
+        default_value="false",
+        description=(
+            "Describe the OnRobot gripper as fake hardware while keeping the UR arm real."
+        ),
+    )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
+        default_value="0.0",
     )
     controller_spawner_timeout_arg = DeclareLaunchArgument(
         "controller_spawner_timeout",
@@ -49,6 +64,10 @@ def generate_launch_description() -> LaunchDescription:
             "use_rviz": LaunchConfiguration("use_rviz"),
             "robot_base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
             "velocity_scale": LaunchConfiguration("velocity_scale"),
+            "cartesian_retime_velocity_scale": LaunchConfiguration(
+                "cartesian_retime_velocity_scale"
+            ),
+            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
             "controller_spawner_timeout": LaunchConfiguration(
                 "controller_spawner_timeout"
             ),
@@ -61,6 +80,8 @@ def generate_launch_description() -> LaunchDescription:
             reverse_ip_arg,
             use_rviz_arg,
             velocity_scale_arg,
+            cartesian_retime_velocity_scale_arg,
+            use_fake_gripper_hardware_arg,
             robot_base_yaw_rad_arg,
             controller_spawner_timeout_arg,
             full_hardware,

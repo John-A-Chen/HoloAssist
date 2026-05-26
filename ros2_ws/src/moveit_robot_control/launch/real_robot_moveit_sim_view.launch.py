@@ -57,6 +57,14 @@ def generate_launch_description() -> LaunchDescription:
     )
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     velocity_scale_arg = DeclareLaunchArgument("velocity_scale", default_value="0.02")
+    cartesian_retime_velocity_scale_arg = DeclareLaunchArgument(
+        "cartesian_retime_velocity_scale",
+        default_value="0.0",
+        description=(
+            "Optional cap used only when retiming straight Cartesian paths. "
+            "Set 0.0 to follow velocity_scale."
+        ),
+    )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
         default_value="0.0",
@@ -129,6 +137,9 @@ def generate_launch_description() -> LaunchDescription:
             "hw_config": LaunchConfiguration("sim_visual_config"),
             "robot_base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
             "velocity_scale": LaunchConfiguration("velocity_scale"),
+            "cartesian_retime_velocity_scale": LaunchConfiguration(
+                "cartesian_retime_velocity_scale"
+            ),
             "controller_spawner_timeout": LaunchConfiguration(
                 "controller_spawner_timeout"
             ),
@@ -168,6 +179,7 @@ def generate_launch_description() -> LaunchDescription:
             headless_mode_arg,
             use_rviz_arg,
             velocity_scale_arg,
+            cartesian_retime_velocity_scale_arg,
             robot_base_yaw_rad_arg,
             controller_spawner_timeout_arg,
             start_pick_place_arg,

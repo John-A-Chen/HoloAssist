@@ -7,7 +7,7 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -16,10 +16,9 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description() -> LaunchDescription:
+    """MoveIt-only launch — robot driver + perception provided by launch.sh --perception."""
     moveit_robot_control_pkg = FindPackageShare("moveit_robot_control")
-    perception_pkg = FindPackageShare("holo_assist_depth_tracker")
     moveit_pkg = FindPackageShare("ur_onrobot_moveit_config")
-    robot_control_pkg = FindPackageShare("ur_onrobot_control")
     robot_description_pkg = FindPackageShare("ur_onrobot_description")
 
     hw_config_default = PathJoinSubstitution(
@@ -29,12 +28,8 @@ def generate_launch_description() -> LaunchDescription:
         [moveit_robot_control_pkg, "rviz", "holoassist_hw.rviz"]
     )
 
-    robot_launch = PathJoinSubstitution([robot_control_pkg, "launch", "start_robot.launch.py"])
     moveit_launch = PathJoinSubstitution(
         [moveit_pkg, "launch", LaunchConfiguration("moveit_launch_file")]
-    )
-    perception_launch = PathJoinSubstitution(
-        [perception_pkg, "launch", "holoassist_4tag_board_4cube.launch.py"]
     )
     coordinate_listener_launch = PathJoinSubstitution(
         [moveit_robot_control_pkg, "launch", "coordinate_listener.launch.py"]
@@ -49,28 +44,25 @@ def generate_launch_description() -> LaunchDescription:
     # ── Declared arguments ───────────────────────────────────────────────────
     robot_ip_arg = DeclareLaunchArgument(
         "robot_ip",
-        description="IP address of the UR3e robot.",
+        description="IP address of the UR3e robot (used for xacro only, driver already running).",
     )
     ur_type_arg = DeclareLaunchArgument("ur_type", default_value="ur3e")
     onrobot_type_arg = DeclareLaunchArgument("onrobot_type", default_value="rg2")
+    use_fake_gripper_hardware_arg = DeclareLaunchArgument(
+        "use_fake_gripper_hardware",
+        default_value="false",
+        description=(
+            "Describe the OnRobot gripper as fake hardware while keeping the UR arm real."
+        ),
+    )
     robot_base_yaw_rad_arg = DeclareLaunchArgument(
         "robot_base_yaw_rad",
-        default_value="3.14159",
-        description=(
-            "Yaw of the world->base mounting joint in radians. "
-            "Default 3.14159 rotates the UR3e mounting 180 degrees to match "
-            "the HoloAssist bench/trolley orientation."
-        ),
+        default_value="0.0",
     )
     kinematics_config_arg = DeclareLaunchArgument(
         "kinematics_config",
         default_value=PathJoinSubstitution(
             [FindPackageShare("ur_onrobot_description"), "config", "ur3e_calibration.yaml"]
-        ),
-        description=(
-            "Robot-specific kinematics calibration YAML. "
-            "Extract with: ros2 launch ur_calibration calibration_correction.launch.py "
-            "robot_ip:=<IP> target_filename:=<path/to/ur3e_calibration.yaml>"
         ),
     )
 
@@ -87,13 +79,19 @@ def generate_launch_description() -> LaunchDescription:
     hw_config_arg = DeclareLaunchArgument(
         "hw_config",
         default_value=hw_config_default,
-        description="Hardware tuning config (trolley mesh, hover offsets).",
     )
 
     velocity_scale_arg = DeclareLaunchArgument(
         "velocity_scale",
         default_value="0.05",
-        description="Trajectory velocity scale 0.0–1.0. Keep low during initial hardware bringup.",
+    )
+    cartesian_retime_velocity_scale_arg = DeclareLaunchArgument(
+        "cartesian_retime_velocity_scale",
+        default_value="0.0",
+        description=(
+            "Optional cap used only when retiming straight Cartesian paths. "
+            "Set 0.0 to follow velocity_scale."
+        ),
     )
     orientation_mode_arg = DeclareLaunchArgument(
         "orientation_mode", default_value="auto"
@@ -108,39 +106,51 @@ def generate_launch_description() -> LaunchDescription:
     start_pick_place_arg = DeclareLaunchArgument(
         "start_pick_place",
         default_value="true",
-        description="Launch pick_place_sequencer and pick_place_service_node.",
     )
-    start_camera_arg = DeclareLaunchArgument(
-        "start_camera",
+    grasp_z_absolute_arg = DeclareLaunchArgument(
+        "grasp_z_absolute",
+        default_value="0.05",
+        description=(
+            "Absolute Z height for the pick descent pose. "
+            "Use -1.0 to fall back to cube_z + grasp_z_offset."
+        ),
+    )
+    cube_pose_topic_prefix_arg = DeclareLaunchArgument(
+        "cube_pose_topic_prefix",
+        default_value="/holoassist/perception",
+        description="Prefix for april_cube_N_pose topics used by the pick-place service.",
+    )
+
+    trajectory_topic_arg = DeclareLaunchArgument(
+        "trajectory_topic",
+        default_value="/scaled_joint_trajectory_controller/joint_trajectory",
+        description="JointTrajectory topic for MoveIt execution. "
+                    "Use /joint_trajectory_controller/joint_trajectory for fake hardware.",
+    )
+    arm_trajectory_topic_arg = DeclareLaunchArgument(
+        "arm_trajectory_topic",
+        default_value="/scaled_joint_trajectory_controller/joint_trajectory",
+        description="JointTrajectory topic for the pick-place sequencer. "
+                    "Use /joint_trajectory_controller/joint_trajectory for fake hardware.",
+    )
+    require_robot_status_arg = DeclareLaunchArgument(
+        "require_robot_status",
         default_value="true",
-        description="Launch the RealSense camera node inside the perception stack.",
+        description="Set false for fake hardware (no UR driver status topics).",
     )
-    start_rosbridge_arg = DeclareLaunchArgument(
-        "start_rosbridge",
+    require_controller_check_arg = DeclareLaunchArgument(
+        "require_controller_check",
         default_value="true",
-        description="Launch rosbridge WebSocket server for Unity/HoloLens (port 9090).",
+        description="Set false for fake hardware.",
     )
-    rosbridge_port_arg = DeclareLaunchArgument(
-        "rosbridge_port",
-        default_value="9090",
-        description="WebSocket port rosbridge listens on.",
-    )
-    start_moveit_arg = DeclareLaunchArgument("start_moveit", default_value="true")
 
     use_calibrated_workspace_arg = DeclareLaunchArgument(
         "use_calibrated_workspace",
-        default_value="true",
-        description=(
-            "true (default): workspace_frame_tf loads calibration_yaml as a static transform. "
-            "false: workspace_board_node provides workspace_frame dynamically from live "
-            "AprilTag detections — requires board to be visible to the camera at all times. "
-            "Only one source may run at a time."
-        ),
+        default_value="false",
     )
     calibration_yaml_arg = DeclareLaunchArgument(
         "calibration_yaml",
         default_value=os.path.expanduser("~/.holoassist/calibration/calibration_latest.yaml"),
-        description="Path to the calibration YAML written by board_calibration_node.",
     )
 
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
@@ -163,6 +173,8 @@ def generate_launch_description() -> LaunchDescription:
                     "name:=ur_onrobot",
                     " ",
                     "use_fake_hardware:=false",
+                    " ",
+                    "use_fake_gripper_hardware:=", LaunchConfiguration("use_fake_gripper_hardware"),
                     " ",
                     "base_yaw_rad:=", LaunchConfiguration("robot_base_yaw_rad"),
                     " ",
@@ -190,28 +202,9 @@ def generate_launch_description() -> LaunchDescription:
         )
     }
 
-    # ── UR3e + OnRobot robot driver ───────────────────────────────────────────
-    # Starts ur_ros2_control_node, controller_manager, RSP, dashboard client,
-    # controller_stopper, tool_communication (serial → /tmp/ttyUR for OnRobot).
-    robot_stack = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(robot_launch),
-        launch_arguments={
-            "ur_type": LaunchConfiguration("ur_type"),
-            "onrobot_type": LaunchConfiguration("onrobot_type"),
-            "robot_ip": LaunchConfiguration("robot_ip"),
-            "use_fake_hardware": "false",
-            "launch_rviz": "false",          # we launch our own RViz below
-            "activate_joint_controller": "true",
-            "initial_joint_controller": "scaled_joint_trajectory_controller",
-            "kinematics_config": LaunchConfiguration("kinematics_config"),
-            "base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
-        }.items(),
-    )
-
     # ── MoveIt: move_group + OMPL + SRDF ─────────────────────────────────────
     moveit_stack = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(moveit_launch),
-        condition=IfCondition(LaunchConfiguration("start_moveit")),
         launch_arguments={
             "ur_type": LaunchConfiguration("ur_type"),
             "onrobot_type": LaunchConfiguration("onrobot_type"),
@@ -220,37 +213,11 @@ def generate_launch_description() -> LaunchDescription:
             "launch_rviz": "false",
             "launch_servo": "false",
             "base_yaw_rad": LaunchConfiguration("robot_base_yaw_rad"),
+            "use_fake_gripper_hardware": LaunchConfiguration("use_fake_gripper_hardware"),
         }.items(),
-    )
-
-    # ── AprilTag perception pipeline ──────────────────────────────────────────
-    # Starts: (optionally) RealSense camera, apriltag_ros, cube_pose_node.
-    # workspace_board_node is started only in dynamic mode (use_calibrated_workspace=false).
-    # In calibrated mode workspace_frame_tf below owns base_link → workspace_frame.
-    perception_stack = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(perception_launch),
-        launch_arguments={
-            "start_camera": LaunchConfiguration("start_camera"),
-            "start_workspace_board": "false",
-            "start_rviz": "false",
-            "start_scene": "false",
-        }.items(),
-        condition=IfCondition(LaunchConfiguration("use_calibrated_workspace")),
-    )
-    perception_stack_dynamic = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(perception_launch),
-        launch_arguments={
-            "start_camera": LaunchConfiguration("start_camera"),
-            "start_workspace_board": "true",
-            "start_rviz": "false",
-            "start_scene": "false",
-        }.items(),
-        condition=UnlessCondition(LaunchConfiguration("use_calibrated_workspace")),
     )
 
     # ── workspace_frame static TF broadcaster (calibrated mode only) ──────────
-    # Loads the calibration YAML written by board_calibration_node as a --params-file.
-    # Must NOT run alongside workspace_board_node (both would conflict on workspace_frame).
     workspace_frame_tf = Node(
         package="moveit_robot_control",
         executable="workspace_frame_tf",
@@ -271,30 +238,25 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # ── Coordinate listener: topic-driven MoveIt goals → trajectory execution ─
-    # Uses scaled_joint_trajectory_controller (real UR) and enables all hardware
-    # safety checks (require_robot_status, require_controller_check).
     coordinate_listener = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(coordinate_listener_launch),
         launch_arguments={
             "move_group_name": LaunchConfiguration("move_group_name"),
             "ee_link": LaunchConfiguration("ee_link"),
             "frame": LaunchConfiguration("frame"),
-            "require_robot_status": "true",
-            "require_controller_check": "true",
+            "require_robot_status": LaunchConfiguration("require_robot_status"),
+            "require_controller_check": LaunchConfiguration("require_controller_check"),
             "allow_pose_goal_fallback": "true",
             "orientation_mode": LaunchConfiguration("orientation_mode"),
             "avoid_flange_forearm_clamp": LaunchConfiguration("avoid_flange_forearm_clamp"),
             "pose_goal_planning_time": LaunchConfiguration("pose_goal_planning_time"),
             "velocity_scale": LaunchConfiguration("velocity_scale"),
-            # Real UR uses scaled_joint_trajectory_controller.
-            "trajectory_topic": "/scaled_joint_trajectory_controller/joint_trajectory",
+            "cartesian_retime_velocity_scale": LaunchConfiguration("cartesian_retime_velocity_scale"),
+            "trajectory_topic": LaunchConfiguration("trajectory_topic"),
         }.items(),
     )
 
     # ── Pick-and-place sequencer ──────────────────────────────────────────────
-    # Hardware: cube_pose_node reports 3-D cube centres in workspace_frame (same
-    # convention as sim truth node), so grasp_z_offset stays at 0.0. Tune if
-    # the gripper consistently misses by a fixed vertical amount.
     pick_place_sequencer = Node(
         package="moveit_robot_control",
         executable="pick_place_sequencer",
@@ -307,30 +269,25 @@ def generate_launch_description() -> LaunchDescription:
             "orientation_mode": "auto",
             "pregrasp_z_offset": 0.10,
             "grasp_z_offset": 0.0,
+            "grasp_z_absolute": LaunchConfiguration("grasp_z_absolute"),
             "place_above_z_offset": 0.15,
             "place_z_offset": 0.05,
             "place_descent_enabled": True,
+            "arm_trajectory_topic": LaunchConfiguration("arm_trajectory_topic"),
         }],
     )
 
     # ── Pick-cube-to-bin service ──────────────────────────────────────────────
-    # Reads live cube poses from the real perception pipeline
-    # (/holoassist/perception/april_cube_{1-4}_pose) and converts a service call
-    # into a pick_place_sequencer command.
     pick_place_service = Node(
         package="holo_assist_depth_tracker_sim",
         executable="pick_place_service_node",
         name="holoassist_pick_place_service",
         output="screen",
         condition=IfCondition(LaunchConfiguration("start_pick_place")),
-        parameters=[{"cube_pose_topic_prefix": "/holoassist/perception"}],
+        parameters=[{"cube_pose_topic_prefix": LaunchConfiguration("cube_pose_topic_prefix")}],
     )
 
-    # ── Selected-cube → MoveIt target adapter (teleop / HoloLens mode) ───────
-    # Subscribes to /holoassist/teleop/selected_cube{,_pose} — published by an
-    # external selector (HoloLens, RViz panel, etc.) — and continuously keeps
-    # the robot hovering above the selected cube. Leave unused if only the
-    # pick_place_service is needed.
+    # ── Selected-cube → MoveIt target adapter ────────────────────────────────
     selected_cube_adapter = Node(
         package="holo_assist_depth_tracker_sim",
         executable="selected_cube_to_moveit_target_node",
@@ -344,22 +301,6 @@ def generate_launch_description() -> LaunchDescription:
                 "output_pose_topic": "/moveit_robot_control/target_pose",
             },
         ],
-    )
-
-    # ── rosbridge WebSocket server ────────────────────────────────────────────
-    # Unity/HoloLens connects to ws://<host>:9090 and subscribes to cube pose topics.
-    rosbridge = Node(
-        package="rosbridge_server",
-        executable="rosbridge_websocket",
-        name="rosbridge_websocket",
-        output="screen",
-        parameters=[{
-            "port": LaunchConfiguration("rosbridge_port"),
-            "address": "",
-            "ssl": False,
-            "authenticate": False,
-        }],
-        condition=IfCondition(LaunchConfiguration("start_rosbridge")),
     )
 
     # ── RViz ─────────────────────────────────────────────────────────────────
@@ -376,22 +317,20 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
-    # Startup sequencing:
-    #  t=0s   robot_stack    — UR driver takes a few seconds to handshake
+    # Startup sequencing (robot driver + perception already running via launch.sh):
     #  t=0s   moveit_stack   — move_group waits for controller_manager + joint_states
-    #  t=0s   perception     — independent; camera + AprilTag pipeline
-    #  t=8s   workspace_scene — needs TF to be up (robot_state_publisher)
-    #  t=10s  coordinate_listener + pick_place_sequencer
-    #                         — needs move_group + scaled_joint_trajectory_controller active
-    #  t=12s  pick_place_service + selected_cube_adapter
-    #                         — needs cube pose topics + TF
-    #  t=15s  RViz
+    #  t=0s   workspace_frame_tf
+    #  t=5s   workspace_scene — needs TF to be up
+    #  t=8s   coordinate_listener + pick_place_sequencer
+    #  t=10s  pick_place_service + selected_cube_adapter
+    #  t=12s  RViz
 
     return LaunchDescription(
         [
             robot_ip_arg,
             ur_type_arg,
             onrobot_type_arg,
+            use_fake_gripper_hardware_arg,
             robot_base_yaw_rad_arg,
             kinematics_config_arg,
             moveit_launch_file_arg,
@@ -400,29 +339,28 @@ def generate_launch_description() -> LaunchDescription:
             frame_arg,
             hw_config_arg,
             velocity_scale_arg,
+            cartesian_retime_velocity_scale_arg,
             orientation_mode_arg,
             avoid_flange_forearm_clamp_arg,
             pose_goal_planning_time_arg,
             start_pick_place_arg,
-            start_camera_arg,
-            start_rosbridge_arg,
-            rosbridge_port_arg,
-            start_moveit_arg,
+            grasp_z_absolute_arg,
+            cube_pose_topic_prefix_arg,
+            trajectory_topic_arg,
+            arm_trajectory_topic_arg,
+            require_robot_status_arg,
+            require_controller_check_arg,
             use_calibrated_workspace_arg,
             calibration_yaml_arg,
             use_rviz_arg,
             rviz_config_arg,
-            robot_stack,
             moveit_stack,
-            perception_stack,
-            perception_stack_dynamic,
             workspace_frame_tf,
-            TimerAction(period=8.0, actions=[workspace_scene]),
-            TimerAction(period=10.0, actions=[coordinate_listener, pick_place_sequencer]),
-            TimerAction(period=12.0, actions=[pick_place_service, selected_cube_adapter]),
-            rosbridge,
-            TimerAction(period=15.0, actions=[
-                LogInfo(msg="[hw] t=15s: launching RViz"),
+            TimerAction(period=5.0, actions=[workspace_scene]),
+            TimerAction(period=8.0, actions=[coordinate_listener, pick_place_sequencer]),
+            TimerAction(period=10.0, actions=[pick_place_service, selected_cube_adapter]),
+            TimerAction(period=12.0, actions=[
+                LogInfo(msg="[hw] t=12s: launching RViz"),
                 rviz,
             ]),
         ]

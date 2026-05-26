@@ -18,7 +18,7 @@ from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
 from visualization_msgs.msg import Marker
 
-from holo_assist_depth_tracker.utils.apriltag import default_tag_frame_name
+from holo_assist_depth_tracker.utils.apriltag import candidate_tag_frame_names
 from holo_assist_depth_tracker.utils.math3d import (
     quaternion_from_rotation_matrix,
     rotation_matrix_from_quaternion,
@@ -333,15 +333,19 @@ class WorkspaceBoardNode(Node):
         rotations: Dict[int, np.ndarray] = {}
 
         for tag_id in self.board_tag_ids:
-            tag_frame = default_tag_frame_name(self.tag_family, tag_id)
-            try:
-                tf_msg = self._tf_buffer.lookup_transform(
-                    frame_id,
-                    tag_frame,
-                    rclpy.time.Time(),
-                    timeout=Duration(seconds=self.tag_lookup_timeout_s),
-                )
-            except TransformException:
+            tf_msg = None
+            for tag_frame in candidate_tag_frame_names(self.tag_family, tag_id):
+                try:
+                    tf_msg = self._tf_buffer.lookup_transform(
+                        frame_id,
+                        tag_frame,
+                        rclpy.time.Time(),
+                        timeout=Duration(seconds=self.tag_lookup_timeout_s),
+                    )
+                    break
+                except TransformException:
+                    continue
+            if tf_msg is None:
                 return None
 
             t = tf_msg.transform.translation

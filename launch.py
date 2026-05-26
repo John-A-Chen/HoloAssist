@@ -7,11 +7,16 @@ Starts:
   - Controller switch (velocity + gripper for teleop)
   - ROS-TCP endpoint (Unity bridge, port 10000)
   - UDP beacon (Quest auto-discovery)
-  - [optional] Perception sim + cube pose relay (--perception)
+  - [optional] Perception pipeline (--perception)
+  - [optional] MoveIt pick/place stack (--moveit)
+
+Default mode: clean one-line status per process, logs to /tmp/holoassist_*.log
+Verbose mode: full subprocess output in terminal (--verbose)
 """
 
 import argparse
 import os
+import re
 import subprocess
 import signal
 import sys
@@ -27,12 +32,102 @@ SOURCE_CMD = (
     f" && [ -f {MAIN_WS}/install/setup.bash ] && source {MAIN_WS}/install/setup.bash || true"
 )
 
-DEFAULT_WIFI_IP = "172.19.115.104"
+DEFAULT_WIFI_IP = "10.84.45.11"
 DEFAULT_ROBOT_IP = "192.168.0.194"
 PREFERRED_SUBNET = "192.168.0."
 
-processes = []
+_WEBCAM_PRESETS = {
+    "brio":    (78.0,  848, 480,  30.0),
+    "generic": (69.4,  640, 480,  30.0),
+}
 
+processes = []
+_verbose = False  # set by --verbose in main()
+_NW = 42          # name column width for aligned one-liners
+
+# Lines filtered from verbose output — harmless FastDDS SHM init noise
+_NOISE_PATTERNS = [
+    "RTPS_TRANSPORT_SHM",
+    "open_and_lock_file",
+    "open_port_internal",
+    "Failed init_port",
+]
+
+
+# ── Output helpers ────────────────────────────────────────────────────
+
+def _log_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
+def _pstart(name: str, log_path: str = "") -> None:
+    if log_path:
+        print(f"  ▸  {name:<{_NW}}  → {log_path}", flush=True)
+    else:
+        print(f"  ▸  {name}", flush=True)
+
+
+def _pok(name: str, detail: str = "OK") -> None:
+    print(f"  ✓  {name:<{_NW}}  {detail}", flush=True)
+
+
+def _pfail(name: str, detail: str = "") -> None:
+    suffix = f"  {detail}" if detail else ""
+    print(f"  ✗  {name}{suffix}", flush=True)
+
+
+def _pinfo(msg: str) -> None:
+    print(f"       {msg}", flush=True)
+
+
+# ── Camera detection ──────────────────────────────────────────────────
+
+def _detect_camera() -> dict:
+    """
+    Probe plugged-in cameras. Returns best one found by priority:
+      Intel RealSense > Logitech Brio > other UVC webcam > none
+    """
+    import glob
+
+    try:
+        import pyrealsense2 as rs
+        ctx = rs.context()
+        devs = ctx.query_devices()
+        if len(devs) > 0:
+            try:
+                name = devs[0].get_info(rs.camera_info.name)
+            except Exception:
+                name = "Intel RealSense"
+            return dict(type="realsense", index=None, label=name, preset=None)
+    except Exception:
+        pass
+
+    v4l = []
+    for path in sorted(glob.glob("/sys/class/video4linux/video*/name")):
+        try:
+            name = open(path).read().strip()
+            idx = int(path.split("/")[4].replace("video", ""))
+            v4l.append((idx, name))
+        except Exception:
+            pass
+
+    for idx, name in v4l:
+        if "realsense" in name.lower():
+            return dict(type="realsense", index=None,
+                        label=f"Intel RealSense ({name})", preset=None)
+    for idx, name in v4l:
+        if "brio" in name.lower():
+            return dict(type="brio", index=idx,
+                        label=f"Logitech Brio ({name}, /dev/video{idx})", preset="brio")
+    for idx, name in v4l:
+        if any(k in name.lower() for k in ("webcam", "cam", "uvc", "usb video")):
+            return dict(type="webcam", index=idx,
+                        label=f"{name} (/dev/video{idx})", preset="generic")
+
+    return dict(type=None, index=None, label="none detected", preset=None)
+
+
+# ── Network ───────────────────────────────────────────────────────────
 
 def get_wifi_ip():
     """Return the best local IP — prefer the 192.168.0.x subnet."""
@@ -55,52 +150,152 @@ def get_wifi_ip():
         return DEFAULT_WIFI_IP
 
 
-def run(name, cmd):
-    """Launch a bash subprocess and track it."""
-    print(f"\n>>> Starting {name}")
-    print(f"    {cmd}\n")
+# ── Process management ────────────────────────────────────────────────
+
+def _wait_for_driver(timeout: int = 30) -> bool:
+    """Poll until joint_state_broadcaster is active in controller_manager."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            r = subprocess.run(
+                ["bash", "-c", f"{SOURCE_CMD} && ros2 control list_controllers 2>/dev/null"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if "joint_state_broadcaster" in r.stdout and "[active]" in r.stdout:
+                return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return False
+
+
+def _preexec():
+    os.setsid()  # new process group so cleanup() can kill the whole tree
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+def run(name: str, cmd: str, always_quiet: bool = False) -> subprocess.Popen:
+    """Launch a bash subprocess and track it.
+
+    Default mode  — all output redirected to /tmp/holoassist_<name>.log.
+    Verbose mode  — output goes to the terminal, with FastDDS SHM noise filtered.
+    always_quiet  — redirect even in verbose mode (for trivial TF publishers etc).
+    """
+    show_inline = _verbose and not always_quiet
+
+    if show_inline:
+        print(f"\n>>> Starting {name}")
+        print(f"    {cmd}\n")
+        noise = " | ".join(f"grep -v '{p}'" for p in _NOISE_PATTERNS)
+        full_cmd = f"({SOURCE_CMD} && {cmd}) 2>&1 | {noise}; exit ${{PIPESTATUS[0]}}"
+        kwargs = {}
+    else:
+        log_path = f"/tmp/holoassist_{_log_slug(name)}.log"
+        log_file = open(log_path, "w")
+        kwargs = {"stdout": log_file, "stderr": log_file}
+        if not _verbose:
+            _pstart(name, log_path)
+        full_cmd = f"{SOURCE_CMD} && {cmd}"
+
     proc = subprocess.Popen(
-        ["bash", "-c", f"{SOURCE_CMD} && {cmd}"],
-        preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN),
+        ["bash", "-c", full_cmd],
+        preexec_fn=_preexec,
+        **kwargs,
     )
     processes.append((name, proc))
     return proc
 
 
-def run_once(name, cmd, retries=1, delay=5):
+def run_once(name: str, cmd: str, retries: int = 1, delay: int = 5, timeout: int = 20) -> bool:
     """Run a command once (blocking), retry on failure."""
+    result = None
     for attempt in range(1 + retries):
-        result = subprocess.run(
-            ["bash", "-c", f"{SOURCE_CMD} && {cmd}"],
-            capture_output=True, text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["bash", "-c", f"{SOURCE_CMD} && {cmd}"],
+                capture_output=True, text=True, timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            if attempt < retries:
+                if _verbose:
+                    print(f">>> {name}: timed out, retrying in {delay}s...")
+                else:
+                    _pinfo(f"timed out, retrying in {delay}s…")
+                time.sleep(delay)
+                continue
+            _pfail(name, f"timed out after {timeout}s")
+            return False
         if result.returncode == 0:
-            print(f">>> {name}: OK")
+            if _verbose:
+                print(f">>> {name}: OK")
+            else:
+                _pok(name)
             return True
         if attempt < retries:
-            print(f">>> {name}: failed, retrying in {delay}s...")
+            if _verbose:
+                print(f">>> {name}: failed, retrying in {delay}s...")
+            else:
+                _pinfo(f"retrying in {delay}s…")
             time.sleep(delay)
-    print(f">>> {name}: FAILED — {result.stderr.strip()}")
+    err_line = ((result.stderr.strip().splitlines() or ["unknown error"])[-1]) if result else "no result"
+    if _verbose:
+        print(f">>> {name}: FAILED — {(result.stderr.strip() if result else 'no result')}")
+    else:
+        _pfail(name, err_line[:72])
     return False
 
 
+def _kill_group(proc, sig):
+    try:
+        pgid = os.getpgid(proc.pid)
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass
+    except Exception:
+        try:
+            proc.send_signal(sig)
+        except Exception:
+            pass
+
+
 def cleanup(*_):
-    print("\n\n>>> Shutting down all processes...")
+    if _verbose:
+        print("\n\n>>> Shutting down all processes...")
+    else:
+        print("\n")
+        print("=" * 65)
+        print("  Shutting down...")
+        print("=" * 65)
     for name, proc in reversed(processes):
         if proc.poll() is None:
-            print(f"    Stopping {name} (pid {proc.pid})")
-            proc.terminate()
+            if _verbose:
+                print(f"    Stopping {name} (pgid {os.getpgid(proc.pid) if proc.poll() is None else '?'})")
+            else:
+                _pinfo(f"stopping  {name}")
+            _kill_group(proc, signal.SIGTERM)
     for name, proc in processes:
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            print(f"    Force killing {name}")
-            proc.kill()
-    print(">>> All stopped.")
+            if _verbose:
+                print(f"    Force killing {name}")
+            else:
+                _pinfo(f"force kill {name}")
+            _kill_group(proc, signal.SIGKILL)
+    if _verbose:
+        print(">>> All stopped.")
+    else:
+        print()
+        print("  All stopped.")
+        print("=" * 65)
     sys.exit(0)
 
 
+# ── Entry point ───────────────────────────────────────────────────────
+
 def main():
+    global _verbose
+
     parser = argparse.ArgumentParser(description="HoloAssist ROS 2 Launcher")
     parser.add_argument(
         "--robot-ip", type=str, default=None,
@@ -113,9 +308,40 @@ def main():
     parser.add_argument("--no-rviz", action="store_true", help="Disable RViz")
     parser.add_argument(
         "--perception", action="store_true",
-        help="Start perception pipeline + cube pose relay (AprilTag cubes in Unity)",
+        help="Start perception pipeline. Camera is auto-detected (RealSense > Brio > webcam). "
+             "Falls back to sim if no camera is found and robot is fake.",
+    )
+    parser.add_argument(
+        "--fake-gripper", action="store_true",
+        help="With a real/URSim arm, use fake OnRobot gripper hardware.",
+    )
+    parser.add_argument(
+        "--moveit",
+        action="store_true",
+        help="Start MoveIt pick/place stack (full_holoassist_hardware.launch.py). "
+             "Reads cube poses from the perception pipeline (--perception). Suppresses driver RViz.",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Print full subprocess output to the terminal (ROS driver logs, node output, etc).",
+    )
+    parser.add_argument(
+        "--dashboard", action="store_true",
+        help="Open the e-stop dashboard alongside the launcher.",
+    )
+    parser.add_argument(
+        "--dashboard-fullscreen", action="store_true",
+        help="Open the dashboard in fullscreen mode (implies --dashboard).",
+    )
+    parser.add_argument(
+        "--fake-gripper", action="store_true",
+        help="With a real/URSim arm, use fake OnRobot gripper hardware.",
     )
     args = parser.parse_args()
+    _verbose = args.verbose
+
+    open_dashboard = args.dashboard or args.dashboard_fullscreen
+    dashboard_fullscreen = args.dashboard_fullscreen
 
     fake = args.robot_ip is None
     robot_ip = "0.0.0.0" if fake else args.robot_ip
@@ -129,37 +355,97 @@ def main():
         print(f"  Robot IP:    {robot_ip}")
     print(f"  ROS IP:      {args.ros_ip}")
     print(f"  WiFi IP:     {wifi_ip}  <-- set this in Unity ROS Settings")
+    if not fake:
+        print(f"  Gripper:     {'fake' if args.fake_gripper else 'real'}")
     print(f"  RViz:        {'off' if args.no_rviz else 'on'}")
-    print(f"  Perception:  {'on' if args.perception else 'off (use --perception to enable)'}")
+    if args.perception:
+        cam = _detect_camera()
+        if cam["type"] is None and fake:
+            cam_label = f"on (sim — {cam['label']})"
+        elif cam["type"] is None:
+            cam_label = "on — WARNING: no camera detected"
+        else:
+            cam_label = f"on ({cam['label']})"
+    else:
+        cam = dict(type=None, index=None, label="", preset=None)
+        cam_label = "off (add --perception to enable)"
+    print(f"  Perception:  {cam_label}")
+    if args.moveit:
+        moveit_label = "on"
+    else:
+        moveit_label = "off (add --moveit to enable)"
+    print(f"  MoveIt:      {moveit_label}")
+    print(f"  Dashboard:   {'on (fullscreen)' if dashboard_fullscreen else 'on  (bridge on :9090)' if open_dashboard else 'off  (--dashboard to open)'}")
+    print(f"  Verbose:     {'on' if _verbose else 'off  (--verbose for full node logs)'}")
     print("=" * 65)
+    if not _verbose:
+        print()
 
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
+    # ── Dashboard (first, so it's live when everything else comes up) ──
+    if open_dashboard:
+        subprocess.run(["bash", "-c", "fuser -k 9090/tcp 2>/dev/null"], capture_output=True)
+        time.sleep(0.3)
+        bridge_path = os.path.join(SCRIPT_DIR, "dashboard", "bridge_server.py")
+        run("Bridge", f"python3 {bridge_path}")
+        dashboard_path = os.path.join(SCRIPT_DIR, "dashboard", "main.py")
+        dashboard_cmd = f"python3 {dashboard_path}"
+        if dashboard_fullscreen:
+            dashboard_cmd += " --fullscreen"
+        run("Dashboard", dashboard_cmd)
+        time.sleep(1)  # give Qt a moment to open before the terminal fills up
+
     # ── Phase 1: UR + OnRobot driver ─────────────────────────────────
-    rviz_flag = "false" if args.no_rviz else "true"
+    # When --moveit is active, MoveIt stack owns RViz (it has SRDF pre-loaded).
+    # Letting the UR driver also open RViz causes a race where the MotionPlanning
+    # plugin times out waiting for robot_description_semantic (~40s to arrive).
+    driver_rviz = "false" if (args.no_rviz or args.moveit) else "true"
     driver_cmd = (
         f"ros2 launch ur_onrobot_control start_robot.launch.py"
-        f" ur_type:=ur3e onrobot_type:=rg2 launch_rviz:={rviz_flag}"
+        f" ur_type:=ur3e onrobot_type:=rg2 launch_rviz:={driver_rviz}"
+        f" base_yaw_rad:=0.0"
     )
     if fake:
         driver_cmd += " use_fake_hardware:=true"
     else:
         driver_cmd += f" robot_ip:={robot_ip}"
+        if args.fake_gripper:
+            driver_cmd += " use_fake_gripper_hardware:=true"
     run("UR + OnRobot Driver", driver_cmd)
 
-    print("\n>>> Waiting 10s for UR driver to initialize...")
-    time.sleep(10)
-
-    # ── Phase 2: Controller switch ───────────────────────────────────
-    switch_cmd = (
-        "ros2 service call /controller_manager/switch_controller"
-        " controller_manager_msgs/srv/SwitchController"
-        " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
-        " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
-        " strictness: 1}\""
+    run(
+        "Trolley Scene Publisher",
+        "ros2 run holo_assist_depth_tracker holoassist_trolley_scene_publisher",
     )
-    run_once("Controller Switch (teleop)", switch_cmd, retries=5, delay=3)
+
+    if _verbose:
+        print("\n>>> Waiting for UR driver (joint_state_broadcaster active)...")
+    else:
+        _pinfo("waiting for UR driver…")
+    if not _wait_for_driver(timeout=30):
+        _pinfo("warning: UR driver readiness check timed out (30s), continuing anyway")
+
+    # ── Phase 2: Controller switch (real hardware, teleop-only start) ──
+    # When --moveit is set, the driver already starts with scaled_joint_trajectory_controller
+    # active (the default), so MoveIt can use it immediately.  Switching to velocity
+    # controllers here would break MoveIt until the dashboard MOVEIT button is pressed.
+    # When --moveit is NOT set, switch to velocity + gripper controllers for teleop.
+    if not fake:
+        if args.moveit:
+            _pinfo("moveit mode — keeping trajectory controllers (scaled_joint + finger_width_traj)")
+        else:
+            switch_cmd = (
+                "ros2 service call /controller_manager/switch_controller"
+                " controller_manager_msgs/srv/SwitchController"
+                " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
+                " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
+                " strictness: 1}\""
+            )
+            run_once("Controller Switch", switch_cmd, retries=5, delay=3, timeout=20)
+    else:
+        _pinfo("fake hardware — skipping controller switch")
 
     # ── Phase 3: Communication bridges ───────────────────────────────
     subprocess.run(["bash", "-c", "fuser -k 10000/tcp 2>/dev/null"], capture_output=True)
@@ -174,11 +460,17 @@ def main():
     if os.path.exists(beacon_path):
         run("IP Beacon", f"python3 {beacon_path} --ip {wifi_ip}")
 
-    # ── Phase 4: Perception + cube relay (optional) ──────────────────
+    # ── Phase 4: Perception (optional) ───────────────────────────────
     if args.perception:
-        print("\n>>> Starting perception pipeline...")
+        sim_only = cam["type"] is None and fake
 
-        if fake:
+        if _verbose:
+            print(f"\n>>> Starting perception pipeline...")
+        else:
+            print()
+            _pinfo("── perception ──────────────────────────────────────────")
+
+        if sim_only:
             run(
                 "Perception (sim)",
                 "ros2 launch holo_assist_depth_tracker_sim"
@@ -186,19 +478,26 @@ def main():
                 " use_rviz:=false publish_scene_state_publisher:=false",
             )
             time.sleep(2)
-
-            run(
-                "Workspace Frame TF",
-                "ros2 run tf2_ros static_transform_publisher"
-                " --x 0 --y -0.315 --z 0.02 --frame-id base_link"
-                " --child-frame-id workspace_frame",
-            )
+        elif cam["type"] is None:
+            _pfail("Perception", "no camera detected — skipping")
         else:
-            # Publish camera calibration TF (base_link → camera_link)
-            # The easy_handeye2 calibration gives base_link → camera_color_optical_frame,
-            # but the RealSense driver already publishes camera_link → camera_color_optical_frame.
-            # We publish base_link → camera_link to avoid TF parent conflicts.
-            # To recalibrate: run easy_handeye2 with tracking_base_frame:=camera_link
+            rviz_flag_perception = "false" if args.no_rviz else "true"
+
+            if cam["type"] in ("brio", "webcam"):
+                hfov, w, h, fps = _WEBCAM_PRESETS[cam["preset"]]
+                run(
+                    f"Camera ({cam['label']})",
+                    f"ros2 run holo_assist_depth_tracker holo_assist_webcam_image_publisher"
+                    f" --ros-args"
+                    f" -p device_index:={cam['index']}"
+                    f" -p image_topic:=/camera/camera/color/image_raw"
+                    f" -p camera_info_topic:=/camera/camera/color/camera_info"
+                    f" -p frame_id:=camera_color_optical_frame"
+                    f" -p hfov_deg:={hfov}"
+                    f" -p width:={w} -p height:={h} -p fps:={fps}",
+                )
+                time.sleep(3)
+
             calib_file = os.path.expanduser(
                 "~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib"
             )
@@ -209,72 +508,100 @@ def main():
                         calib = yaml.safe_load(f)
                     t = calib["transform"]["translation"]
                     r = calib["transform"]["rotation"]
+                    calib_target = (
+                        str(calib.get("parameters", {}).get("tracking_base_frame", ""))
+                        or "camera_link"
+                    )
                     run(
                         "Camera Calibration TF",
                         f"ros2 run tf2_ros static_transform_publisher"
                         f" --x {t['x']} --y {t['y']} --z {t['z']}"
                         f" --qx {r['x']} --qy {r['y']} --qz {r['z']} --qw {r['w']}"
-                        f" --frame-id base_link --child-frame-id camera_link",
+                        f" --frame-id base_link --child-frame-id {calib_target}",
                     )
+                    if not _verbose:
+                        _pinfo(f"calibration: base_link → {calib_target}")
+                    # Webcam: add standard camera_link → camera_color_optical_frame rotation.
+                    # RealSense driver publishes this automatically.
+                    if cam["type"] != "realsense" and calib_target == "camera_link":
+                        run(
+                            "Camera Link → Optical TF",
+                            "ros2 run tf2_ros static_transform_publisher"
+                            " --x 0 --y 0 --z 0"
+                            " --qx -0.5 --qy 0.5 --qz -0.5 --qw 0.5"
+                            " --frame-id camera_link"
+                            " --child-frame-id camera_color_optical_frame",
+                            always_quiet=True,
+                        )
                     time.sleep(1)
                 except Exception as e:
-                    print(f"    WARNING: Failed to read calibration: {e}")
+                    _pfail("Camera Calibration TF", str(e))
             else:
-                print(f"    WARNING: No calibration found at {calib_file}")
-                print(f"    Run calibration first — see CALIBRATION.md")
+                _pinfo("no calibration found — run ./calibrate.sh to calibrate")
 
-            # Camera + depth tracker + RViz
-            rviz_perception = "false" if args.no_rviz else "true"
+            if cam["type"] == "realsense":
+                perception_launch = "visualize_depth_tracker.launch.py"
+            else:
+                perception_launch = (
+                    "holoassist_4tag_board_4cube.launch.py"
+                    " start_camera:=false start_workspace:=false"
+                )
             run(
-                "Perception (hardware)",
-                "ros2 launch holo_assist_depth_tracker"
-                " visualize_depth_tracker.launch.py"
-                " start_workspace_perception:=false"
-                f" start_rviz:={rviz_perception}",
+                f"Perception ({cam['type']})",
+                f"ros2 launch holo_assist_depth_tracker"
+                f" {perception_launch} start_rviz:={rviz_flag_perception}",
             )
-            time.sleep(2)
+            time.sleep(5)
 
-            # AprilTag detector (publishes TF for tag detections)
-            run(
-                "AprilTag Detector",
-                "ros2 run apriltag_ros apriltag_node --ros-args"
-                ' -p "families:=36h11" -p "size:=0.032" -p "publish_tf:=true"'
-                " --remap image_rect:=/camera/camera/color/image_raw"
-                " --remap camera_info:=/camera/camera/color/camera_info",
-            )
-            time.sleep(1)
+    # ── Phase 5: MoveIt (optional) ───────────────────────────────────
+    if args.moveit:
+        if _verbose:
+            print("\n>>> Starting MoveIt stack...")
+        else:
+            print()
+            _pinfo("── moveit ──────────────────────────────────────────────")
 
-            # Cube pose node: computes cube centers from AprilTag faces
-            # Uses base_link as reference frame (via calibration TF chain)
-            # instead of workspace_frame (which needs board corner tags)
-            run(
-                "Cube Pose Node",
-                "ros2 run holo_assist_depth_tracker holoassist_cube_pose_node"
-                " --ros-args"
-                " -p workspace_frame:=base_link"
-                " -p detections_topic:=/detections",
-            )
+        # scaled_joint_trajectory_controller is active on both real and fake hardware
+        # (the UR driver spawner activates it in both modes).  Only the safety
+        # checks need to be skipped for fake hardware.
+        moveit_extra = " require_robot_status:=false require_controller_check:=false" if fake else ""
 
-        time.sleep(2)
-
-        # Cube pose relay: transforms perception poses (workspace_frame) to base_link for Unity
-        relay_prefix = "/holoassist/sim/perception" if fake else "/holoassist/perception"
-        run(
-            "Cube Pose Relay",
-            f"python3 {os.path.join(SCRIPT_DIR, 'ros2_ws', 'cube_pose_relay.py')}"
-            f" --ros-args -p input_prefix:={relay_prefix}",
+        # MoveIt owns RViz when --moveit is active so the MotionPlanning plugin
+        # receives robot_description_semantic as a direct parameter (not via topic).
+        view_robot_rviz = os.path.join(
+            ROS2_WS,
+            "install/ur_onrobot_description/share"
+            "/ur_onrobot_description/rviz/view_robot.rviz",
         )
+        moveit_rviz = "false" if args.no_rviz else "true"
+        moveit_cmd = (
+            "ros2 launch moveit_robot_control"
+            " full_holoassist_hardware.launch.py"
+            f" robot_ip:={robot_ip}"
+            f" use_rviz:={moveit_rviz}"
+            + (f" rviz_config:={view_robot_rviz}" if not args.no_rviz else "")
+            + moveit_extra
+        )
+        run("MoveIt", moveit_cmd)
+        if not args.perception:
+            _pinfo("warning: perception is off; pick_cube_to_bin will wait for cube poses")
 
     # ── Done ─────────────────────────────────────────────────────────
-    print("\n" + "=" * 65)
+    print()
+    print("=" * 65)
     print("  All running. Ctrl+C to stop everything.")
     print(f"  ROS-TCP:     port 10000 (Unity)")
     if args.perception:
-        print(f"  Perception:  cube poses relayed to /holoassist/unity/cube_{{1-4}}_pose")
+        print(f"  Perception:  cube poses on /holoassist/perception/april_cube_{{1-4}}_pose")
+    if args.moveit:
+        print(f"  MoveIt:      /holoassist/pick_cube_to_bin  (reads real cube poses from perception)")
     print()
     if not fake:
         print("  Don't forget: run External Control on teach pendant")
     print("  Then hit Play in Unity.")
+    if not _verbose:
+        print()
+        print("  Logs: /tmp/holoassist_*.log")
     print("=" * 65)
 
     critical = {"UR + OnRobot Driver", "ROS-TCP Endpoint"}
@@ -282,9 +609,16 @@ def main():
         for name, proc in list(processes):
             ret = proc.poll()
             if ret is not None:
-                print(f"\n>>> {name} exited (code {ret})")
+                if _verbose:
+                    print(f"\n>>> {name} exited (code {ret})")
+                else:
+                    print()
+                    _pfail(f"{name} has stopped", f"(code {ret})")
                 if name in critical:
-                    print(f"    Critical process died — shutting down.")
+                    if _verbose:
+                        print(f"    Critical process died — shutting down.")
+                    else:
+                        _pinfo("critical — shutting down")
                     cleanup()
                 else:
                     processes.remove((name, proc))

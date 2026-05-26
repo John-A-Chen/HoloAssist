@@ -52,14 +52,15 @@ class CubePoseNode(Node):
         self._last_log_time: Dict[str, float] = {}
 
         self.declare_parameter("detections_topic", "/detections_all")
-        self.declare_parameter("workspace_frame", "workspace_frame")
+        self.declare_parameter("workspace_frame", "camera_color_optical_frame")
         self.declare_parameter("tag_family", "36h11")
         self.declare_parameter("cube_edge_size_m", 0.040)
         self.declare_parameter("cube_tag_size_m", 0.032)
         self.declare_parameter("cube_face_offset_m", 0.020)
         self.declare_parameter("cube_size_m", 0.040)
         self.declare_parameter("cube_min_center_z_m", -1.0)
-        self.declare_parameter("detections_timeout_s", 1.0)
+        self.declare_parameter("detections_timeout_s", 0.15)
+        self.declare_parameter("position_deadzone_m", 0.003)
         self.declare_parameter("tf_lookup_timeout_s", 0.05)
         self.declare_parameter("timer_hz", 20.0)
         self.declare_parameter("publish_cube_tf", True)
@@ -100,6 +101,7 @@ class CubePoseNode(Node):
             )
         self.cube_min_center_z_m = float(self.get_parameter("cube_min_center_z_m").value)
         self.detections_timeout_s = max(0.05, float(self.get_parameter("detections_timeout_s").value))
+        self.position_deadzone_m = max(0.0, float(self.get_parameter("position_deadzone_m").value))
         self.tf_lookup_timeout_s = max(0.0, float(self.get_parameter("tf_lookup_timeout_s").value))
         self.timer_hz = max(1.0, float(self.get_parameter("timer_hz").value))
         self.publish_cube_tf = bool(self.get_parameter("publish_cube_tf").value)
@@ -192,12 +194,17 @@ class CubePoseNode(Node):
 
         self._latest_visible_ids: set[int] = set()
         self._latest_detection_stamp: Optional[rclpy.time.Time] = None
+        self._last_processed_stamp: Optional[rclpy.time.Time] = None
 
         self._marker_active: List[bool] = [False, False, False, False]
         self._last_centers: List[Optional[np.ndarray]] = [None, None, None, None]
         self._last_rotations: List[Optional[np.ndarray]] = [None, None, None, None]
+        self._last_output_frames: List[str] = [self.workspace_frame] * 4
 
+        # Slow timer only handles staleness/cleanup — actual processing is
+        # triggered directly from _on_detections at detection rate.
         self._timer = self.create_timer(1.0 / self.timer_hz, self._on_timer)
+        self._heartbeat_timer = self.create_timer(15.0, self._on_heartbeat)
         self._validate_configuration()
 
         self.get_logger().info(
@@ -230,7 +237,23 @@ class CubePoseNode(Node):
             stamp = self.get_clock().now()
         self._latest_detection_stamp = stamp
 
+        # Process immediately at detection rate rather than waiting for the timer.
+        self._on_timer()
+
     def _on_timer(self) -> None:
+        # Skip full processing if no new detection has arrived since last run.
+        # The timer's only job between detections is staleness/cleanup.
+        if (
+            self._latest_detection_stamp is not None
+            and self._last_processed_stamp is not None
+            and self._latest_detection_stamp == self._last_processed_stamp
+        ):
+            age_s = (self.get_clock().now() - self._latest_detection_stamp).nanoseconds / 1e9
+            if age_s > self.detections_timeout_s:
+                for idx in range(4):
+                    self._delete_marker(idx)
+            return
+
         if self._latest_detection_stamp is None:
             for idx in range(4):
                 self._publish_status(
@@ -271,23 +294,19 @@ class CubePoseNode(Node):
                     reason="detections_timeout",
                 )
                 self._delete_marker(idx)
-                self._log_throttled(
-                    "info",
-                    f"cube_{cube_id}_stale",
-                    self.DEBUG_THROTTLE_S,
-                    "cube_id=%d state=stale visible_tag_ids=%s age_s=%.2f" % (cube_id, visible_ids, age_s),
-                )
             return
 
+        self._last_processed_stamp = self._latest_detection_stamp
         visible_pose_records: List[Tuple[int, PoseStamped, np.ndarray]] = []
 
         for idx, tag_ids in enumerate(self.cube_groups):
             cube_def = self.cube_defs[idx]
             cube_id = int(cube_def["cube_id"])
             detected_ids = sorted(int(tag_id) for tag_id in tag_ids if int(tag_id) in self._latest_visible_ids)
-            observations = self._collect_observations(idx, tag_ids)
+            observations, output_frame = self._collect_observations(idx, tag_ids)
             visible_ids = sorted(int(obs["id"]) for obs in observations)
             if not observations:
+                reason = "tf_lookup_failed" if detected_ids else "no_visible_cube_tags"
                 self._publish_status(
                     cube_idx=idx,
                     state="stale",
@@ -296,11 +315,11 @@ class CubePoseNode(Node):
                     rejected_ids=[],
                     candidate_count=0,
                     candidate_spread_m=float("nan"),
-                    method="no_visible_cube_tags",
+                    method=reason,
                     age_s=age_s,
-                    frame_id=self.workspace_frame,
+                    frame_id=output_frame,
                     center=self._last_centers[idx],
-                    reason="no_visible_cube_tags",
+                    reason=reason,
                 )
                 self._delete_marker(idx)
                 continue
@@ -317,7 +336,7 @@ class CubePoseNode(Node):
                     candidate_spread_m=float("nan"),
                     method="failed_to_solve_cube_pose",
                     age_s=age_s,
-                    frame_id=self.workspace_frame,
+                    frame_id=output_frame,
                     center=self._last_centers[idx],
                     reason="failed_to_solve_cube_pose",
                 )
@@ -341,8 +360,16 @@ class CubePoseNode(Node):
                 center = center.copy()
                 center[2] = float(min_z)
 
+            # Deadzone: snap to last known position if movement is below threshold.
+            if (
+                self.position_deadzone_m > 0.0
+                and self._last_centers[idx] is not None
+                and float(np.linalg.norm(center - self._last_centers[idx])) < self.position_deadzone_m
+            ):
+                center = self._last_centers[idx]
+
             qx, qy, qz, qw = quaternion_from_rotation_matrix(rot_w_c)
-            pose = self._publish_cube_outputs(idx, center, (qx, qy, qz, qw))
+            pose = self._publish_cube_outputs(idx, center, (qx, qy, qz, qw), output_frame)
             self._last_centers[idx] = np.asarray(center, dtype=np.float64)
             self._last_rotations[idx] = np.asarray(rot_w_c, dtype=np.float64)
             visible_pose_records.append((idx, pose, center))
@@ -357,7 +384,7 @@ class CubePoseNode(Node):
                 candidate_spread_m=candidate_spread_m,
                 method=method,
                 age_s=age_s,
-                frame_id=self.workspace_frame,
+                frame_id=output_frame,
                 center=center,
                 reason="ok",
             )
@@ -378,35 +405,6 @@ class CubePoseNode(Node):
                         selected_tag_id,
                     ),
                 )
-            self._log_throttled(
-                "info",
-                f"cube_{cube_id}_debug",
-                self.DEBUG_THROTTLE_S,
-                "cube_id=%d visible_tag_ids=%s selected_tag_id=%d rejected_tag_ids=%s center=(%.3f,%.3f,%.3f) "
-                "candidate_spread_m=%.4f pos_resid_mm=%.1f method=%s tf_child=%s marker_topic=%s "
-                "marker_scale=(%.3f,%.3f,%.3f) cube_color_rgba=(%.2f,%.2f,%.2f,%.2f)"
-                % (
-                    cube_id,
-                    used_ids,
-                    selected_tag_id,
-                    rejected_ids,
-                    float(center[0]),
-                    float(center[1]),
-                    float(center[2]),
-                    candidate_spread_m,
-                    1000.0 * pos_resid_m,
-                    method,
-                    str(cube_def["tf_child_frame"]),
-                    str(cube_def["marker_topic"]),
-                    self.cube_edge_size_m,
-                    self.cube_edge_size_m,
-                    self.cube_edge_size_m,
-                    float(marker_color[0]),
-                    float(marker_color[1]),
-                    float(marker_color[2]),
-                    float(marker_color[3]),
-                ),
-            )
             self._warn_if_pose_unreasonable(cube_id, center)
 
         if visible_pose_records:
@@ -417,15 +415,17 @@ class CubePoseNode(Node):
                 nearest = min(visible_pose_records, key=lambda item: float(np.linalg.norm(item[2])))
                 self.legacy_pose_pub.publish(nearest[1])
 
-    def _collect_observations(self, cube_idx: int, tag_ids: List[int]) -> List[Dict[str, object]]:
+    def _collect_observations(self, cube_idx: int, tag_ids: List[int]) -> Tuple[List[Dict[str, object]], str]:
         observations: List[Dict[str, object]] = []
         visible_ordered = [tag_id for tag_id in tag_ids if tag_id in self._latest_visible_ids]
+        output_frame = self._resolve_output_frame(visible_ordered)
         cube_def = self.cube_defs[cube_idx]
-        cube_id = int(cube_def["cube_id"])
         tag_to_face: Dict[int, str] = cube_def["tag_to_face"]  # type: ignore[assignment]
+        if output_frame is None:
+            return [], self.workspace_frame
 
         for tag_id in visible_ordered:
-            tf_msg = self._lookup_tag_transform(tag_id)
+            tf_msg = self._lookup_tag_transform(tag_id, output_frame)
             if tf_msg is None:
                 continue
 
@@ -451,39 +451,21 @@ class CubePoseNode(Node):
                 }
             )
 
-            self._log_throttled(
-                "info",
-                f"cube_{cube_id}_tag_{tag_id}",
-                self.DEBUG_THROTTLE_S,
-                "detected_tag_id=%d mapped_cube_id=%d mapped_face_label=%s tag_center=(%.3f,%.3f,%.3f) "
-                "tag_normal=(%.3f,%.3f,%.3f) local_offset_used=(%.3f,%.3f,%.3f) "
-                "candidate_cube_center=(%.3f,%.3f,%.3f)"
-                % (
-                    int(tag_id),
-                    cube_id,
-                    face_label,
-                    float(point[0]),
-                    float(point[1]),
-                    float(point[2]),
-                    float(tag_normal[0]),
-                    float(tag_normal[1]),
-                    float(tag_normal[2]),
-                    float(local_offset[0]),
-                    float(local_offset[1]),
-                    float(local_offset[2]),
-                    float(candidate_center[0]),
-                    float(candidate_center[1]),
-                    float(candidate_center[2]),
-                ),
-            )
+        return observations, output_frame
 
-        return observations
+    def _resolve_output_frame(self, visible_tag_ids: List[int]) -> Optional[str]:
+        if not visible_tag_ids:
+            return self.workspace_frame
+        probe_tag_id = int(visible_tag_ids[0])
+        if self._lookup_tag_transform(probe_tag_id, self.workspace_frame) is not None:
+            return self.workspace_frame
+        return None
 
-    def _lookup_tag_transform(self, tag_id: int) -> Optional[TransformStamped]:
+    def _lookup_tag_transform(self, tag_id: int, target_frame: str) -> Optional[TransformStamped]:
         for candidate in candidate_tag_frame_names(self.tag_family, tag_id):
             try:
                 return self._tf_buffer.lookup_transform(
-                    self.workspace_frame,
+                    target_frame,
                     candidate,
                     rclpy.time.Time(),
                     timeout=Duration(seconds=self.tf_lookup_timeout_s),
@@ -651,19 +633,10 @@ class CubePoseNode(Node):
         return output
 
     def _local_offset_for_face(self, face_label: str) -> np.ndarray:
+        # apriltag_ros convention: tag Z-axis = face outward normal (points toward camera).
+        # Cube centre is always half-edge behind the tag face, i.e. -Z in tag frame,
+        # regardless of which face. face_label is kept for future orientation work.
         f = float(self.cube_face_offset_m)
-        if face_label == "+X":
-            return np.array([-f, 0.0, 0.0], dtype=np.float64)
-        if face_label == "-X":
-            return np.array([f, 0.0, 0.0], dtype=np.float64)
-        if face_label == "+Y":
-            return np.array([0.0, -f, 0.0], dtype=np.float64)
-        if face_label == "-Y":
-            return np.array([0.0, f, 0.0], dtype=np.float64)
-        if face_label == "+Z":
-            return np.array([0.0, 0.0, -f], dtype=np.float64)
-        if face_label == "-Z":
-            return np.array([0.0, 0.0, f], dtype=np.float64)
         return np.array([0.0, 0.0, -f], dtype=np.float64)
 
     def _publish_cube_outputs(
@@ -671,12 +644,13 @@ class CubePoseNode(Node):
         cube_idx: int,
         center: np.ndarray,
         quat_xyzw: Tuple[float, float, float, float],
+        output_frame: str,
     ) -> PoseStamped:
         qx, qy, qz, qw = quat_xyzw
         stamp = self.get_clock().now().to_msg()
 
         pose_msg = PoseStamped()
-        pose_msg.header.frame_id = self.workspace_frame
+        pose_msg.header.frame_id = output_frame
         pose_msg.header.stamp = stamp
         pose_msg.pose.position.x = float(center[0])
         pose_msg.pose.position.y = float(center[1])
@@ -689,7 +663,7 @@ class CubePoseNode(Node):
 
         if self.publish_cube_tf:
             tf_msg = TransformStamped()
-            tf_msg.header.frame_id = self.workspace_frame
+            tf_msg.header.frame_id = output_frame
             tf_msg.header.stamp = stamp
             tf_msg.child_frame_id = self.cube_tf_frames[cube_idx]
             tf_msg.transform.translation.x = float(center[0])
@@ -703,7 +677,7 @@ class CubePoseNode(Node):
 
         if self.publish_cube_markers:
             marker = Marker()
-            marker.header.frame_id = self.workspace_frame
+            marker.header.frame_id = output_frame
             marker.header.stamp = stamp
             marker.ns = f"holoassist_april_cube_{cube_idx + 1}"
             marker.id = 0
@@ -718,8 +692,12 @@ class CubePoseNode(Node):
             marker.color.g = float(color[1])
             marker.color.b = float(color[2])
             marker.color.a = max(0.05, min(1.0, float(color[3]) * float(self.marker_alpha)))
+            # lifetime matches detections_timeout so RViz auto-expires without a sharp DELETE
+            marker.lifetime.sec = 0
+            marker.lifetime.nanosec = int(self.detections_timeout_s * 1e9)
             self.marker_pubs[cube_idx].publish(marker)
             self._marker_active[cube_idx] = True
+        self._last_output_frames[cube_idx] = output_frame
 
         return pose_msg
 
@@ -783,7 +761,7 @@ class CubePoseNode(Node):
         if not self._marker_active[cube_idx]:
             return
         marker = Marker()
-        marker.header.frame_id = self.workspace_frame
+        marker.header.frame_id = self._last_output_frames[cube_idx]
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = f"holoassist_april_cube_{cube_idx + 1}"
         marker.id = 0
@@ -877,6 +855,9 @@ class CubePoseNode(Node):
                 "cube_id=%d pose looks unreasonable for workspace: position=(%.3f,%.3f,%.3f)"
                 % (cube_id, float(c[0]), float(c[1]), float(c[2])),
             )
+
+    def _on_heartbeat(self) -> None:
+        self.get_logger().info("perception node is healthy")
 
     def _log_throttled(self, level: str, key: str, period_s: float, msg: str) -> None:
         now_s = float(self.get_clock().now().nanoseconds) / 1e9
