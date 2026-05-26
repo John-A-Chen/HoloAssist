@@ -48,4 +48,4 @@ XR-based teleoperation of the UR3e arm and OnRobot gripper via Meta Quest 3. Inc
 - Dashboard saves session log to `~/holoassist_sessions/` on shutdown (events, e-stop count, Unity session info)
 - OnRobot gripper open/close triggered from XR controller during teleoperation, enabling full pick-and-place workflow
 
-**Status:** Hand Guide + session logging DONE. Gripper integration TODO.
+**Status:** DONE
