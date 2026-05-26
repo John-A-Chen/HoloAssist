@@ -3,1438 +3,784 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HoloAssist — Mixed Reality Robot Control</title>
-<meta name="description" content="Mixed-reality teleoperation and autonomous manipulation for industrial robotics. See it. Reach it. Move it.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<title>HoloAssist</title>
+<meta name="description" content="Mixed-reality teleoperation and autonomous manipulation for the UR3e.">
 <style>
-/* ============================================================
-   DESIGN TOKENS
-   ============================================================ */
+@font-face {
+  font-family: 'Mono';
+  src: local('SF Mono'), local('Fira Code'), local('Cascadia Code'), local('JetBrains Mono'), local('Menlo'), local('Consolas'), local('monospace');
+}
+
 :root {
-  --white: #ffffff;
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-200: #e2e8f0;
-  --gray-300: #cbd5e1;
-  --gray-400: #94a3b8;
-  --gray-500: #64748b;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1e293b;
-  --gray-900: #0f172a;
-  --gray-950: #020617;
-
-  --indigo: #6366f1;
-  --cyan: #06b6d4;
-  --violet: #8b5cf6;
-  --emerald: #10b981;
-  --amber: #f59e0b;
-  --rose: #f43f5e;
-
-  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-  --gradient-glow: linear-gradient(135deg, rgba(99,102,241,.4) 0%, rgba(6,182,212,.4) 100%);
-  --gradient-subtle: linear-gradient(180deg, var(--gray-950) 0%, var(--gray-900) 100%);
+  --black: #050505;
+  --white: #edece8;
+  --accent: #a855f7;
+  --accent-dim: #a855f733;
+  --gray: #777;
+  --dim: #1a1a1a;
+  --border: #222;
+  --surface: #0c0c0c;
 }
 
-/* ============================================================
-   RESET & BASE
-   ============================================================ */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--gray-950);
-  color: var(--gray-200);
-  line-height: 1.6;
-  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--black);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
 }
-img { max-width: 100%; display: block; }
-a { color: inherit; text-decoration: none; }
 
-/* ============================================================
-   SCROLL REVEAL
-   ============================================================ */
-.reveal {
-  opacity: 0;
-  transform: translateY(40px);
-  transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.reveal-delay-1 { transition-delay: .1s; }
-.reveal-delay-2 { transition-delay: .2s; }
-.reveal-delay-3 { transition-delay: .3s; }
-.reveal-delay-4 { transition-delay: .4s; }
-.reveal-delay-5 { transition-delay: .5s; }
+::selection { background: var(--accent); color: var(--black); }
 
-/* ============================================================
-   NAVIGATION
-   ============================================================ */
+a { color: inherit; }
+
+/* ---- NAV ---- */
 .nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  padding: 0 clamp(1.5rem, 4vw, 3rem);
-  transition: background .3s, border-color .3s;
-  border-bottom: 1px solid transparent;
-}
-.nav.scrolled {
-  background: rgba(2, 6, 23, .82);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom-color: rgba(99,102,241,.15);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,5,5,.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .nav-inner {
-  max-width: 1320px; margin: 0 auto;
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
   display: flex; align-items: center; justify-content: space-between;
-  height: 72px;
+  height: 56px;
 }
-.nav-logo {
-  font-weight: 800; font-size: 1.35rem; letter-spacing: -.02em;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+.nav-brand {
+  font-size: .85rem; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; text-decoration: none;
 }
-.nav-links { display: flex; gap: 2.25rem; list-style: none; }
-.nav-links a {
-  font-size: .875rem; font-weight: 500; color: var(--gray-400);
-  transition: color .2s;
-  position: relative;
+.nav-brand span { color: var(--accent); }
+.nav-links {
+  display: flex; gap: 2rem; list-style: none;
+  font-size: .8rem; letter-spacing: .04em; text-transform: uppercase;
 }
+.nav-links a { text-decoration: none; color: var(--gray); transition: color .15s; }
 .nav-links a:hover { color: var(--white); }
-.nav-links a::after {
-  content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
-  height: 2px; background: var(--gradient-brand);
-  transform: scaleX(0); transition: transform .25s;
+.nav-gh {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+  text-decoration: none; color: var(--black); background: var(--accent);
+  padding: .45rem 1rem; font-weight: 600;
 }
-.nav-links a:hover::after { transform: scaleX(1); }
-.nav-cta {
-  padding: .55rem 1.25rem; border-radius: 8px; font-size: .85rem; font-weight: 600;
-  background: var(--gradient-brand); color: var(--white);
-  transition: opacity .2s, transform .15s;
-}
-.nav-cta:hover { opacity: .9; transform: translateY(-1px); }
+.nav-gh:hover { background: #9333ea; }
 
-.nav-mobile-toggle {
-  display: none; background: none; border: none; color: var(--white);
-  font-size: 1.5rem; cursor: pointer;
-}
-
-/* ============================================================
-   HERO
-   ============================================================ */
+/* ---- HERO ---- */
 .hero {
-  position: relative;
   min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  padding: 8rem 2rem 6rem;
-  text-align: center;
-  overflow: hidden;
-}
-
-/* Animated gradient orbs */
-.hero::before, .hero::after {
-  content: ''; position: absolute; border-radius: 50%;
-  filter: blur(120px); pointer-events: none;
-}
-.hero::before {
-  width: 800px; height: 800px; top: -300px; left: -200px;
-  background: radial-gradient(circle, rgba(99,102,241,.25) 0%, transparent 70%);
-  animation: float-orb 12s ease-in-out infinite alternate;
-}
-.hero::after {
-  width: 600px; height: 600px; bottom: -200px; right: -100px;
-  background: radial-gradient(circle, rgba(6,182,212,.2) 0%, transparent 70%);
-  animation: float-orb 10s ease-in-out infinite alternate-reverse;
-}
-@keyframes float-orb {
-  from { transform: translate(0, 0) scale(1); }
-  to   { transform: translate(60px, 40px) scale(1.1); }
-}
-
-/* Grid pattern overlay */
-.hero-grid {
-  position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(99,102,241,.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99,102,241,.06) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
-}
-
-.hero-content { position: relative; z-index: 2; max-width: 900px; }
-
-.hero-eyebrow {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem 1rem .4rem .5rem;
-  background: rgba(99,102,241,.1);
-  border: 1px solid rgba(99,102,241,.2);
-  border-radius: 999px; font-size: .8rem; font-weight: 500;
-  color: var(--indigo); margin-bottom: 2rem;
-  letter-spacing: .02em;
-}
-.hero-eyebrow-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--emerald);
-  box-shadow: 0 0 8px var(--emerald);
-  animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
-}
-
-.hero h1 {
-  font-size: clamp(3rem, 7.5vw, 5.5rem);
-  font-weight: 900; letter-spacing: -.04em;
-  line-height: 1.05; margin-bottom: 1.5rem;
-}
-.hero h1 .line { display: block; }
-.hero h1 .gradient-text {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-sub {
-  font-size: clamp(1.1rem, 2vw, 1.35rem);
-  color: var(--gray-400); max-width: 620px;
-  margin: 0 auto 3rem; font-weight: 400; line-height: 1.7;
-}
-
-.hero-cta-row {
-  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
-  margin-bottom: 4rem;
-}
-.btn-lg {
-  padding: .9rem 2.25rem; border-radius: 12px; font-size: 1rem; font-weight: 600;
-  transition: all .2s; display: inline-flex; align-items: center; gap: .5rem;
-  border: none; cursor: pointer;
-}
-.btn-primary {
-  background: var(--gradient-brand); color: var(--white);
-  box-shadow: 0 0 32px rgba(99,102,241,.3);
-}
-.btn-primary:hover {
-  box-shadow: 0 0 48px rgba(99,102,241,.5);
-  transform: translateY(-2px);
-}
-.btn-ghost {
-  background: rgba(255,255,255,.05); color: var(--white);
-  border: 1px solid rgba(255,255,255,.1);
-}
-.btn-ghost:hover {
-  background: rgba(255,255,255,.1);
-  transform: translateY(-2px);
-}
-
-/* Hero stats bar */
-.hero-stats {
-  display: flex; justify-content: center; gap: clamp(2rem, 5vw, 4rem);
-  flex-wrap: wrap;
-}
-.hero-stat { text-align: center; }
-.hero-stat-value {
-  font-size: clamp(2rem, 4vw, 3rem); font-weight: 800;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.2;
-}
-.hero-stat-label {
-  font-size: .8rem; color: var(--gray-500); font-weight: 500;
-  text-transform: uppercase; letter-spacing: .1em; margin-top: .25rem;
-}
-
-/* ============================================================
-   SECTION COMMONS
-   ============================================================ */
-section { padding: clamp(5rem, 10vw, 8rem) 2rem; position: relative; }
-.container { max-width: 1200px; margin: 0 auto; }
-.container-lg { max-width: 1320px; margin: 0 auto; }
-
-.section-header { text-align: center; margin-bottom: 4rem; }
-.section-tag {
-  display: inline-block;
-  text-transform: uppercase; letter-spacing: .2em; font-size: .7rem;
-  font-weight: 700; color: var(--cyan);
-  padding: .35rem 1rem; border-radius: 6px;
-  background: rgba(6,182,212,.08);
-  border: 1px solid rgba(6,182,212,.15);
-  margin-bottom: 1.25rem;
-}
-.section-heading {
-  font-size: clamp(2rem, 4.5vw, 3.25rem);
-  font-weight: 800; letter-spacing: -.03em;
-  color: var(--white); line-height: 1.15;
-  margin-bottom: 1rem;
-}
-.section-desc {
-  font-size: 1.1rem; color: var(--gray-400);
-  max-width: 560px; margin: 0 auto;
-  line-height: 1.7;
-}
-
-/* Section divider glow */
-.divider-glow {
-  height: 1px; border: none; margin: 0;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,.3), rgba(6,182,212,.3), transparent);
-}
-
-/* ============================================================
-   FEATURE SPOTLIGHTS (alternating full-width)
-   ============================================================ */
-.spotlight {
-  padding: clamp(4rem, 8vw, 7rem) 2rem;
-}
-.spotlight-inner {
-  max-width: 1200px; margin: 0 auto;
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 4rem; align-items: center;
-}
-.spotlight:nth-child(even) .spotlight-inner {
-  direction: rtl;
-}
-.spotlight:nth-child(even) .spotlight-inner > * {
-  direction: ltr;
-}
-
-.spotlight-text {}
-.spotlight-tag {
-  display: inline-block;
-  text-transform: uppercase; letter-spacing: .15em; font-size: .7rem;
-  font-weight: 700; padding: .3rem .8rem; border-radius: 4px;
-  margin-bottom: 1.25rem;
-}
-.tag-indigo { color: var(--indigo); background: rgba(99,102,241,.1); }
-.tag-cyan { color: var(--cyan); background: rgba(6,182,212,.1); }
-.tag-violet { color: var(--violet); background: rgba(139,92,246,.1); }
-.tag-emerald { color: var(--emerald); background: rgba(16,185,129,.1); }
-.tag-amber { color: var(--amber); background: rgba(245,158,11,.1); }
-.tag-rose { color: var(--rose); background: rgba(244,63,94,.1); }
-
-.spotlight-heading {
-  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-  font-weight: 800; letter-spacing: -.03em;
-  color: var(--white); line-height: 1.15;
-  margin-bottom: 1rem;
-}
-.spotlight-desc {
-  font-size: 1.05rem; color: var(--gray-400);
-  line-height: 1.7; margin-bottom: 2rem;
-}
-.spotlight-features {
-  list-style: none; display: flex; flex-direction: column; gap: .75rem;
-}
-.spotlight-features li {
-  display: flex; align-items: flex-start; gap: .65rem;
-  font-size: .95rem; color: var(--gray-300);
-}
-.spotlight-check {
-  flex-shrink: 0; margin-top: .15rem;
-  width: 20px; height: 20px; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .7rem; font-weight: 800;
-}
-.check-indigo { background: rgba(99,102,241,.15); color: var(--indigo); }
-.check-cyan { background: rgba(6,182,212,.15); color: var(--cyan); }
-.check-violet { background: rgba(139,92,246,.15); color: var(--violet); }
-.check-emerald { background: rgba(16,185,129,.15); color: var(--emerald); }
-.check-amber { background: rgba(245,158,11,.15); color: var(--amber); }
-.check-rose { background: rgba(244,63,94,.15); color: var(--rose); }
-
-/* Spotlight visual card (replaces images) */
-.spotlight-visual {
-  position: relative; border-radius: 20px; overflow: hidden;
-  background: var(--gray-900);
-  border: 1px solid var(--gray-800);
-  aspect-ratio: 4/3;
-  display: flex; align-items: center; justify-content: center;
-}
-.spotlight-visual::before {
-  content: ''; position: absolute; inset: 0;
-  opacity: .15;
-}
-.sv-indigo::before { background: linear-gradient(135deg, var(--indigo), transparent); }
-.sv-cyan::before { background: linear-gradient(135deg, var(--cyan), transparent); }
-.sv-violet::before { background: linear-gradient(135deg, var(--violet), transparent); }
-.sv-emerald::before { background: linear-gradient(135deg, var(--emerald), transparent); }
-.sv-amber::before { background: linear-gradient(135deg, var(--amber), transparent); }
-.sv-rose::before { background: linear-gradient(135deg, var(--rose), transparent); }
-
-/* Animated SVG illustrations inside spotlight visuals */
-.spotlight-visual svg {
-  position: relative; z-index: 1; width: 65%; height: 65%;
-}
-
-/* ============================================================
-   ARCHITECTURE / DATA FLOW
-   ============================================================ */
-.arch-section {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(99,102,241,.06) 0%, transparent 70%),
-    var(--gray-950);
-}
-
-.arch-pipeline {
-  display: flex; align-items: stretch; justify-content: center;
-  gap: 0; flex-wrap: wrap; margin-top: 3rem;
-}
-.arch-stage {
-  flex: 1; min-width: 200px; max-width: 280px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
+  padding-bottom: clamp(4rem, 8vh, 8rem);
+  padding-top: 80px;
+  max-width: 1400px; margin: 0 auto;
   position: relative;
-  padding: 2rem 1.5rem;
-  text-align: center;
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--gray-800);
-  transition: border-color .3s, background .3s;
 }
-.arch-stage:first-child { border-radius: 16px 0 0 16px; }
-.arch-stage:last-child { border-radius: 0 16px 16px 0; }
-.arch-stage:hover {
-  border-color: rgba(99,102,241,.4);
-  background: rgba(99,102,241,.04);
-}
-.arch-stage-icon {
-  font-size: 2rem; margin-bottom: .75rem; display: block;
-}
-.arch-stage h4 {
-  font-size: .95rem; font-weight: 700; color: var(--white);
-  margin-bottom: .35rem;
-}
-.arch-stage p {
-  font-size: .78rem; color: var(--gray-500); line-height: 1.5;
-}
-.arch-arrow {
-  display: flex; align-items: center;
-  color: var(--indigo); font-size: 1.5rem;
-  padding: 0 .25rem;
-  user-select: none;
-  animation: pulse-arrow 2s infinite;
-}
-@keyframes pulse-arrow {
-  0%, 100% { opacity: .5; }
-  50% { opacity: 1; }
-}
-
-/* ============================================================
-   SPECS BANNER
-   ============================================================ */
-.specs-banner {
-  background: var(--gray-900);
-  border-top: 1px solid var(--gray-800);
-  border-bottom: 1px solid var(--gray-800);
-  padding: 4rem 2rem;
-}
-.specs-grid {
-  max-width: 1200px; margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2rem;
-}
-.spec-item { text-align: center; }
-.spec-value {
-  font-size: clamp(2.5rem, 5vw, 3.75rem);
-  font-weight: 900; letter-spacing: -.03em;
-  color: var(--white); line-height: 1;
-}
-.spec-value .spec-unit {
-  font-size: .45em; font-weight: 600; color: var(--gray-500);
-  vertical-align: baseline;
-}
-.spec-label {
-  font-size: .85rem; color: var(--gray-500); margin-top: .5rem;
-  font-weight: 500;
-}
-
-/* ============================================================
-   TECH STACK (logo-style grid)
-   ============================================================ */
-.stack-section {
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(6,182,212,.05) 0%, transparent 70%),
-    var(--gray-950);
-}
-.stack-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem; margin-top: 3rem;
-}
-.stack-card {
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--gray-800);
-  border-radius: 16px;
-  padding: 2rem 1.5rem;
-  text-align: center;
-  transition: border-color .3s, transform .3s, background .3s;
-}
-.stack-card:hover {
-  border-color: rgba(99,102,241,.3);
-  transform: translateY(-4px);
-  background: rgba(99,102,241,.04);
-}
-.stack-card-icon {
-  width: 56px; height: 56px; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.6rem; margin: 0 auto .75rem;
-  background: rgba(255,255,255,.04);
-  border: 1px solid var(--gray-800);
-}
-.stack-card h4 {
-  font-size: .95rem; font-weight: 700; color: var(--white);
-  margin-bottom: .25rem;
-}
-.stack-card p {
-  font-size: .8rem; color: var(--gray-500);
-}
-
-/* ============================================================
-   CODE / QUICKSTART
-   ============================================================ */
-.quickstart-section {
-  background: var(--gray-950);
-}
-.quickstart-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 2rem; margin-top: 3rem;
-}
-.quickstart-card {
-  background: var(--gray-900);
-  border: 1px solid var(--gray-800);
-  border-radius: 16px; overflow: hidden;
-}
-.quickstart-card-header {
+.hero-label {
+  font-family: 'Mono', monospace;
+  font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1.5rem;
   display: flex; align-items: center; gap: .75rem;
-  padding: 1rem 1.5rem;
-  background: rgba(255,255,255,.02);
-  border-bottom: 1px solid var(--gray-800);
 }
-.quickstart-dots {
-  display: flex; gap: 6px;
+.hero-label::before {
+  content: ''; width: 32px; height: 1px; background: var(--accent);
 }
-.quickstart-dots span {
-  width: 12px; height: 12px; border-radius: 50%;
+.hero-title {
+  font-size: clamp(4rem, 12vw, 10rem);
+  font-weight: 800;
+  letter-spacing: -.05em;
+  line-height: .9;
+  margin-bottom: 2rem;
 }
-.quickstart-dots span:nth-child(1) { background: #ff5f57; }
-.quickstart-dots span:nth-child(2) { background: #ffbd2e; }
-.quickstart-dots span:nth-child(3) { background: #28c840; }
-.quickstart-card-title {
-  font-size: .8rem; color: var(--gray-500); font-weight: 500;
+.hero-title .thin {
+  font-weight: 200;
+  color: var(--gray);
 }
-.quickstart-code {
-  padding: 1.5rem;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
-  font-size: .85rem; line-height: 2;
-  overflow-x: auto;
+.hero-desc {
+  max-width: 540px;
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: var(--gray);
+  font-weight: 300;
+  margin-bottom: 3rem;
 }
-.quickstart-code .c { color: var(--gray-600); }
-.quickstart-code .k { color: var(--indigo); }
-.quickstart-code .f { color: var(--violet); }
-.quickstart-code .v { color: var(--cyan); }
-.quickstart-code .t { color: var(--gray-300); }
+.hero-desc strong { color: var(--white); font-weight: 500; }
+.hero-meta {
+  display: flex; gap: 3rem;
+  font-family: 'Mono', monospace;
+  font-size: .7rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--gray);
+}
+.hero-meta-val {
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 2rem; font-weight: 700; letter-spacing: -.03em;
+  color: var(--white); line-height: 1; margin-bottom: .35rem;
+}
 
-.quickstart-full {
-  grid-column: 1 / -1;
-}
-
-/* ============================================================
-   TEAM
-   ============================================================ */
-.team-section {
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(99,102,241,.05) 0%, transparent 60%),
-    var(--gray-950);
-}
-.team-grid {
-  display: flex; justify-content: center; flex-wrap: wrap;
-  gap: 1.5rem; margin-top: 3rem;
-}
-.team-card {
-  width: 200px;
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--gray-800);
-  border-radius: 16px; padding: 2rem 1.5rem;
-  text-align: center;
-  transition: border-color .3s, transform .3s;
-}
-.team-card:hover {
-  border-color: rgba(99,102,241,.3);
-  transform: translateY(-4px);
-}
-.team-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem; font-weight: 800; color: var(--white);
-  margin: 0 auto 1rem;
-  position: relative;
-}
-.team-avatar::before {
-  content: ''; position: absolute; inset: -2px; border-radius: 50%;
-  background: var(--gradient-brand); z-index: -1;
-}
-.team-avatar-inner {
-  width: 100%; height: 100%; border-radius: 50%;
-  background: var(--gray-900);
-  display: flex; align-items: center; justify-content: center;
-}
-.team-card h4 { font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: .2rem; }
-.team-card p { font-size: .8rem; color: var(--gray-500); }
-
-/* ============================================================
-   CTA BANNER
-   ============================================================ */
-.cta-banner {
-  padding: clamp(5rem, 10vw, 8rem) 2rem;
-  text-align: center;
-  position: relative; overflow: hidden;
-}
-.cta-banner::before {
-  content: ''; position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(99,102,241,.12) 0%, transparent 70%);
+/* Vertical line accent */
+.hero::after {
+  content: '';
+  position: absolute; right: clamp(1.5rem, 4vw, 3rem); top: 80px; bottom: 0;
+  width: 1px; background: linear-gradient(to bottom, transparent, var(--border) 30%, var(--border) 70%, transparent);
   pointer-events: none;
 }
-.cta-banner h2 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  font-weight: 900; letter-spacing: -.03em;
-  color: var(--white); margin-bottom: 1rem;
-  position: relative;
-}
-.cta-banner p {
-  font-size: 1.15rem; color: var(--gray-400);
-  max-width: 500px; margin: 0 auto 2.5rem;
-  position: relative;
-}
-.cta-banner .btn-lg { position: relative; }
 
-/* ============================================================
-   FOOTER
-   ============================================================ */
-.footer {
-  border-top: 1px solid var(--gray-800);
-  padding: 3rem 2rem; text-align: center;
+/* ---- DIVIDER ---- */
+.divider {
+  border: none; height: 1px; background: var(--border);
+  margin: 0;
 }
-.footer-inner {
-  max-width: 1200px; margin: 0 auto;
+
+/* ---- ABOUT ---- */
+.about {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 8rem) clamp(1.5rem, 4vw, 3rem);
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+}
+.about-label {
+  font-family: 'Mono', monospace;
+  font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--accent);
+  padding-top: .35rem;
+}
+.about-body {
+  max-width: 680px;
+}
+.about-body p {
+  font-size: 1.15rem; line-height: 1.75; color: var(--gray);
+  font-weight: 300; margin-bottom: 1.5rem;
+}
+.about-body p strong { color: var(--white); font-weight: 500; }
+
+/* ---- PIPELINE ---- */
+.pipeline-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.pipeline-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
+}
+.pipeline-header {
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  margin-bottom: 4rem;
+}
+.pipeline-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
+  letter-spacing: -.03em; line-height: 1.1;
+}
+
+.pipeline {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.pipeline-stage {
+  padding: 2rem 1.5rem;
+  border-right: 1px solid var(--border);
+  position: relative;
+  transition: background .2s;
+}
+.pipeline-stage:last-child { border-right: none; }
+.pipeline-stage:hover { background: rgba(168,85,247,.05); }
+.pipeline-num {
+  font-family: 'Mono', monospace;
+  font-size: .65rem; color: var(--accent);
+  letter-spacing: .1em; margin-bottom: 1.5rem;
+}
+.pipeline-stage h4 {
+  font-size: .95rem; font-weight: 600; margin-bottom: .6rem;
+  letter-spacing: -.01em;
+}
+.pipeline-stage p {
+  font-size: .78rem; color: var(--gray); line-height: 1.55;
+}
+.pipeline-icon {
+  width: 36px; height: 36px; margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.pipeline-arrow {
+  position: absolute; right: -7px; top: 50%; transform: translateY(-50%);
+  z-index: 2; color: var(--accent); font-size: .7rem;
+  width: 14px; height: 14px; background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+}
+.pipeline-stage:last-child .pipeline-arrow { display: none; }
+
+/* ---- CAPABILITIES ---- */
+.capabilities {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
+}
+.cap-header {
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  margin-bottom: 4rem;
+}
+.cap-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
+  letter-spacing: -.03em; line-height: 1.1;
+}
+
+.cap-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--border);
+}
+.cap-item {
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  align-items: start;
+}
+.cap-item:nth-child(odd) {
+  border-right: 1px solid var(--border);
+  padding-right: 3rem;
+}
+.cap-item:nth-child(even) {
+  padding-left: 3rem;
+}
+.cap-name {
+  font-size: 1.1rem; font-weight: 600; letter-spacing: -.01em;
+  display: flex; align-items: flex-start; gap: .75rem;
+}
+.cap-marker {
+  width: 8px; height: 8px; flex-shrink: 0;
+  background: var(--accent); margin-top: .45rem;
+}
+.cap-detail {
+  font-size: .9rem; color: var(--gray); line-height: 1.6;
+}
+.cap-detail ul {
+  list-style: none; margin-top: .75rem;
+}
+.cap-detail li {
+  padding: .25rem 0;
+  font-family: 'Mono', monospace; font-size: .75rem;
+  color: var(--gray);
+}
+.cap-detail li::before {
+  content: '\2192'; margin-right: .5rem; color: var(--accent);
+}
+
+/* ---- TECH ---- */
+.tech-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.tech-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
+}
+.tech-header {
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  margin-bottom: 3rem;
+}
+.tech-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
+  letter-spacing: -.03em; line-height: 1.1;
+}
+.tech-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+}
+.tech-item {
+  padding: 2rem 1.5rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background .2s;
+}
+.tech-item:nth-child(4n) { border-right: none; }
+.tech-item:nth-child(n+5) { border-bottom: none; }
+.tech-item:hover { background: rgba(168,85,247,.05); }
+.tech-name {
+  font-size: .9rem; font-weight: 600; margin-bottom: .3rem;
+}
+.tech-desc {
+  font-size: .75rem; color: var(--gray); line-height: 1.5;
+}
+.tech-icon {
+  width: 28px; height: 28px; margin-bottom: 1rem;
+}
+
+/* ---- QUICKSTART ---- */
+.quickstart {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
+}
+.qs-header {
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  margin-bottom: 3rem;
+}
+.qs-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
+  letter-spacing: -.03em; line-height: 1.1;
+}
+.qs-blocks {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--border);
+}
+.qs-block {
+  background: var(--black);
+  padding: 2rem;
+}
+.qs-block-full { grid-column: 1 / -1; }
+.qs-block-label {
+  font-family: 'Mono', monospace;
+  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1.25rem;
+}
+.qs-code {
+  font-family: 'Mono', monospace;
+  font-size: .82rem; line-height: 2;
+  color: var(--gray);
+}
+.qs-code .w { color: var(--white); }
+.qs-code .a { color: var(--accent); }
+.qs-code .c { color: #333; }
+
+/* ---- TEAM ---- */
+.team-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.team-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: clamp(4rem, 8vw, 5rem) clamp(1.5rem, 4vw, 3rem);
+  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
+  align-items: center;
+}
+.team-list {
+  display: flex; gap: 3rem; flex-wrap: wrap;
+}
+.team-member {}
+.team-member-name {
+  font-size: 1rem; font-weight: 600;
+}
+.team-member-role {
+  font-size: .75rem; color: var(--gray);
+  font-family: 'Mono', monospace;
+}
+
+/* ---- FOOTER ---- */
+.footer {
+  max-width: 1400px; margin: 0 auto;
+  padding: 3rem clamp(1.5rem, 4vw, 3rem);
   display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 1rem;
 }
 .footer-brand {
-  font-weight: 800; font-size: 1.1rem;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: .8rem; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase;
 }
-.footer-links { display: flex; gap: 2rem; list-style: none; }
+.footer-brand span { color: var(--accent); }
+.footer-links {
+  display: flex; gap: 2rem; list-style: none;
+}
 .footer-links a {
-  font-size: .85rem; color: var(--gray-500); transition: color .2s;
+  font-size: .75rem; color: var(--gray); text-decoration: none;
+  letter-spacing: .04em; text-transform: uppercase;
+  transition: color .15s;
 }
 .footer-links a:hover { color: var(--white); }
-.footer-copy { font-size: .8rem; color: var(--gray-600); }
+.footer-copy {
+  font-size: .7rem; color: #333;
+  font-family: 'Mono', monospace;
+}
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
+/* ---- RESPONSIVE ---- */
 @media (max-width: 1024px) {
-  .spotlight-inner { grid-template-columns: 1fr; gap: 2.5rem; }
-  .spotlight:nth-child(even) .spotlight-inner { direction: ltr; }
-  .specs-grid { grid-template-columns: repeat(2, 1fr); }
-  .stack-grid { grid-template-columns: repeat(2, 1fr); }
-  .quickstart-grid { grid-template-columns: 1fr; }
+  .about, .cap-header, .pipeline-header, .tech-header, .qs-header, .team-inner {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .cap-grid { grid-template-columns: 1fr; }
+  .cap-item { grid-template-columns: 1fr; gap: 1rem; }
+  .cap-item:nth-child(odd) { border-right: none; padding-right: 0; }
+  .cap-item:nth-child(even) { padding-left: 0; }
+  .pipeline { grid-template-columns: 1fr; }
+  .pipeline-stage { border-right: none; border-bottom: 1px solid var(--border); }
+  .pipeline-stage:last-child { border-bottom: none; }
+  .pipeline-arrow { display: none !important; }
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+  .tech-item:nth-child(2n) { border-right: none; }
+  .tech-item:nth-child(n+5) { border-bottom: 1px solid var(--border); }
+  .tech-item:nth-child(n+7) { border-bottom: none; }
+  .qs-blocks { grid-template-columns: 1fr; }
+  .qs-block-full { grid-column: 1; }
 }
-
-@media (max-width: 768px) {
-  .nav-links, .nav-cta { display: none; }
-  .nav-mobile-toggle { display: block; }
-  .hero h1 { font-size: 2.5rem; }
-  .hero-stats { gap: 1.5rem; }
-  .arch-pipeline { flex-direction: column; align-items: center; }
-  .arch-stage { max-width: 100%; border-radius: 12px !important; }
-  .arch-arrow { transform: rotate(90deg); }
-  .specs-grid { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-  .stack-grid { grid-template-columns: 1fr; }
-  .footer-inner { flex-direction: column; text-align: center; }
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .hero-title { font-size: 3.5rem; }
+  .hero-meta { flex-wrap: wrap; gap: 2rem; }
+  .hero::after { display: none; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .tech-item { border-right: none !important; border-bottom: 1px solid var(--border) !important; }
+  .tech-item:last-child { border-bottom: none !important; }
+  .footer { flex-direction: column; gap: 1.5rem; text-align: center; }
+  .team-list { gap: 2rem; }
 }
-
-/* ============================================================
-   ANIMATED ROBOT ARM SVG
-   ============================================================ */
-@keyframes arm-rotate {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-15deg); }
-  50% { transform: rotate(5deg); }
-  75% { transform: rotate(-8deg); }
-}
-@keyframes gripper-open {
-  0%, 40%, 100% { transform: scaleX(1); }
-  50%, 90% { transform: scaleX(.7); }
-}
-.arm-segment { animation: arm-rotate 6s ease-in-out infinite; transform-origin: bottom center; }
-.gripper-part { animation: gripper-open 4s ease-in-out infinite; }
-
-/* Floating cubes animation */
-@keyframes float-cube {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-12px) rotate(5deg); }
-}
-.float-cube { animation: float-cube 3s ease-in-out infinite; }
-.float-cube-2 { animation: float-cube 3.5s ease-in-out infinite .5s; }
-.float-cube-3 { animation: float-cube 4s ease-in-out infinite 1s; }
-
-/* Scanning line */
-@keyframes scan-line {
-  0% { transform: translateY(-100%); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(200%); opacity: 0; }
-}
-.scan-line { animation: scan-line 3s ease-in-out infinite; }
-
-/* Data pulse */
-@keyframes data-pulse {
-  0%, 100% { opacity: .3; r: 3; }
-  50% { opacity: 1; r: 5; }
-}
-.data-dot { animation: data-pulse 1.5s ease-in-out infinite; }
-.data-dot-2 { animation: data-pulse 1.5s ease-in-out infinite .3s; }
-.data-dot-3 { animation: data-pulse 1.5s ease-in-out infinite .6s; }
-
-/* Dashboard bars */
-@keyframes bar-grow {
-  0%, 100% { transform: scaleY(.6); }
-  50% { transform: scaleY(1); }
-}
-.dash-bar { transform-origin: bottom; }
-.dash-bar-1 { animation: bar-grow 2s ease-in-out infinite; }
-.dash-bar-2 { animation: bar-grow 2s ease-in-out infinite .3s; }
-.dash-bar-3 { animation: bar-grow 2s ease-in-out infinite .6s; }
-.dash-bar-4 { animation: bar-grow 2s ease-in-out infinite .9s; }
-
-/* Calibration crosshair */
-@keyframes crosshair-lock {
-  0%, 100% { transform: scale(1.3); opacity: .5; }
-  50% { transform: scale(1); opacity: 1; }
-}
-.crosshair { animation: crosshair-lock 2.5s ease-in-out infinite; transform-origin: center; }
 </style>
 </head>
 <body>
 
-<!-- ========== NAV ========== -->
-<nav class="nav" id="nav">
+<!-- NAV -->
+<nav class="nav">
   <div class="nav-inner">
-    <a href="#" class="nav-logo">HoloAssist</a>
+    <a href="#" class="nav-brand">Holo<span>Assist</span></a>
     <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#architecture">Architecture</a></li>
-      <li><a href="#specs">Specs</a></li>
-      <li><a href="#stack">Tech Stack</a></li>
-      <li><a href="#quickstart">Quick Start</a></li>
-      <li><a href="#team">Team</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#capabilities">Capabilities</a></li>
+      <li><a href="#stack">Stack</a></li>
+      <li><a href="#start">Start</a></li>
     </ul>
-    <a href="https://github.com/John-A-Chen/HoloAssist" class="nav-cta">View on GitHub</a>
-    <button class="nav-mobile-toggle" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <a href="https://github.com/John-A-Chen/HoloAssist" class="nav-gh">GitHub</a>
   </div>
 </nav>
 
-<!-- ========== HERO ========== -->
+<!-- HERO -->
 <section class="hero">
-  <div class="hero-grid"></div>
-  <div class="hero-content">
-    <div class="hero-eyebrow reveal">
-      <span class="hero-eyebrow-dot"></span>
-      ROS 2 &middot; Unity XR &middot; MoveIt 2
+  <div class="hero-label">Mixed-reality robot control platform</div>
+  <h1 class="hero-title">
+    Holo<br><span class="thin">Assist</span>
+  </h1>
+  <p class="hero-desc">
+    Put on a headset. Pick up an object. The <strong>UR3e does the rest</strong>.
+    HoloAssist connects mixed reality to a real robot arm through
+    ROS&nbsp;2, real-time perception, and autonomous motion planning.
+  </p>
+  <div class="hero-meta">
+    <div>
+      <span class="hero-meta-val">6-DOF</span>
+      UR3e arm
     </div>
-    <h1 class="reveal reveal-delay-1">
-      <span class="line">See it. Reach it.</span>
-      <span class="line gradient-text">Move it.</span>
-    </h1>
-    <p class="hero-sub reveal reveal-delay-2">
-      Mixed-reality teleoperation and autonomous pick-and-place
-      for the UR3e robot arm. One platform connecting
-      your&nbsp;headset to the&nbsp;real&nbsp;world.
+    <div>
+      <span class="hero-meta-val">4</span>
+      Camera sources
+    </div>
+    <div>
+      <span class="hero-meta-val">11</span>
+      ROS 2 packages
+    </div>
+    <div>
+      <span class="hero-meta-val">1</span>
+      Launch command
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="about-label">What this is</div>
+  <div class="about-body">
+    <p>
+      HoloAssist is a <strong>complete teleoperation and autonomous manipulation stack</strong>
+      for the Universal Robots UR3e, built on ROS 2 Humble. It bridges a Unity-based
+      HoloLens interface to the physical robot through a ROS-TCP endpoint, with
+      auto-discovery so the headset finds the robot without configuration.
     </p>
-    <div class="hero-cta-row reveal reveal-delay-3">
-      <a href="https://github.com/John-A-Chen/HoloAssist" class="btn-lg btn-primary">
-        Get Started
-        <span>&rarr;</span>
-      </a>
-      <a href="#features" class="btn-lg btn-ghost">
-        Explore Features
-      </a>
-    </div>
-    <div class="hero-stats reveal reveal-delay-4">
-      <div class="hero-stat">
-        <div class="hero-stat-value">6<span class="spec-unit">DOF</span></div>
-        <div class="hero-stat-label">Robot Arm</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">4</div>
-        <div class="hero-stat-label">Camera Sources</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">11</div>
-        <div class="hero-stat-label">ROS 2 Packages</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">1</div>
-        <div class="hero-stat-label">Command to Launch</div>
-      </div>
-    </div>
+    <p>
+      The system sees objects through <strong>Intel RealSense depth cameras</strong> and
+      AprilTag fiducial markers, fuses their 6-DOF poses in real time, and feeds them
+      to MoveIt 2 for collision-aware motion planning. An operator can teleoperate
+      directly, or trigger autonomous pick-and-place with a single service call.
+    </p>
+    <p>
+      Everything launches from one script. Real robot or simulated hardware, with or
+      without cameras, with or without the dashboard&mdash;same command, different flags.
+      The launcher handles startup ordering, health checks, and coordinated shutdown.
+    </p>
   </div>
 </section>
 
-<hr class="divider-glow">
+<hr class="divider">
 
-<!-- ========== FEATURE SPOTLIGHTS ========== -->
-<div id="features">
-
-  <!-- Spotlight 1: Teleoperation -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-indigo">Robot Control</div>
-        <h2 class="spotlight-heading">Precision Teleoperation</h2>
-        <p class="spotlight-desc">
-          Take direct control of the UR3e from your mixed-reality headset.
-          Joint-level and Cartesian modes give you the flexibility to operate
-          with surgical precision or broad strokes.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-indigo">&check;</span>
-            Real-time joint and Cartesian control via Unity
-          </li>
-          <li>
-            <span class="spotlight-check check-indigo">&check;</span>
-            OnRobot RG2 gripper with force feedback
-          </li>
-          <li>
-            <span class="spotlight-check check-indigo">&check;</span>
-            Seamless switch between real and simulated hardware
-          </li>
-          <li>
-            <span class="spotlight-check check-indigo">&check;</span>
-            Emergency stop with hardware-level safety
-          </li>
-        </ul>
-      </div>
-      <div class="spotlight-visual sv-indigo reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Base -->
-          <rect x="70" y="170" width="60" height="14" rx="4" fill="#334155"/>
-          <rect x="85" y="160" width="30" height="14" rx="2" fill="#475569"/>
-          <!-- Arm segments -->
-          <g class="arm-segment">
-            <rect x="94" y="100" width="12" height="64" rx="4" fill="#6366f1"/>
-            <circle cx="100" cy="100" r="10" fill="#4f46e5" stroke="#818cf8" stroke-width="1.5"/>
-            <!-- Upper arm -->
-            <g style="transform-origin: 100px 100px;" class="arm-segment">
-              <rect x="94" y="50" width="12" height="54" rx="4" fill="#818cf8"/>
-              <circle cx="100" cy="50" r="8" fill="#6366f1" stroke="#a5b4fc" stroke-width="1.5"/>
-              <!-- Gripper -->
-              <g class="gripper-part" style="transform-origin: 100px 42px;">
-                <rect x="86" y="32" width="8" height="18" rx="2" fill="#a5b4fc"/>
-                <rect x="106" y="32" width="8" height="18" rx="2" fill="#a5b4fc"/>
-              </g>
-            </g>
-          </g>
-          <!-- Glow effect -->
-          <circle cx="100" cy="42" r="16" fill="none" stroke="#6366f1" stroke-width=".5" opacity=".4">
-            <animate attributeName="r" values="16;22;16" dur="2s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values=".4;.1;.4" dur="2s" repeatCount="indefinite"/>
-          </circle>
-        </svg>
-      </div>
+<!-- PIPELINE -->
+<section class="pipeline-section" id="pipeline">
+  <div class="pipeline-inner">
+    <div class="pipeline-header">
+      <div class="about-label">Data flow</div>
+      <h2>From headset to hardware in five stages</h2>
     </div>
-  </section>
-
-  <hr class="divider-glow">
-
-  <!-- Spotlight 2: Mixed Reality -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-violet">Mixed Reality</div>
-        <h2 class="spotlight-heading">Your Hands in the Loop</h2>
-        <p class="spotlight-desc">
-          A Unity-powered HoloLens interface that overlays holographic controls
-          directly onto the physical workspace. The robot becomes an
-          extension of your intent.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-violet">&check;</span>
-            ROS-TCP bridge with sub-second latency
-          </li>
-          <li>
-            <span class="spotlight-check check-violet">&check;</span>
-            UDP beacon for zero-config headset discovery
-          </li>
-          <li>
-            <span class="spotlight-check check-violet">&check;</span>
-            Holographic workspace overlays and radial menus
-          </li>
-          <li>
-            <span class="spotlight-check check-violet">&check;</span>
-            Trolley scene with live 3D model rendering
-          </li>
-        </ul>
+    <div class="pipeline">
+      <div class="pipeline-stage">
+        <div class="pipeline-num">01</div>
+        <div class="pipeline-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><rect x="4" y="9" width="7" height="5" rx="1"/><rect x="13" y="9" width="7" height="5" rx="1"/></svg>
+        </div>
+        <h4>HoloLens Input</h4>
+        <p>Unity XR app with gesture controls and holographic workspace overlays</p>
+        <div class="pipeline-arrow">&rsaquo;</div>
       </div>
-      <div class="spotlight-visual sv-violet reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- HoloLens headset -->
-          <rect x="50" y="70" width="100" height="50" rx="25" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5"/>
-          <rect x="60" y="80" width="35" height="25" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <rect x="105" y="80" width="35" height="25" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <!-- Holographic projections -->
-          <line x1="77" y1="105" x2="60" y2="145" stroke="#8b5cf6" stroke-width=".8" stroke-dasharray="3 3" opacity=".6"/>
-          <line x1="122" y1="105" x2="140" y2="145" stroke="#8b5cf6" stroke-width=".8" stroke-dasharray="3 3" opacity=".6"/>
-          <!-- Holographic cube -->
-          <g class="float-cube">
-            <rect x="85" y="135" width="30" height="30" rx="3" fill="none" stroke="#a78bfa" stroke-width="1.5" opacity=".8"/>
-            <rect x="90" y="130" width="30" height="30" rx="3" fill="none" stroke="#c4b5fd" stroke-width="1" opacity=".4"/>
-          </g>
-          <!-- Signal waves -->
-          <circle cx="100" cy="60" r="12" fill="none" stroke="#8b5cf6" stroke-width=".8" opacity=".3">
-            <animate attributeName="r" values="12;25;12" dur="2.5s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values=".3;0;.3" dur="2.5s" repeatCount="indefinite"/>
-          </circle>
-          <circle cx="100" cy="60" r="12" fill="none" stroke="#8b5cf6" stroke-width=".8" opacity=".3">
-            <animate attributeName="r" values="12;25;12" dur="2.5s" begin=".8s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values=".3;0;.3" dur="2.5s" begin=".8s" repeatCount="indefinite"/>
-          </circle>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-  <hr class="divider-glow">
-
-  <!-- Spotlight 3: Perception -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-rose">Computer Vision</div>
-        <h2 class="spotlight-heading">Eyes on Every Object</h2>
-        <p class="spotlight-desc">
-          A multi-sensor perception pipeline that detects, tracks, and fuses
-          object poses in real time. From RealSense depth cameras to sim fallback,
-          the system always sees.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-rose">&check;</span>
-            4 camera sources with automatic fallback cascade
-          </li>
-          <li>
-            <span class="spotlight-check check-rose">&check;</span>
-            AprilTag fiducial detection and 6-DOF pose estimation
-          </li>
-          <li>
-            <span class="spotlight-check check-rose">&check;</span>
-            Multi-cube pose fusion and TF publishing
-          </li>
-          <li>
-            <span class="spotlight-check check-rose">&check;</span>
-            Debug overlay and visual diagnostics stream
-          </li>
-        </ul>
-      </div>
-      <div class="spotlight-visual sv-rose reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Camera body -->
-          <rect x="65" y="55" width="70" height="50" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
-          <circle cx="100" cy="80" r="16" fill="#0f172a" stroke="#fb7185" stroke-width="1.5"/>
-          <circle cx="100" cy="80" r="8" fill="#f43f5e" opacity=".6"/>
-          <!-- Scan beam -->
-          <g class="scan-line">
-            <line x1="75" y1="115" x2="125" y2="115" stroke="#f43f5e" stroke-width="1.5" opacity=".6"/>
-          </g>
-          <!-- Detected cubes -->
-          <g class="float-cube">
-            <rect x="40" y="140" width="25" height="25" rx="3" fill="none" stroke="#fb7185" stroke-width="1.5"/>
-            <text x="52" y="157" text-anchor="middle" fill="#fb7185" font-size="8" font-family="Inter, sans-serif">T1</text>
-          </g>
-          <g class="float-cube-2">
-            <rect x="88" y="145" width="25" height="25" rx="3" fill="none" stroke="#fb7185" stroke-width="1.5"/>
-            <text x="100" y="162" text-anchor="middle" fill="#fb7185" font-size="8" font-family="Inter, sans-serif">T2</text>
-          </g>
-          <g class="float-cube-3">
-            <rect x="135" y="138" width="25" height="25" rx="3" fill="none" stroke="#fb7185" stroke-width="1.5"/>
-            <text x="147" y="155" text-anchor="middle" fill="#fb7185" font-size="8" font-family="Inter, sans-serif">T3</text>
-          </g>
-          <!-- Tracking lines -->
-          <line x1="90" y1="100" x2="52" y2="140" stroke="#f43f5e" stroke-width=".5" stroke-dasharray="2 2" opacity=".5"/>
-          <line x1="100" y1="100" x2="100" y2="145" stroke="#f43f5e" stroke-width=".5" stroke-dasharray="2 2" opacity=".5"/>
-          <line x1="110" y1="100" x2="147" y2="138" stroke="#f43f5e" stroke-width=".5" stroke-dasharray="2 2" opacity=".5"/>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-  <hr class="divider-glow">
-
-  <!-- Spotlight 4: MoveIt -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-amber">Autonomous Manipulation</div>
-        <h2 class="spotlight-heading">Plan. Pick. Place.</h2>
-        <p class="spotlight-desc">
-          MoveIt 2 motion planning consumes live perception data to autonomously
-          pick objects and place them precisely. One service call from
-          headset to complete manipulation.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-amber">&check;</span>
-            Collision-aware trajectory planning
-          </li>
-          <li>
-            <span class="spotlight-check check-amber">&check;</span>
-            Live cube-pose-to-MoveIt target adapter
-          </li>
-          <li>
-            <span class="spotlight-check check-amber">&check;</span>
-            ROS service interface for pick-and-place
-          </li>
-          <li>
-            <span class="spotlight-check check-amber">&check;</span>
-            Safety checks and status monitoring
-          </li>
-        </ul>
-      </div>
-      <div class="spotlight-visual sv-amber reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Trajectory path -->
-          <path d="M 40 150 Q 60 60, 100 50 Q 140 40, 160 130" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="5 3" opacity=".6">
-            <animate attributeName="stroke-dashoffset" values="0;-24" dur="1.5s" repeatCount="indefinite"/>
-          </path>
-          <!-- Start cube -->
-          <rect x="25" y="140" width="30" height="30" rx="4" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="40" y="160" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700" font-family="Inter, sans-serif">A</text>
-          <!-- End zone (bin) -->
-          <rect x="140" y="125" width="40" height="35" rx="4" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2"/>
-          <text x="160" y="147" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700" font-family="Inter, sans-serif">BIN</text>
-          <!-- Moving dot along path -->
-          <circle r="5" fill="#f59e0b">
-            <animateMotion dur="3s" repeatCount="indefinite" path="M 40 155 Q 60 60, 100 50 Q 140 40, 160 140"/>
-          </circle>
-          <circle r="10" fill="#f59e0b" opacity=".2">
-            <animateMotion dur="3s" repeatCount="indefinite" path="M 40 155 Q 60 60, 100 50 Q 140 40, 160 140"/>
-          </circle>
-          <!-- Planning visualization -->
-          <circle cx="100" cy="50" r="3" fill="#fbbf24" class="data-dot"/>
-          <circle cx="80" cy="70" r="3" fill="#fbbf24" class="data-dot-2"/>
-          <circle cx="120" cy="65" r="3" fill="#fbbf24" class="data-dot-3"/>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-  <hr class="divider-glow">
-
-  <!-- Spotlight 5: Dashboard -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-emerald">Operations</div>
-        <h2 class="spotlight-heading">Full Situational Awareness</h2>
-        <p class="spotlight-desc">
-          A real-time dashboard gives operators complete visibility into robot
-          state, perception health, and system status. Emergency stop is
-          always one click away.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-emerald">&check;</span>
-            Live joint rates, controller state, and gripper status
-          </li>
-          <li>
-            <span class="spotlight-check check-emerald">&check;</span>
-            Perception topic health monitoring
-          </li>
-          <li>
-            <span class="spotlight-check check-emerald">&check;</span>
-            Camera feeds and debug overlays
-          </li>
-          <li>
-            <span class="spotlight-check check-emerald">&check;</span>
-            Hardware e-stop with resume logic
-          </li>
-        </ul>
-      </div>
-      <div class="spotlight-visual sv-emerald reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Dashboard frame -->
-          <rect x="25" y="40" width="150" height="120" rx="10" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
-          <rect x="25" y="40" width="150" height="20" rx="10" fill="#1e293b"/>
-          <rect x="25" y="55" width="150" height="5" rx="0" fill="#1e293b"/>
-          <!-- Window dots -->
-          <circle cx="38" cy="50" r="3" fill="#f43f5e"/>
-          <circle cx="48" cy="50" r="3" fill="#f59e0b"/>
-          <circle cx="58" cy="50" r="3" fill="#10b981"/>
-          <!-- Bar chart -->
-          <rect x="40" y="110" width="14" height="35" rx="2" fill="#10b981" opacity=".7" class="dash-bar dash-bar-1"/>
-          <rect x="60" y="100" width="14" height="45" rx="2" fill="#10b981" opacity=".7" class="dash-bar dash-bar-2"/>
-          <rect x="80" y="115" width="14" height="30" rx="2" fill="#10b981" opacity=".7" class="dash-bar dash-bar-3"/>
-          <rect x="100" y="105" width="14" height="40" rx="2" fill="#10b981" opacity=".7" class="dash-bar dash-bar-4"/>
-          <!-- Status indicators -->
-          <circle cx="140" cy="80" r="5" fill="#10b981">
-            <animate attributeName="opacity" values="1;.4;1" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-          <text x="140" y="95" text-anchor="middle" fill="#6ee7b7" font-size="6" font-family="Inter, sans-serif">ONLINE</text>
-          <rect x="125" y="110" width="35" height="14" rx="3" fill="#dc2626" opacity=".9"/>
-          <text x="142" y="120" text-anchor="middle" fill="white" font-size="7" font-weight="700" font-family="Inter, sans-serif">E-STOP</text>
-          <!-- Line graph -->
-          <polyline points="38,80 55,75 70,78 85,70 100,73" stroke="#34d399" stroke-width="1.5" fill="none"/>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-  <hr class="divider-glow">
-
-  <!-- Spotlight 6: Calibration -->
-  <section class="spotlight">
-    <div class="spotlight-inner">
-      <div class="spotlight-text reveal">
-        <div class="spotlight-tag tag-cyan">Precision</div>
-        <h2 class="spotlight-heading">Millimetre-Accurate Calibration</h2>
-        <p class="spotlight-desc">
-          Integrated eye-to-hand calibration computes the exact camera-to-base
-          transform. Persist once, use every session. Your perception and
-          manipulation stay perfectly aligned.
-        </p>
-        <ul class="spotlight-features">
-          <li>
-            <span class="spotlight-check check-cyan">&check;</span>
-            easy_handeye2 calibration workflow
-          </li>
-          <li>
-            <span class="spotlight-check check-cyan">&check;</span>
-            AprilTag-based transform estimation
-          </li>
-          <li>
-            <span class="spotlight-check check-cyan">&check;</span>
-            Persistent calibration files across sessions
-          </li>
-          <li>
-            <span class="spotlight-check check-cyan">&check;</span>
-            Auto-published static TF on perception startup
-          </li>
-        </ul>
-      </div>
-      <div class="spotlight-visual sv-cyan reveal reveal-delay-2">
-        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Crosshair -->
-          <g class="crosshair">
-            <circle cx="100" cy="100" r="35" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity=".6"/>
-            <circle cx="100" cy="100" r="20" fill="none" stroke="#06b6d4" stroke-width="1" opacity=".4"/>
-            <line x1="100" y1="60" x2="100" y2="85" stroke="#06b6d4" stroke-width="1.5"/>
-            <line x1="100" y1="115" x2="100" y2="140" stroke="#06b6d4" stroke-width="1.5"/>
-            <line x1="60" y1="100" x2="85" y2="100" stroke="#06b6d4" stroke-width="1.5"/>
-            <line x1="115" y1="100" x2="140" y2="100" stroke="#06b6d4" stroke-width="1.5"/>
-            <circle cx="100" cy="100" r="4" fill="#06b6d4"/>
-          </g>
-          <!-- Coordinate axes -->
-          <line x1="100" y1="100" x2="100" y2="55" stroke="#ef4444" stroke-width="2" opacity=".7"/>
-          <text x="104" y="54" fill="#ef4444" font-size="8" font-family="Inter, sans-serif" opacity=".8">Y</text>
-          <line x1="100" y1="100" x2="145" y2="100" stroke="#22c55e" stroke-width="2" opacity=".7"/>
-          <text x="147" y="103" fill="#22c55e" font-size="8" font-family="Inter, sans-serif" opacity=".8">X</text>
-          <line x1="100" y1="100" x2="80" y2="120" stroke="#3b82f6" stroke-width="2" opacity=".7"/>
-          <text x="72" y="126" fill="#3b82f6" font-size="8" font-family="Inter, sans-serif" opacity=".8">Z</text>
-          <!-- AprilTag marker -->
-          <rect x="35" y="45" width="30" height="30" rx="2" fill="#0f172a" stroke="#67e8f9" stroke-width="1"/>
-          <rect x="40" y="50" width="8" height="8" fill="#67e8f9" opacity=".6"/>
-          <rect x="52" y="50" width="8" height="8" fill="#67e8f9" opacity=".6"/>
-          <rect x="40" y="62" width="8" height="8" fill="#67e8f9" opacity=".6"/>
-          <!-- Transform arrow -->
-          <path d="M 55 75 Q 75 85, 90 95" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3 2" fill="none" marker-end="url(#arrow-cyan)"/>
-          <defs>
-            <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
-            </marker>
-          </defs>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-</div>
-
-<hr class="divider-glow">
-
-<!-- ========== ARCHITECTURE ========== -->
-<section id="architecture" class="arch-section">
-  <div class="container-lg">
-    <div class="section-header reveal">
-      <div class="section-tag">System Design</div>
-      <h2 class="section-heading">End-to-End Architecture</h2>
-      <p class="section-desc">A unified pipeline from headset to hardware, orchestrated by a single launcher.</p>
-    </div>
-
-    <div class="arch-pipeline reveal reveal-delay-1">
-      <div class="arch-stage">
-        <span class="arch-stage-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><rect x="4" y="9" width="7" height="6" rx="1.5"/><rect x="13" y="9" width="7" height="6" rx="1.5"/></svg></span>
-        <h4>HoloLens</h4>
-        <p>Unity XR client with gesture controls and holographic overlays</p>
-      </div>
-      <div class="arch-arrow">&rarr;</div>
-      <div class="arch-stage">
-        <span class="arch-stage-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 8v6"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24"/><path d="M2 12h6m8 0h6"/><path d="M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24"/></svg></span>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">02</div>
+        <div class="pipeline-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="13" y1="9" x2="15" y2="12"/><line x1="13" y1="15" x2="15" y2="12"/></svg>
+        </div>
         <h4>ROS-TCP Bridge</h4>
-        <p>Bidirectional messaging with auto-discovery beacon</p>
+        <p>Bidirectional message transport with UDP beacon for zero-config discovery</p>
+        <div class="pipeline-arrow">&rsaquo;</div>
       </div>
-      <div class="arch-arrow">&rarr;</div>
-      <div class="arch-stage">
-        <span class="arch-stage-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12c2.5-5 6.5-8 10-8s7.5 3 10 8c-2.5 5-6.5 8-10 8s-7.5-3-10-8z"/></svg></span>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">03</div>
+        <div class="pipeline-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12c2.5-5 6.5-8 10-8s7.5 3 10 8c-2.5 5-6.5 8-10 8s-7.5-3-10-8z"/></svg>
+        </div>
         <h4>Perception</h4>
-        <p>AprilTag detection, depth tracking, pose fusion</p>
+        <p>AprilTag detection, depth tracking, multi-cube pose fusion, TF publishing</p>
+        <div class="pipeline-arrow">&rsaquo;</div>
       </div>
-      <div class="arch-arrow">&rarr;</div>
-      <div class="arch-stage">
-        <span class="arch-stage-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3"/><path d="M3 12h3m12 0h3"/><path d="M8 8l2 2m4 4l2 2"/><path d="M16 8l-2 2m-4 4l-2 2"/><circle cx="12" cy="12" r="3"/><path d="M12 9V3"/><path d="M12 21v-6"/></svg></span>
-        <h4>MoveIt Planner</h4>
-        <p>Motion planning, collision avoidance, trajectory execution</p>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">04</div>
+        <div class="pipeline-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h4V10H4z"/><path d="M10 18h4V6h-4z"/><path d="M16 18h4v-5h-4z"/><path d="M4 10l6-4 6 3 4-3" stroke-dasharray="2 2"/></svg>
+        </div>
+        <h4>MoveIt 2 Planner</h4>
+        <p>Collision-aware trajectory generation and pick-and-place sequencing</p>
+        <div class="pipeline-arrow">&rsaquo;</div>
       </div>
-      <div class="arch-arrow">&rarr;</div>
-      <div class="arch-stage">
-        <span class="arch-stage-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="18" width="8" height="4" rx="1"/><rect x="10" y="14" width="4" height="4"/><line x1="12" y1="6" x2="12" y2="14"/><circle cx="12" cy="5" r="2"/><line x1="8" y1="3" x2="10" y2="5"/><line x1="16" y1="3" x2="14" y2="5"/></svg></span>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">05</div>
+        <div class="pipeline-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="17" width="10" height="5" rx="1"/><rect x="9" y="13" width="6" height="4"/><line x1="12" y1="5" x2="12" y2="13"/><circle cx="12" cy="4" r="2"/><line x1="8" y1="2" x2="10" y2="4"/><line x1="16" y1="2" x2="14" y2="4"/></svg>
+        </div>
         <h4>UR3e + RG2</h4>
-        <p>6-DOF arm and parallel gripper via ros2_control</p>
+        <p>6-DOF arm execution and parallel gripper actuation via ros2_control</p>
       </div>
     </div>
   </div>
 </section>
 
-<hr class="divider-glow">
-
-<!-- ========== SPECS BANNER ========== -->
-<section id="specs" class="specs-banner">
-  <div class="specs-grid reveal">
-    <div class="spec-item">
-      <div class="spec-value">6<span class="spec-unit"> DOF</span></div>
-      <div class="spec-label">Degrees of Freedom</div>
-    </div>
-    <div class="spec-item">
-      <div class="spec-value">4<span class="spec-unit"> src</span></div>
-      <div class="spec-label">Camera Fallback Sources</div>
-    </div>
-    <div class="spec-item">
-      <div class="spec-value">&lt;1<span class="spec-unit"> sec</span></div>
-      <div class="spec-label">Bridge Latency</div>
-    </div>
-    <div class="spec-item">
-      <div class="spec-value">1<span class="spec-unit"> cmd</span></div>
-      <div class="spec-label">Full Stack Launch</div>
-    </div>
+<!-- CAPABILITIES -->
+<section class="capabilities" id="capabilities">
+  <div class="cap-header">
+    <div class="about-label">Capabilities</div>
+    <h2>What the system does</h2>
   </div>
-</section>
-
-<!-- ========== TECH STACK ========== -->
-<section id="stack" class="stack-section">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-tag">Technologies</div>
-      <h2 class="section-heading">Built on Industry Standards</h2>
-      <p class="section-desc">A modern robotics stack combining proven frameworks with cutting-edge interfaces.</p>
-    </div>
-    <div class="stack-grid">
-      <div class="stack-card reveal reveal-delay-1">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-        <h4>ROS 2 Humble</h4>
-        <p>Middleware & communication</p>
+  <div class="cap-grid">
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Teleoperation
       </div>
-      <div class="stack-card reveal reveal-delay-2">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg></div>
-        <h4>Unity 3D</h4>
-        <p>Mixed reality XR platform</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-2">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l4-4 4 4 4-4 2 2"/><path d="M3 17l4-4 4 4 4-4 4 4"/><circle cx="5" cy="5" r="1" fill="var(--gray-300)"/><circle cx="19" cy="7" r="1" fill="var(--gray-300)"/></svg></div>
-        <h4>MoveIt 2</h4>
-        <p>Motion planning & manipulation</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-3">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5" fill="var(--gray-300)"/></svg></div>
-        <h4>Intel RealSense</h4>
-        <p>Depth sensing & perception</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-3">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="2" fill="var(--gray-300)"/></svg></div>
-        <h4>AprilTag</h4>
-        <p>Fiducial detection & tracking</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-4">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="18" width="10" height="4" rx="1"/><rect x="9" y="14" width="6" height="4"/><line x1="12" y1="6" x2="12" y2="14"/><line x1="8" y1="10" x2="12" y2="6"/><line x1="16" y1="10" x2="12" y2="6"/><circle cx="12" cy="4" r="2"/></svg></div>
-        <h4>Universal Robots</h4>
-        <p>UR3e industrial 6-DOF arm</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-4">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="8" rx="1"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="7" y1="14" x2="7" y2="22"/><line x1="17" y1="14" x2="17" y2="22"/><line x1="7" y1="14" x2="17" y2="14"/></svg></div>
-        <h4>OnRobot RG2</h4>
-        <p>Collaborative parallel gripper</p>
-      </div>
-      <div class="stack-card reveal reveal-delay-5">
-        <div class="stack-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-        <h4>Ubuntu 22.04</h4>
-        <p>Deployment target platform</p>
+      <div class="cap-detail">
+        Direct joint and Cartesian control from the mixed-reality headset, with OnRobot RG2 gripper force feedback and hardware-level e-stop.
+        <ul>
+          <li>Real-time joint + Cartesian modes</li>
+          <li>Seamless real/simulated hardware switch</li>
+          <li>Force-feedback gripper control</li>
+        </ul>
       </div>
     </div>
-  </div>
-</section>
-
-<hr class="divider-glow">
-
-<!-- ========== QUICKSTART ========== -->
-<section id="quickstart" class="quickstart-section">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-tag">Get Started</div>
-      <h2 class="section-heading">Up and Running in Minutes</h2>
-      <p class="section-desc">Clone, build, and launch the entire stack with a single command.</p>
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Mixed Reality
+      </div>
+      <div class="cap-detail">
+        Unity-based HoloLens interface with holographic workspace overlays, radial menus, and a trolley scene with live 3D models.
+        <ul>
+          <li>ROS-TCP bridge with low latency</li>
+          <li>UDP beacon for zero-config discovery</li>
+          <li>Holographic workspace overlays</li>
+        </ul>
+      </div>
     </div>
-
-    <div class="quickstart-grid">
-      <div class="quickstart-card quickstart-full reveal reveal-delay-1">
-        <div class="quickstart-card-header">
-          <div class="quickstart-dots"><span></span><span></span><span></span></div>
-          <span class="quickstart-card-title">terminal &mdash; build</span>
-        </div>
-        <div class="quickstart-code">
-          <span class="c"># Clone the repository</span><br>
-          <span class="k">git clone</span> <span class="v">https://github.com/John-A-Chen/HoloAssist.git</span><br>
-          <span class="k">cd</span> <span class="t">HoloAssist/main/ros2_ws</span><br><br>
-          <span class="c"># Build the workspace</span><br>
-          <span class="k">source</span> <span class="t">/opt/ros/humble/setup.bash</span><br>
-          <span class="k">colcon build</span> <span class="f">--symlink-install</span><br>
-          <span class="k">source</span> <span class="t">install/setup.bash</span>
-        </div>
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Perception
       </div>
-
-      <div class="quickstart-card reveal reveal-delay-2">
-        <div class="quickstart-card-header">
-          <div class="quickstart-dots"><span></span><span></span><span></span></div>
-          <span class="quickstart-card-title">simulation mode</span>
-        </div>
-        <div class="quickstart-code">
-          <span class="c"># No hardware needed</span><br>
-          <span class="k">./launch.sh</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--perception</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--moveit</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--dashboard</span>
-        </div>
+      <div class="cap-detail">
+        Multi-sensor pipeline with automatic camera fallback: RealSense, Brio, generic USB, or simulated. AprilTag detection with 6-DOF cube pose fusion.
+        <ul>
+          <li>4-source camera cascade</li>
+          <li>AprilTag fiducial tracking</li>
+          <li>Debug overlay diagnostics stream</li>
+        </ul>
       </div>
-
-      <div class="quickstart-card reveal reveal-delay-3">
-        <div class="quickstart-card-header">
-          <div class="quickstart-dots"><span></span><span></span><span></span></div>
-          <span class="quickstart-card-title">real hardware</span>
-        </div>
-        <div class="quickstart-code">
-          <span class="c"># Connect to UR3e</span><br>
-          <span class="k">./launch.sh</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--robot-ip</span> <span class="v">192.168.0.194</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--perception</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--moveit</span> <span class="f">\</span><br>
-          &nbsp;&nbsp;<span class="f">--dashboard</span>
-        </div>
+    </div>
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Motion Planning
+      </div>
+      <div class="cap-detail">
+        MoveIt 2 consumes live cube poses and generates collision-aware trajectories. Pick-and-place triggered via a single ROS service call.
+        <ul>
+          <li>Collision-aware planning</li>
+          <li>Live pose-to-target adapter</li>
+          <li>Service-based pick/place API</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Dashboard
+      </div>
+      <div class="cap-detail">
+        PyQt operator panel showing live joint rates, gripper state, perception health, camera feeds, and e-stop controls.
+        <ul>
+          <li>Real-time system monitoring</li>
+          <li>Camera feed display</li>
+          <li>Emergency stop with resume</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cap-item">
+      <div class="cap-name">
+        <div class="cap-marker"></div>
+        Calibration
+      </div>
+      <div class="cap-detail">
+        Eye-to-hand calibration via easy_handeye2 computes the camera-to-base transform. Run once, persist, auto-publish on startup.
+        <ul>
+          <li>AprilTag-based estimation</li>
+          <li>Persistent calibration files</li>
+          <li>Auto static TF publishing</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<hr class="divider-glow">
-
-<!-- ========== TEAM ========== -->
-<section id="team" class="team-section">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-tag">Team</div>
-      <h2 class="section-heading">Built by Engineers, for Engineers</h2>
-      <p class="section-desc">A dedicated team bridging robotics, XR, and computer vision.</p>
+<!-- TECH STACK -->
+<section class="tech-section" id="stack">
+  <div class="tech-inner">
+    <div class="tech-header">
+      <div class="about-label">Stack</div>
+      <h2>What it runs on</h2>
     </div>
-    <div class="team-grid reveal reveal-delay-1">
-      <div class="team-card">
-        <div class="team-avatar"><div class="team-avatar-inner">JC</div></div>
-        <h4>John Chen</h4>
-        <p>Project Lead</p>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/></svg>
+        <div class="tech-name">ROS 2 Humble</div>
+        <div class="tech-desc">Robot middleware, DDS transport, lifecycle management</div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar"><div class="team-avatar-inner">NS</div></div>
-        <h4>Nic</h4>
-        <p>Contributor</p>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>
+        <div class="tech-name">Unity 3D</div>
+        <div class="tech-desc">HoloLens mixed-reality application runtime</div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar"><div class="team-avatar-inner">OL</div></div>
-        <h4>Oliver Lau</h4>
-        <p>Contributor</p>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l4-4 3 3 4-4 3 3"/><path d="M3 17l4-4 4 4 4-4 4 4"/></svg>
+        <div class="tech-name">MoveIt 2</div>
+        <div class="tech-desc">Motion planning, manipulation, collision checking</div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar"><div class="team-avatar-inner">SB</div></div>
-        <h4>Sebastian</h4>
-        <p>Contributor</p>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5"/></svg>
+        <div class="tech-name">Intel RealSense</div>
+        <div class="tech-desc">Depth camera, point cloud, RGB-D perception</div>
+      </div>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="2"/></svg>
+        <div class="tech-name">AprilTag</div>
+        <div class="tech-desc">Fiducial marker detection and 6-DOF pose estimation</div>
+      </div>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="17" width="10" height="5" rx="1"/><rect x="9" y="13" width="6" height="4"/><line x1="12" y1="5" x2="12" y2="13"/><circle cx="12" cy="4" r="2"/></svg>
+        <div class="tech-name">Universal Robots</div>
+        <div class="tech-desc">UR3e 6-DOF industrial manipulator, ros2_control driver</div>
+      </div>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="8" rx="1"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="7" y1="14" x2="17" y2="14"/><line x1="7" y1="14" x2="7" y2="22"/><line x1="17" y1="14" x2="17" y2="22"/></svg>
+        <div class="tech-name">OnRobot RG2</div>
+        <div class="tech-desc">Collaborative parallel gripper, position + force control</div>
+      </div>
+      <div class="tech-item">
+        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div class="tech-name">Ubuntu 22.04</div>
+        <div class="tech-desc">Target deployment platform for ROS 2 Humble</div>
       </div>
     </div>
   </div>
 </section>
 
-<hr class="divider-glow">
-
-<!-- ========== CTA BANNER ========== -->
-<section class="cta-banner">
-  <h2 class="reveal">Ready to Build?</h2>
-  <p class="reveal reveal-delay-1">Open source. One command. Infinite possibilities.</p>
-  <a href="https://github.com/John-A-Chen/HoloAssist" class="btn-lg btn-primary reveal reveal-delay-2">
-    View on GitHub
-    <span>&rarr;</span>
-  </a>
+<!-- QUICKSTART -->
+<section class="quickstart" id="start">
+  <div class="qs-header">
+    <div class="about-label">Quick start</div>
+    <h2>Three commands to a working stack</h2>
+  </div>
+  <div class="qs-blocks">
+    <div class="qs-block qs-block-full">
+      <div class="qs-block-label">Build</div>
+      <div class="qs-code">
+        <span class="c"># clone + build</span><br>
+        <span class="w">git clone</span> <span class="a">https://github.com/John-A-Chen/HoloAssist.git</span><br>
+        <span class="w">cd</span> HoloAssist/main/ros2_ws<br>
+        <span class="w">source</span> /opt/ros/humble/setup.bash<br>
+        <span class="w">colcon build</span> <span class="a">--symlink-install</span><br>
+        <span class="w">source</span> install/setup.bash
+      </div>
+    </div>
+    <div class="qs-block">
+      <div class="qs-block-label">Simulated</div>
+      <div class="qs-code">
+        <span class="c"># no hardware required</span><br>
+        <span class="w">./launch.sh</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--perception</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--moveit</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--dashboard</span>
+      </div>
+    </div>
+    <div class="qs-block">
+      <div class="qs-block-label">Real Hardware</div>
+      <div class="qs-code">
+        <span class="c"># connect to UR3e</span><br>
+        <span class="w">./launch.sh</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--robot-ip</span> <span class="w">192.168.0.194</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--perception</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--moveit</span> <span class="a">\</span><br>
+        &nbsp;&nbsp;<span class="a">--dashboard</span>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- ========== FOOTER ========== -->
+<!-- TEAM -->
+<section class="team-section">
+  <div class="team-inner">
+    <div class="about-label">Team</div>
+    <div class="team-list">
+      <div class="team-member">
+        <div class="team-member-name">John Chen</div>
+        <div class="team-member-role">Project Lead</div>
+      </div>
+      <div class="team-member">
+        <div class="team-member-name">Nic</div>
+        <div class="team-member-role">Contributor</div>
+      </div>
+      <div class="team-member">
+        <div class="team-member-name">Oliver Lau</div>
+        <div class="team-member-role">Contributor</div>
+      </div>
+      <div class="team-member">
+        <div class="team-member-name">Sebastian</div>
+        <div class="team-member-role">Contributor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
 <footer class="footer">
-  <div class="footer-inner">
-    <span class="footer-brand">HoloAssist</span>
-    <ul class="footer-links">
-      <li><a href="https://github.com/John-A-Chen/HoloAssist">GitHub</a></li>
-      <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/LICENSE">MIT License</a></li>
-      <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/README.md">Docs</a></li>
-    </ul>
-    <span class="footer-copy">&copy; 2026 HoloAssist</span>
-  </div>
+  <div class="footer-brand">Holo<span>Assist</span></div>
+  <ul class="footer-links">
+    <li><a href="https://github.com/John-A-Chen/HoloAssist">Source</a></li>
+    <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/LICENSE">License</a></li>
+    <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/README.md">Docs</a></li>
+  </ul>
+  <span class="footer-copy">MIT 2026</span>
 </footer>
-
-<!-- ========== SCRIPTS ========== -->
-<script>
-// Scroll reveal
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-// Nav scroll effect
-const nav = document.getElementById('nav');
-let ticking = false;
-window.addEventListener('scroll', () => {
-  if (!ticking) {
-    requestAnimationFrame(() => {
-      nav.classList.toggle('scrolled', window.scrollY > 40);
-      ticking = false;
-    });
-    ticking = true;
-  }
-});
-</script>
 
 </body>
 </html>
