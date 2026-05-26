@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teleoperation — HoloAssist</title>
+<link rel="icon" href="../screenshots/logo.png">
+<style>
+:root {
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-dark: #6d28d9;
+    --amber: #fbbf24; --amber-light: #fde68a;
+    --dark: #221d38; --darker: #181228; --darkest: #0e0b1e;
+    --body: #cdc6e0; --light: #ffffff;
+    --orange: #f4821f; --orange-light: #fb9a4b; --steel: #141618;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 19px; scroll-behavior: smooth; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--darker); color: var(--body); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--purple); color: #fff; }
+a { color: inherit; text-decoration: none; }
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(24,18,40,.94); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(139,92,246,.2); }
+.nav-inner { max-width: 1400px; margin: 0 auto; padding: 0 3rem; height: 60px; display: flex; align-items: center; gap: 2rem; }
+.nav-back { display: flex; align-items: center; gap: .5rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(205,198,224,.45); transition: color .15s; }
+.nav-back:hover { color: var(--body); }
+.nav-back svg { flex-shrink: 0; }
+.nav-brand { font-size: .88rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--light); }
+.nav-brand span { color: var(--orange); }
+.hero { min-height: 100vh; position: relative; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 65% 40%, rgba(139,92,246,.22) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 70%, rgba(244,130,31,.1) 0%, transparent 50%), linear-gradient(160deg, #110d1a 0%, #181228 40%, #110d1a 100%); }
+.hero-grid { position: absolute; inset: 0; opacity: .09; background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 60px 60px; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(14,11,30,.1) 0%, rgba(14,11,30,.5) 60%, rgba(14,11,30,.92) 100%); }
+.hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .28; }
+.hero-content { position: relative; z-index: 2; padding: 0 4rem 5rem 9.5rem; max-width: 860px; }
+.hero-eyebrow { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--orange); margin-bottom: .6rem; font-weight: 600; }
+.hero-line { width: 48px; height: 2px; background: linear-gradient(90deg, var(--purple), var(--orange)); margin-bottom: 1.5rem; }
+.hero-num { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(205,198,224,.28); margin-bottom: .4rem; }
+.hero-title { font-size: clamp(3.5rem, 8vw, 7rem); font-weight: 800; color: var(--light); line-height: .88; margin-bottom: 1.4rem; letter-spacing: -3px; }
+.hero-title .thin { font-weight: 200; color: rgba(205,198,224,.35); }
+.hero-desc { max-width: 540px; font-size: 1.05rem; color: var(--body); line-height: 1.75; font-weight: 300; margin-bottom: 2.5rem; }
+.hero-desc strong { color: var(--light); font-weight: 500; }
+.hero-meta { display: flex; gap: 3rem; flex-wrap: wrap; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(205,198,224,.35); }
+.hero-meta-val { display: block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 2rem; font-weight: 800; color: var(--light); letter-spacing: -2px; line-height: 1; margin-bottom: .25rem; }
+.section { padding: 5rem 4rem 5rem 9.5rem; }
+.section.alt { background: var(--steel); }
+.section-in { max-width: 1100px; margin: 0; }
+.ph-line { width: 42px; height: 3px; background: linear-gradient(90deg, var(--purple), var(--orange)); margin-bottom: .9rem; }
+.section-lbl { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--orange); margin-bottom: .5rem; }
+.section h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 700; color: var(--light); letter-spacing: -.5px; line-height: 1.1; margin-bottom: 1.5rem; }
+.section p { font-size: 1rem; color: var(--body); line-height: 1.75; margin-bottom: 1.1rem; max-width: 780px; }
+.section p strong { color: var(--light); font-weight: 600; }
+.photo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 2rem; }
+.photo-slot { aspect-ratio: 16/9; overflow: hidden; border-radius: 6px; background: rgba(139,92,246,.06); border: 1px dashed rgba(139,92,246,.22); display: flex; align-items: center; justify-content: center; position: relative; }
+.photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo-slot-ph { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; color: rgba(139,92,246,.35); letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
+.pipe-grid { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid rgba(244,130,31,.14); margin-top: 2rem; }
+.pipe-step { padding: 2rem 1.75rem; border-right: 1px solid rgba(244,130,31,.14); position: relative; transition: background .2s; }
+.pipe-step:last-child { border-right: none; }
+.pipe-step:hover { background: rgba(139,92,246,.06); }
+.pipe-num { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; color: var(--orange); letter-spacing: 2px; margin-bottom: 1.25rem; }
+.pipe-step h4 { font-size: 0.95rem; font-weight: 600; color: var(--light); margin-bottom: .5rem; }
+.pipe-step p { font-size: 0.82rem; color: var(--body); line-height: 1.6; }
+.pipe-step p code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .78rem; color: var(--purple-light); background: rgba(139,92,246,.1); padding: 1px 5px; border-radius: 3px; }
+.pipe-arrow { position: absolute; right: -7px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; background: var(--steel); border: 1px solid rgba(244,130,31,.3); color: var(--orange); display: flex; align-items: center; justify-content: center; font-size: .6rem; z-index: 2; }
+.pipe-step:last-child .pipe-arrow { display: none; }
+.data-table { width: 100%; border-collapse: collapse; margin-top: 1.75rem; }
+.data-table th { text-align: left; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .6rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(205,198,224,.35); padding: .65rem 1rem .65rem 0; border-bottom: 1px solid rgba(244,130,31,.14); font-weight: 400; }
+.data-table td { padding: .9rem 1rem .9rem 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .9rem; vertical-align: top; color: var(--body); }
+.data-table td:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .82rem; white-space: nowrap; }
+.data-table td:nth-child(2) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .82rem; }
+.cfg-table { border: 1px solid rgba(244,130,31,.14); margin-top: 1.75rem; }
+.cfg-row { display: grid; grid-template-columns: 200px 120px 1fr; border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+.cfg-row:last-child { border-bottom: none; }
+.cfg-row:hover { background: rgba(139,92,246,.05); }
+.cfg-row > div { padding: .9rem 1.25rem; font-size: .9rem; color: var(--body); }
+.cfg-row > div:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .82rem; border-right: 1px solid rgba(255,255,255,.04); }
+.cfg-row > div:nth-child(2) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .82rem; border-right: 1px solid rgba(255,255,255,.04); }
+.issues { list-style: none; margin-top: 1.75rem; }
+.issues li { padding: 1.5rem 0; border-bottom: 1px solid rgba(255,255,255,.05); display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
+.issues li:last-child { border-bottom: none; }
+.issue-ttl { font-size: .9rem; font-weight: 600; color: var(--light); }
+.issue-body { font-size: .9rem; color: var(--body); line-height: 1.68; }
+.issue-body code { background: rgba(139,92,246,.12); padding: 1px 6px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .78rem; color: var(--purple-light); }
+.doc-footer { background: #0a0b0c; border-top: 1px solid rgba(139,92,246,.14); padding: 2.5rem 4rem; }
+.doc-footer-in { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.doc-footer h3 { color: var(--light); font-size: .9rem; font-weight: 700; margin-bottom: .25rem; }
+.doc-footer p { font-size: .78rem; color: rgba(205,198,224,.38); }
+.doc-footer-back { display: flex; align-items: center; gap: .4rem; font-size: .72rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--orange); transition: color .15s; }
+.doc-footer-back:hover { color: var(--orange-light); }
+@media (max-width: 1024px) {
+    .pipe-grid { grid-template-columns: 1fr 1fr; }
+    .pipe-step { border-bottom: 1px solid rgba(244,130,31,.14); }
+    .pipe-arrow { display: none !important; }
+    .cfg-row { grid-template-columns: 1fr; }
+    .cfg-row > div:first-child, .cfg-row > div:nth-child(2) { border-right: none; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .issues li { grid-template-columns: 1fr; gap: .5rem; }
+}
+@media (max-width: 768px) {
+    html { font-size: 17px; }
+    .nav-links { display: none; }
+    .section { padding: 3.5rem 1.75rem; }
+    .hero-content { padding: 0 1.75rem 4rem; }
+    .pipe-grid { grid-template-columns: 1fr; }
+    .photo-row { grid-template-columns: 1fr; }
+    .doc-footer { padding: 2rem 1.75rem; }
+    .doc-footer-in { flex-direction: column; gap: 1.5rem; text-align: center; }
+}
+
+/* ── DOCK (matches index.html) ── */
+.dock-wrap { position: fixed; left: 0.75rem; top: 50%; transform: translateY(-50%); z-index: 200; pointer-events: none; }
+.dock { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; border-radius: 1.1rem; border: 1px solid rgba(139,92,246,0.35); background: rgba(10,7,22,0.92); backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1); padding: 0.5rem; }
+.di { --sz: 64px; width: var(--sz); height: var(--sz); display: inline-flex; align-items: center; justify-content: center; border-radius: 0.9rem; border: 1px solid rgba(139,92,246,0.22); background: rgba(20,14,40,0.9); color: #4a3f68; position: relative; text-decoration: none; transition: width 160ms ease, height 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.di:hover, .di:focus-visible { transform: translateX(4px); border-color: rgba(139,92,246,0.7); background: rgba(60,28,110,0.9); color: var(--purple-light); }
+.di.active { border-color: rgba(139,92,246,0.85); background: linear-gradient(180deg, rgba(139,92,246,0.38), rgba(139,92,246,0.2)); color: var(--purple-light); }
+.di.gh { color: var(--amber); }
+.di.gh:hover { color: var(--amber-light); border-color: rgba(251,191,36,0.6); background: rgba(80,55,8,0.85); }
+.di-icon { width: 1.65rem; height: 1.65rem; }
+.di-icon svg { width: 100%; height: 100%; display: block; }
+.di-label { position: absolute; left: calc(100% + 0.7rem); top: 50%; transform: translateY(-50%) translateX(-6px); opacity: 0; pointer-events: none; border-radius: 0.5rem; border: 1px solid rgba(139,92,246,0.3); background: rgba(10,7,22,0.97); color: #ede8ff; white-space: nowrap; padding: 0.28rem 0.65rem; font-size: 0.76rem; font-weight: 500; letter-spacing: 0.3px; transition: opacity 150ms ease, transform 150ms ease; }
+.di:hover .di-label, .di:focus-visible .di-label { opacity: 1; transform: translateY(-50%) translateX(0); }
+.d-sep { width: 22px; height: 1px; background: rgba(139,92,246,0.2); margin: 0.08rem 0; }
+@media (max-width: 768px) {
+    .dock-wrap { left: 50%; top: auto; bottom: 0.7rem; transform: translateX(-50%); }
+    .dock { flex-direction: row; border-radius: 1rem; padding: 0.48rem 0.55rem; gap: 0.4rem; }
+    .d-sep { width: 1px; height: 20px; margin: 0 0.05rem; }
+    .di { --sz: 44px; }
+    .di-icon { width: 1.2rem; height: 1.2rem; }
+    .di-label { display: none; }
+    .di:hover { transform: translateY(-3px) !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </a>
+    <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-overlay"></div>
+  <!-- <img class="hero-photo" src="../screenshots/teleoperation.png" alt=""> -->
+  <div class="hero-content">
+    <div class="hero-num">03 / 04</div>
+    <div class="hero-eyebrow">HoloAssist — Subsystem</div>
+    <div class="hero-line"></div>
+    <h1 class="hero-title">Tele<span class="thin">op</span><br>eration</h1>
+    <p class="hero-desc">
+      Hand-gesture control of the UR3e via <strong>Quest 3 hand tracking</strong>,
+      bridged through ROS-TCP-Endpoint with auto-discovery via UDP beacon.
+      Full joint and Cartesian modes with hardware e-stop.
+    </p>
+    <div class="hero-meta">
+      <div><span class="hero-meta-val">Quest</span>3 headset</div>
+      <div><span class="hero-meta-val">10k</span>port ROS-TCP</div>
+      <div><span class="hero-meta-val">UDP</span>auto-discovery</div>
+      <div><span class="hero-meta-val">E-Stop</span>hardware</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="overview">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Overview</div>
+    <h2>What this subsystem does</h2>
+    <p>
+      The teleoperation subsystem lets an operator control the UR3e arm using <strong>natural hand
+      gestures</strong> tracked by the Meta Quest 3 headset. Unity C# scripts capture hand pose data
+      and publish it over the ROS-TCP-Endpoint bridge running on the laptop.
+    </p>
+    <p>
+      A <strong>UDP beacon</strong> broadcasts the laptop IP address so the Quest app can connect
+      without manual configuration. The bridge listens on port 10000. Both joint-space and
+      Cartesian end-effector control modes are supported.
+    </p>
+    <p>
+      <strong>Lead:</strong> Nic &nbsp;·&nbsp;
+      <strong>Client:</strong> Unity + Quest 3 (C#) &nbsp;·&nbsp;
+      <strong>Bridge:</strong> ROS-TCP-Endpoint :10000
+    </p>
+    <div class="photo-row">
+      <div class="photo-slot">
+        <!-- <img src="../screenshots/teleop_demo.jpg" alt=""> -->
+        <div class="photo-slot-ph">Teleop demo photo</div>
+      </div>
+      <div class="photo-slot">
+        <!-- <img src="../screenshots/quest3_hand.jpg" alt=""> -->
+        <div class="photo-slot-ph">Quest 3 hand tracking view</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="pipeline">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Pipeline</div>
+    <h2>Gesture to motion in four stages</h2>
+    <div class="pipe-grid">
+      <div class="pipe-step">
+        <div class="pipe-num">01</div>
+        <h4>Hand Tracking</h4>
+        <p>Quest 3 XR Hand subsystem tracks 26 joints per hand at ~72 Hz. Unity reads poses each frame.</p>
+        <div class="pipe-arrow">&rsaquo;</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">02</div>
+        <h4>Gesture Recognition</h4>
+        <p>Unity C# classifies pinch, grip, and directional gestures. Maps to robot commands (joint deltas or Cartesian targets).</p>
+        <div class="pipe-arrow">&rsaquo;</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">03</div>
+        <h4>ROS-TCP Bridge</h4>
+        <p>Commands published as ROS messages via ROS-TCP-Connector. UDP beacon handles IP auto-discovery on the same LAN.</p>
+        <div class="pipe-arrow">&rsaquo;</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">04</div>
+        <h4>UR3e Execution</h4>
+        <p>ROS-side subscriber forwards commands to the joint trajectory controller or servoing node. E-stop checked on every cycle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="topics">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Topics</div>
+    <h2>ROS interface</h2>
+    <p>All topics bridged over ROS-TCP-Endpoint at port 10000.</p>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Direction</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/holoassist/teleop/joint_command</td><td>Quest → ROS</td><td>Target joint positions from hand gesture</td></tr>
+        <tr><td>/holoassist/teleop/cartesian_command</td><td>Quest → ROS</td><td>End-effector Cartesian delta command</td></tr>
+        <tr><td>/holoassist/teleop/gripper_command</td><td>Quest → ROS</td><td>Gripper open/close command (0–1)</td></tr>
+        <tr><td>/holoassist/teleop/estop</td><td>Quest → ROS</td><td>Emergency stop signal — halts all motion</td></tr>
+        <tr><td>/joint_states</td><td>ROS → Quest</td><td>Live joint positions for AR arm rendering</td></tr>
+        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>ROS → Quest</td><td>Cube positions for AR overlay</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section alt" id="config">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Configuration</div>
+    <h2>Key parameters</h2>
+    <p>Quest app ROS settings configured in Unity Inspector. Server-side config in launch.sh.</p>
+    <div class="cfg-table">
+      <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>Printed at launcher startup — enter in Quest ROS Settings panel</div></div>
+      <div class="cfg-row"><div>ROS-TCP Port</div><div>10000</div><div>Fixed port for ROS-TCP-Endpoint — must match Unity setting</div></div>
+      <div class="cfg-row"><div>UDP Beacon Port</div><div><!-- fill --></div><div>Broadcast port for IP auto-discovery</div></div>
+      <div class="cfg-row"><div>control_mode</div><div><!-- fill --></div><div>joint or cartesian teleop mode</div></div>
+      <div class="cfg-row"><div>velocity_scale</div><div><!-- fill --></div><div>Speed scaling for teleop commands (0–1)</div></div>
+      <div class="cfg-row"><div>gesture_threshold</div><div><!-- fill --></div><div>Pinch/grip confidence threshold for command trigger</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="issues">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Known Issues</div>
+    <h2>Troubleshooting</h2>
+    <ul class="issues">
+      <li>
+        <div class="issue-ttl">Quest can't find the robot</div>
+        <div class="issue-body">Quest and laptop must be on the same WiFi network. Note the <code>WiFi IP</code> printed at launcher startup and enter it in the Quest Unity app under ROS Settings → Host IP.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Connection drops during use</div>
+        <div class="issue-body">If WiFi drops, the ROS-TCP connection is lost. Restart the launcher and reconnect the Quest app. The UDP beacon re-broadcasts automatically.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Arm unresponsive to gestures</div>
+        <div class="issue-body">Check that the UR driver is active (<code>joint_state_broadcaster [active]</code> in the launcher log). With URSim, External Control must be playing.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">AR overlay misaligned</div>
+        <div class="issue-body">Hand-eye calibration must be run and loaded. Without a valid <code>camera_color_optical_frame → base_link</code> TF, cube poses in the headset will be incorrect.</div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<footer class="doc-footer">
+  <div class="doc-footer-in">
+    <div>
+      <h3>Teleoperation</h3>
+      <p>Nic &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
+    </div>
+    <a href="../index.html" class="doc-footer-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to HoloAssist
+    </a>
+  </div>
+</footer>
+
+
+<script>
+// ── DOCK ──
+(function () {
+    const ITEMS = [
+        { label:'Home',     href:'../index.html', id:'',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+        { label:'Overview', href:'#overview',     id:'overview', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
+        { label:'Pipeline', href:'#pipeline',     id:'pipeline', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+        { label:'Topics',   href:'#topics',       id:'topics',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+        { label:'Config',   href:'#config',       id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
+        { label:'Issues',   href:'#issues',       id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+    ];
+    const GH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>';
+
+    const wrap = document.createElement('aside');
+    wrap.className = 'dock-wrap';
+    const nav = document.createElement('nav');
+    nav.className = 'dock';
+    nav.setAttribute('aria-label', 'Page navigation');
+
+    const links = ITEMS.map(item => {
+        const a = document.createElement('a');
+        a.className = 'di'; a.href = item.href;
+        if (item.id) a.dataset.id = item.id;
+        a.setAttribute('aria-label', item.label);
+        a.innerHTML = '<span class="di-icon">' + item.svg + '</span><span class="di-label">' + item.label + '</span>';
+        nav.appendChild(a);
+        return a;
+    });
+
+    nav.appendChild(Object.assign(document.createElement('div'), { className: 'd-sep' }));
+    const ghLink = document.createElement('a');
+    ghLink.className = 'di gh'; ghLink.href = 'https://github.com/John-A-Chen/HoloAssist';
+    ghLink.target = '_blank'; ghLink.rel = 'noreferrer';
+    ghLink.setAttribute('aria-label', 'GitHub');
+    ghLink.innerHTML = '<span class="di-icon">' + GH + '</span><span class="di-label">GitHub</span>';
+    nav.appendChild(ghLink);
+
+    wrap.appendChild(nav);
+    document.body.appendChild(wrap);
+
+    // Highlight active section
+    const sectionLinks = links.filter(l => l.dataset.id);
+    const io = new IntersectionObserver(es => {
+        es.forEach(e => { if (e.isIntersecting) sectionLinks.forEach(l => l.classList.toggle('active', l.dataset.id === e.target.id)); });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('section[id]').forEach(s => io.observe(s));
+
+    // Magnification
+    const BASE = 64, MAG = 88, DIST = 160;
+    function setW(el, n) { el.style.setProperty('--sz', n + 'px'); }
+    function reset() { [...nav.querySelectorAll('.di')].forEach(l => setW(l, BASE)); }
+    nav.addEventListener('pointermove', e => {
+        if (window.innerWidth <= 768) return;
+        [...nav.querySelectorAll('.di')].forEach(l => {
+            const r = l.getBoundingClientRect(), c = r.top + r.height / 2;
+            const inf = Math.max(0, 1 - Math.abs(e.clientY - c) / DIST);
+            setW(l, BASE + (MAG - BASE) * inf * inf * (3 - 2 * inf));
+        });
+    });
+    nav.addEventListener('pointerleave', reset);
+    window.addEventListener('resize', reset);
+    reset();
+})();
+</script>
+
+</body>
+</html>
