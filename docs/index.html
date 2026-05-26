@@ -1,786 +1,887 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HoloAssist</title>
-<meta name="description" content="Mixed-reality teleoperation and autonomous manipulation for the UR3e.">
-<style>
-@font-face {
-  font-family: 'Mono';
-  src: local('SF Mono'), local('Fira Code'), local('Cascadia Code'), local('JetBrains Mono'), local('Menlo'), local('Consolas'), local('monospace');
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoloAssist — Mixed-Reality Robot Control</title>
+    <link rel="icon" href="screenshots/logo.png">
+    <style>
+        :root {
+            --purple:       #8b5cf6;
+            --purple-light: #c4b5fd;
+            --purple-dark:  #6d28d9;
+            --amber:        #fbbf24;
+            --amber-light:  #fde68a;
+            --dark:         #221d38;
+            --darker:       #181228;
+            --darkest:      #0e0b1e;
+            --body:         #cdc6e0;   /* single body text colour */
+            --light:        #ffffff;
+            --orange:       #f4821f;
+            --orange-light: #fb9a4b;
+            --steel:        #141618;
+        }
 
-:root {
-  --black: #050505;
-  --white: #edece8;
-  --accent: #a855f7;
-  --accent-dim: #a855f733;
-  --gray: #777;
-  --dim: #1a1a1a;
-  --border: #222;
-  --surface: #0c0c0c;
-}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+        html {
+            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory;
+            height: 100%;
+            font-size: 19px;          /* base — all rem values scale from here */
+        }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  background: var(--black);
-  color: var(--white);
-  -webkit-font-smoothing: antialiased;
-}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--darker);
+            color: var(--body);
+            line-height: 1.65;
+            height: 100%;
+        }
 
-::selection { background: var(--accent); color: var(--black); }
+        /* ── CURSOR PLUS ── */
+        body.has-cursor * { cursor: none !important; }
+        .cursor-plus {
+            --s: 22px; --r: 0deg;
+            position: fixed; left: 0; top: 0;
+            width: var(--s); height: var(--s);
+            color: rgba(196,181,253,0.8);
+            opacity: 0; pointer-events: none; z-index: 9999;
+            transition: width 160ms ease, height 160ms ease, color 160ms ease, opacity 120ms ease;
+        }
+        .cursor-plus::before, .cursor-plus::after {
+            content: ""; position: absolute; left: 50%; top: 50%;
+            border-radius: 999px; background: currentColor;
+            transform: translate(-50%,-50%);
+        }
+        .cursor-plus::before { width: 100%; height: 2px; }
+        .cursor-plus::after  { width: 2px; height: 100%; }
+        .cursor-plus.on  { opacity: 1; }
+        .cursor-plus.act { --s: 34px; --r: 45deg; color: var(--purple-light); }
+        .cursor-plus.dn  { --s: 18px; }
 
-a { color: inherit; }
+        /* ── CLICK SPARK ── */
+        .spark-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9998; }
 
-/* ---- NAV ---- */
-.nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  border-bottom: 1px solid var(--border);
-  background: rgba(5,5,5,.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-.nav-inner {
-  max-width: 1400px; margin: 0 auto;
-  padding: 0 clamp(1.5rem, 4vw, 3rem);
-  display: flex; align-items: center; justify-content: space-between;
-  height: 56px;
-}
-.nav-brand {
-  font-size: .85rem; font-weight: 600; letter-spacing: .08em;
-  text-transform: uppercase; text-decoration: none;
-}
-.nav-brand span { color: var(--accent); }
-.nav-links {
-  display: flex; gap: 2rem; list-style: none;
-  font-size: .8rem; letter-spacing: .04em; text-transform: uppercase;
-}
-.nav-links a { text-decoration: none; color: var(--gray); transition: color .15s; }
-.nav-links a:hover { color: var(--white); }
-.nav-gh {
-  font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
-  text-decoration: none; color: var(--black); background: var(--accent);
-  padding: .45rem 1rem; font-weight: 600;
-}
-.nav-gh:hover { background: #9333ea; }
+        /* ── DOCK ── */
+        .dock-wrap {
+            position: fixed;
+            left: 0.75rem; top: 50%;
+            transform: translateY(-50%);
+            z-index: 200; pointer-events: none;
+        }
+        .dock {
+            pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; gap: 0.45rem;
+            border-radius: 1.1rem;
+            border: 1px solid rgba(139,92,246,0.35);
+            background: rgba(10,7,22,0.92);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1);
+            padding: 0.5rem;
+        }
+        .di {
+            --sz: 80px;
+            width: var(--sz); height: var(--sz);
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(139,92,246,0.22);
+            background: rgba(20,14,40,0.9);
+            color: #4a3f68; position: relative; text-decoration: none;
+            transition: width 160ms ease, height 160ms ease, transform 160ms ease,
+                        border-color 160ms ease, background 160ms ease, color 160ms ease;
+        }
+        .di:hover, .di:focus-visible {
+            transform: translateX(4px);
+            border-color: rgba(139,92,246,0.7);
+            background: rgba(60,28,110,0.9);
+            color: var(--purple-light);
+        }
+        .di.active {
+            border-color: rgba(139,92,246,0.85);
+            background: linear-gradient(180deg, rgba(139,92,246,0.38), rgba(139,92,246,0.2));
+            color: var(--purple-light);
+        }
+        .di.gh { color: var(--amber); }
+        .di.gh:hover { color: var(--amber-light); border-color: rgba(251,191,36,0.6); background: rgba(80,55,8,0.85); }
+        .di-icon { width: 2rem; height: 2rem; }
+        .di-icon svg { width: 100%; height: 100%; display: block; }
+        .di-label {
+            position: absolute; left: calc(100% + 0.7rem); top: 50%;
+            transform: translateY(-50%) translateX(-6px);
+            opacity: 0; pointer-events: none;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(139,92,246,0.3);
+            background: rgba(10,7,22,0.97);
+            color: #ede8ff; white-space: nowrap;
+            padding: 0.28rem 0.65rem; font-size: 0.76rem; font-weight: 500; letter-spacing: 0.3px;
+            transition: opacity 150ms ease, transform 150ms ease;
+        }
+        .di:hover .di-label, .di:focus-visible .di-label { opacity: 1; transform: translateY(-50%) translateX(0); }
+        .d-sep { width: 22px; height: 1px; background: rgba(139,92,246,0.2); margin: 0.08rem 0; }
 
-/* ---- HERO ---- */
-.hero {
-  min-height: 100vh;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 0 clamp(1.5rem, 4vw, 3rem);
-  padding-bottom: clamp(4rem, 8vh, 8rem);
-  padding-top: 80px;
-  max-width: 1400px; margin: 0 auto;
-  position: relative;
-}
-.hero-label {
-  font-family: 'Mono', monospace;
-  font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 1.5rem;
-  display: flex; align-items: center; gap: .75rem;
-}
-.hero-label::before {
-  content: ''; width: 32px; height: 1px; background: var(--accent);
-}
-.hero-title {
-  font-size: clamp(4rem, 12vw, 10rem);
-  font-weight: 800;
-  letter-spacing: -.05em;
-  line-height: .9;
-  margin-bottom: 2rem;
-}
-.hero-title .thin {
-  font-weight: 200;
-  color: var(--gray);
-}
-.hero-desc {
-  max-width: 540px;
-  font-size: 1.1rem;
-  line-height: 1.65;
-  color: var(--gray);
-  font-weight: 300;
-  margin-bottom: 3rem;
-}
-.hero-desc strong { color: var(--white); font-weight: 500; }
-.hero-meta {
-  display: flex; gap: 3rem;
-  font-family: 'Mono', monospace;
-  font-size: .7rem; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--gray);
-}
-.hero-meta-val {
-  display: block;
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 2rem; font-weight: 700; letter-spacing: -.03em;
-  color: var(--white); line-height: 1; margin-bottom: .35rem;
-}
+        /* ── SECTIONS — full-page snap ── */
+        .page {
+            scroll-snap-align: start;
+            min-height: 100vh; position: relative;
+        }
+        /* All content pushed right of the dock */
+        .pi {                           /* page-inner */
+            padding: 4rem 4rem 4rem 9.5rem;
+            min-height: 100vh;
+            display: flex; flex-direction: column; justify-content: center;
+        }
 
-/* Vertical line accent */
-.hero::after {
-  content: '';
-  position: absolute; right: clamp(1.5rem, 4vw, 3rem); top: 80px; bottom: 0;
-  width: 1px; background: linear-gradient(to bottom, transparent, var(--border) 30%, var(--border) 70%, transparent);
-  pointer-events: none;
-}
+        /* ── PAGE HEADINGS ── */
+        .ph { margin-bottom: 2.25rem; }
+        .ph-line {
+            width: 42px; height: 3px;
+            background: linear-gradient(90deg, var(--purple), var(--orange));
+            margin-bottom: 0.9rem;
+        }
+        .ph h2 { font-size: 2.6rem; font-weight: 700; color: var(--light); letter-spacing: -0.5px; margin-bottom: 0.35rem; }
+        .ph p  { color: var(--body); font-size: 1rem; }
 
-/* ---- DIVIDER ---- */
-.divider {
-  border: none; height: 1px; background: var(--border);
-  margin: 0;
-}
+        /* ── HERO ── */
+        .hero {
+            scroll-snap-align: start;
+            min-height: 100vh; background: var(--darker);
+            position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+            overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 60% 40%, rgba(139,92,246,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 50% at 20% 70%, rgba(244,130,31,0.1) 0%, transparent 50%),
+                linear-gradient(160deg, #111315 0%, #181a1c 40%, #111315 100%);
+        }
+        .hero-grid {
+            position: absolute; inset: 0; opacity: 0.09;
+            background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        .hero-orb {
+            position: absolute; width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(244,130,31,0.14) 0%, rgba(139,92,246,0.08) 50%, transparent 70%);
+            border-radius: 50%; top: 50%; right: 4%; transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .hero-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(14,11,30,0.1) 0%, rgba(14,11,30,0.5) 60%, rgba(14,11,30,0.92) 100%);
+        }
+        /* <img class="hero-img" src="screenshots/hero.jpg" alt=""> — uncomment once file exists */
+        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; }
+        .hero-content {
+            position: relative; z-index: 2;
+            padding: 0 4rem 4.5rem 9.5rem; max-width: 860px;
+        }
+        .hero-eyebrow {
+            font-size: 0.68rem; letter-spacing: 3px; text-transform: uppercase;
+            color: var(--orange); margin-bottom: 0.75rem; font-weight: 600;
+        }
+        .hero-line {
+            width: 48px; height: 2px;
+            background: linear-gradient(90deg, var(--purple), var(--orange));
+            margin-bottom: 1.5rem;
+        }
+        .hero-title {
+            font-size: clamp(3rem, 6vw, 5.2rem); font-weight: 700;
+            color: var(--light); line-height: 1.05; margin-bottom: 1.3rem; letter-spacing: -1.5px;
+        }
+        .hero-title span { color: var(--purple-light); }
+        .hero-desc { font-size: 1.1rem; color: var(--body); max-width: 600px; margin-bottom: 2.5rem; line-height: 1.75; }
+        .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 13px 26px; font-size: 0.88rem; font-weight: 600;
+            letter-spacing: 0.3px; text-decoration: none;
+            border-radius: 4px; transition: all 0.2s; border: none; cursor: pointer;
+        }
+        .btn-p { background: var(--purple); color: white; box-shadow: 0 4px 22px rgba(139,92,246,0.4); }
+        .btn-p:hover { background: var(--purple-dark); box-shadow: 0 4px 32px rgba(139,92,246,0.6); }
+        .btn-a { background: var(--amber); color: #1a1020; }
+        .btn-a:hover { background: var(--amber-light); }
+        .btn-o { background: transparent; color: var(--light); border: 1px solid rgba(255,255,255,0.28); }
+        .btn-o:hover { border-color: rgba(255,255,255,0.55); }
+        /* Hero bottom strip — Saab style */
+        .hero-strip {
+            position: relative; z-index: 2;
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            border-top: 1px solid rgba(244,130,31,0.25);
+        }
+        .hs-item {
+            padding: 2.4rem 2rem 2.4rem 2.5rem;
+            display: flex; align-items: center;
+            text-decoration: none;
+            border-left: 1px solid rgba(244,130,31,0.18);
+            transition: background 0.2s;
+        }
+        .hs-item:first-child { border-left: none; padding-left: 9.5rem; }
+        .hs-item:hover { background: rgba(244,130,31,0.07); }
+        .hs-item h3 { font-size: 0.88rem; font-weight: 600; color: var(--light); }
+        .hs-item p  { font-size: 0.78rem; color: var(--orange); margin-top: 2px; }
 
-/* ---- ABOUT ---- */
-.about {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 8rem) clamp(1.5rem, 4vw, 3rem);
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-}
-.about-label {
-  font-family: 'Mono', monospace;
-  font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
-  color: var(--accent);
-  padding-top: .35rem;
-}
-.about-body {
-  max-width: 680px;
-}
-.about-body p {
-  font-size: 1.15rem; line-height: 1.75; color: var(--gray);
-  font-weight: 300; margin-bottom: 1.5rem;
-}
-.about-body p strong { color: var(--white); font-weight: 500; }
+        /* ── STATUS ── */
+        .page-status .pi { background: var(--steel); }
+        .feat-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1px; background: rgba(244,130,31,0.12);
+            border: 1px solid rgba(244,130,31,0.12);
+        }
+        .feat-item {
+            background: #1a1c1e; padding: 1rem 1.4rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+            transition: background 0.15s;
+        }
+        .feat-item:hover { background: rgba(139,92,246,0.09); }
+        .feat-name { font-size: 0.94rem; font-weight: 500; color: var(--body); }
+        .badge {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 1px;
+            padding: 4px 10px; border-radius: 20px; white-space: nowrap; text-transform: uppercase;
+        }
+        .b-ok   { background: rgba(34,197,94,0.12);  color: #6ee7a0; border: 1px solid rgba(34,197,94,0.3); }
+        .b-test { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
 
-/* ---- PIPELINE ---- */
-.pipeline-section {
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.pipeline-inner {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
-}
-.pipeline-header {
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  margin-bottom: 4rem;
-}
-.pipeline-header h2 {
-  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.1;
-}
+        /* ── SUBSYSTEM PAGES ── */
+        .sub-slide {
+            scroll-snap-align: start;
+            min-height: 100vh; position: relative; overflow: hidden;
+        }
+        .sc-bg {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            transition: transform 0.7s ease;
+        }
+        .sub-slide:hover .sc-bg { transform: scale(1.03); }
+        .s-perc .sc-bg { background-color: #0f1826; background-image: url('screenshots/perception.png'); }
+        .s-auto .sc-bg { background-color: #0a1910; background-image: url('screenshots/autonomous.png'); }
+        .s-tele .sc-bg { background-color: #1a0d26; background-image: url('screenshots/teleoperation.png'); }
+        .s-visu .sc-bg { background-color: #160a1e; background-image: url('screenshots/visualisation.png'); }
+        .sc-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to right, rgba(0,0,0,.88) 0%, rgba(0,0,0,.6) 55%, rgba(0,0,0,.22) 100%);
+        }
+        .sc-gif {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            transition: opacity 0.45s ease; pointer-events: none;
+        }
+        .sub-slide:hover .sc-gif { opacity: 0.8; }
+        .slide-body {
+            position: absolute; inset: 0;
+            padding: 2.5rem 5rem 5rem 9.5rem;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 2;
+        }
+        .slide-top { display: flex; align-items: center; }
+        .slide-num { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.25); }
+        .slide-docs {
+            display: inline-flex; align-items: center; gap: 9px;
+            font-size: 0.92rem; font-weight: 700; letter-spacing: 0.3px;
+            color: var(--light); text-decoration: none;
+            background: rgba(244,130,31,0.16);
+            border: 1px solid rgba(244,130,31,.55);
+            padding: 12px 26px; border-radius: 6px;
+            backdrop-filter: blur(10px);
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .slide-docs svg { flex-shrink: 0; transition: transform 0.2s; }
+        .slide-docs:hover { background: var(--orange); color: #111; border-color: var(--orange); }
+        .slide-docs:hover svg { transform: translateX(3px); }
+        .slide-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.9rem; flex-shrink: 0; }
+        .slide-mid { max-width: 660px; }
+        .slide-icon {
+            width: 54px; height: 54px; margin-bottom: 1.25rem;
+            color: var(--orange); filter: drop-shadow(0 0 14px rgba(244,130,31,.45));
+        }
+        .slide-icon svg { width: 100%; height: 100%; display: block; }
+        .slide-title {
+            font-size: clamp(2rem, 4.5vw, 3.8rem);
+            font-weight: 800; color: #fff; letter-spacing: -1.5px; line-height: .92;
+            margin-bottom: 1rem;
+        }
+        .slide-tag { font-size: 0.8rem; color: var(--orange); letter-spacing: .5px; margin-bottom: 1rem; }
+        .slide-desc { font-size: 1rem; color: rgba(255,255,255,.72); line-height: 1.72; max-width: 520px; }
+        .slide-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; }
+        .slide-specs { display: flex; gap: 2.5rem; }
+        .slide-spec { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.35); }
+        .slide-spec span { display: block; font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1; margin-bottom: 0.2rem; }
+        /* Person contact card */
+        .slide-person {
+            display: flex; align-items: center; gap: 1.25rem;
+            background: rgba(8,5,18,.88); border: 1px solid rgba(139,92,246,.32);
+            backdrop-filter: blur(20px); padding: 1.5rem 1.75rem; border-radius: 8px;
+            min-width: 400px; flex-shrink: 0;
+        }
+        .sp-photo {
+            width: 68px; height: 68px; border-radius: 50%;
+            overflow: hidden; flex-shrink: 0; position: relative;
+            background: linear-gradient(135deg, var(--purple-dark), var(--purple));
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sp-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .sp-init { font-size: 1.1rem; font-weight: 800; color: white; }
+        .sp-info h3 { font-size: 1.05rem; font-weight: 700; color: white; margin-bottom: 3px; }
+        .sp-info p  { font-size: 0.82rem; color: var(--purple-light); }
+        .sp-links { display: flex; flex-direction: column; gap: 0.4rem; margin-left: auto; }
+        .sp-link {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            font-size: 0.76rem; font-weight: 700; letter-spacing: .5px;
+            text-decoration: none; padding: 7px 16px; border-radius: 4px; white-space: nowrap;
+        }
+        .sp-link-li { background: rgba(139,92,246,.2); color: var(--purple-light); border: 1px solid rgba(139,92,246,.3); }
+        .sp-link-li:hover { background: rgba(139,92,246,.38); }
+        .sp-link-gh { background: rgba(244,130,31,.15); color: var(--orange); border: 1px solid rgba(244,130,31,.28); }
+        .sp-link-gh:hover { background: rgba(244,130,31,.3); }
 
-.pipeline {
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  border: 1px solid var(--border);
-  position: relative;
-}
-.pipeline-stage {
-  padding: 2rem 1.5rem;
-  border-right: 1px solid var(--border);
-  position: relative;
-  transition: background .2s;
-}
-.pipeline-stage:last-child { border-right: none; }
-.pipeline-stage:hover { background: rgba(168,85,247,.05); }
-.pipeline-num {
-  font-family: 'Mono', monospace;
-  font-size: .65rem; color: var(--accent);
-  letter-spacing: .1em; margin-bottom: 1.5rem;
-}
-.pipeline-stage h4 {
-  font-size: .95rem; font-weight: 600; margin-bottom: .6rem;
-  letter-spacing: -.01em;
-}
-.pipeline-stage p {
-  font-size: .78rem; color: var(--gray); line-height: 1.55;
-}
-.pipeline-icon {
-  width: 36px; height: 36px; margin-bottom: 1rem;
-  display: flex; align-items: center; justify-content: center;
-}
-.pipeline-arrow {
-  position: absolute; right: -7px; top: 50%; transform: translateY(-50%);
-  z-index: 2; color: var(--accent); font-size: .7rem;
-  width: 14px; height: 14px; background: var(--surface);
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border);
-}
-.pipeline-stage:last-child .pipeline-arrow { display: none; }
+        /* ── ARCHITECTURE ── */
+        .page-arch .pi { background: #0d0f10; }
+        .arch-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: stretch; }
+        .arch-code {
+            background: #080a0b;
+            border: 1px solid rgba(244,130,31,0.18);
+            border-radius: 6px; padding: 2.5rem 2.25rem;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.84rem; color: #4a4068; line-height: 1.9; white-space: pre; overflow-x: auto;
+        }
+        .an { color: var(--purple-light); font-weight: 600; }
+        .aa { color: var(--amber); }
+        .arch-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(139,92,246,0.14); }
+        .spec { background: var(--darkest); padding: 1.6rem 1.5rem; transition: background .15s; }
+        .spec:hover { background: rgba(139,92,246,0.08); }
+        .spec-lbl { font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--orange); margin-bottom: 0.35rem; }
+        .spec-val { font-size: 2rem; font-weight: 800; color: var(--light); line-height: 1; margin-bottom: 0.25rem; }
+        .spec-sub { font-size: 0.84rem; color: var(--body); }
 
-/* ---- CAPABILITIES ---- */
-.capabilities {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
-}
-.cap-header {
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  margin-bottom: 4rem;
-}
-.cap-header h2 {
-  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.1;
-}
+        /* ── GALLERY ── */
+        .page-gallery .pi { background: var(--steel); justify-content: flex-start; }
+        .gal-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            flex: 1; min-height: 0;
+            gap: 1px; background: rgba(244,130,31,0.14);
+        }
+        .gal-item { background: var(--darker); position: relative; overflow: hidden; }
+        .gal-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .gal-ph { width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2e2850;gap:.5rem; }
+        .gal-ph span { font-size: 0.78rem; font-family: monospace; color: #3a3460; }
+        .gal-lbl { position:absolute;bottom:0;left:0;right:0;padding:.5rem .8rem;background:rgba(8,6,24,.88);font-size:0.8rem;color:var(--body);backdrop-filter:blur(4px); }
 
-.cap-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  border-top: 1px solid var(--border);
-}
-.cap-item {
-  padding: 2.5rem 0;
-  border-bottom: 1px solid var(--border);
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  align-items: start;
-}
-.cap-item:nth-child(odd) {
-  border-right: 1px solid var(--border);
-  padding-right: 3rem;
-}
-.cap-item:nth-child(even) {
-  padding-left: 3rem;
-}
-.cap-name {
-  font-size: 1.1rem; font-weight: 600; letter-spacing: -.01em;
-  display: flex; align-items: flex-start; gap: .75rem;
-}
-.cap-marker {
-  width: 8px; height: 8px; flex-shrink: 0;
-  background: var(--accent); margin-top: .45rem;
-}
-.cap-detail {
-  font-size: .9rem; color: var(--gray); line-height: 1.6;
-}
-.cap-detail ul {
-  list-style: none; margin-top: .75rem;
-}
-.cap-detail li {
-  padding: .25rem 0;
-  font-family: 'Mono', monospace; font-size: .75rem;
-  color: var(--gray);
-}
-.cap-detail li::before {
-  content: '\2192'; margin-right: .5rem; color: var(--accent);
-}
+        /* ── FOOTER ── */
+        .footer {
+            scroll-snap-align: start;
+            background: #0a0b0c;
+            border-top: 1px solid rgba(139,92,246,0.14);
+            color: var(--body); padding: 3.5rem 4rem 2.5rem 9.5rem;
+        }
+        .footer-in { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem; padding-bottom:2rem; border-bottom:1px solid rgba(255,255,255,.05); margin-bottom:1.5rem; }
+        .ft-brand h3 { color:var(--light); font-size:1rem; margin-bottom:.6rem; }
+        .ft-brand p  { font-size:0.9rem; line-height:1.7; color:var(--body); }
+        .ft-col h4   { color:var(--orange); font-size:0.68rem; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:1rem; }
+        .ft-col ul   { list-style:none; }
+        .ft-col li   { margin-bottom:.5rem; }
+        .ft-col a    { color:var(--body); text-decoration:none; font-size:0.9rem; transition:color .2s; }
+        .ft-col a:hover { color:var(--purple-light); }
+        .ft-bot { font-size:0.82rem; color:#3a3260; display:flex; justify-content:space-between; align-items:center; }
 
-/* ---- TECH ---- */
-.tech-section {
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.tech-inner {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
-}
-.tech-header {
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  margin-bottom: 3rem;
-}
-.tech-header h2 {
-  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.1;
-}
-.tech-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  border: 1px solid var(--border);
-}
-.tech-item {
-  padding: 2rem 1.5rem;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  transition: background .2s;
-}
-.tech-item:nth-child(4n) { border-right: none; }
-.tech-item:nth-child(n+5) { border-bottom: none; }
-.tech-item:hover { background: rgba(168,85,247,.05); }
-.tech-name {
-  font-size: .9rem; font-weight: 600; margin-bottom: .3rem;
-}
-.tech-desc {
-  font-size: .75rem; color: var(--gray); line-height: 1.5;
-}
-.tech-icon {
-  width: 28px; height: 28px; margin-bottom: 1rem;
-}
-
-/* ---- QUICKSTART ---- */
-.quickstart {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 4vw, 3rem);
-}
-.qs-header {
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  margin-bottom: 3rem;
-}
-.qs-header h2 {
-  font-size: clamp(2rem, 4vw, 3rem); font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.1;
-}
-.qs-blocks {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
-  background: var(--border);
-}
-.qs-block {
-  background: var(--black);
-  padding: 2rem;
-}
-.qs-block-full { grid-column: 1 / -1; }
-.qs-block-label {
-  font-family: 'Mono', monospace;
-  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 1.25rem;
-}
-.qs-code {
-  font-family: 'Mono', monospace;
-  font-size: .82rem; line-height: 2;
-  color: var(--gray);
-}
-.qs-code .w { color: var(--white); }
-.qs-code .a { color: var(--accent); }
-.qs-code .c { color: #333; }
-
-/* ---- TEAM ---- */
-.team-section {
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.team-inner {
-  max-width: 1400px; margin: 0 auto;
-  padding: clamp(4rem, 8vw, 5rem) clamp(1.5rem, 4vw, 3rem);
-  display: grid; grid-template-columns: 280px 1fr; gap: 4rem;
-  align-items: center;
-}
-.team-list {
-  display: flex; gap: 3rem; flex-wrap: wrap;
-}
-.team-member {}
-.team-member-name {
-  font-size: 1rem; font-weight: 600;
-}
-.team-member-role {
-  font-size: .75rem; color: var(--gray);
-  font-family: 'Mono', monospace;
-}
-
-/* ---- FOOTER ---- */
-.footer {
-  max-width: 1400px; margin: 0 auto;
-  padding: 3rem clamp(1.5rem, 4vw, 3rem);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.footer-brand {
-  font-size: .8rem; font-weight: 600; letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.footer-brand span { color: var(--accent); }
-.footer-links {
-  display: flex; gap: 2rem; list-style: none;
-}
-.footer-links a {
-  font-size: .75rem; color: var(--gray); text-decoration: none;
-  letter-spacing: .04em; text-transform: uppercase;
-  transition: color .15s;
-}
-.footer-links a:hover { color: var(--white); }
-.footer-copy {
-  font-size: .7rem; color: #333;
-  font-family: 'Mono', monospace;
-}
-
-/* ---- RESPONSIVE ---- */
-@media (max-width: 1024px) {
-  .about, .cap-header, .pipeline-header, .tech-header, .qs-header, .team-inner {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  .cap-grid { grid-template-columns: 1fr; }
-  .cap-item { grid-template-columns: 1fr; gap: 1rem; }
-  .cap-item:nth-child(odd) { border-right: none; padding-right: 0; }
-  .cap-item:nth-child(even) { padding-left: 0; }
-  .pipeline { grid-template-columns: 1fr; }
-  .pipeline-stage { border-right: none; border-bottom: 1px solid var(--border); }
-  .pipeline-stage:last-child { border-bottom: none; }
-  .pipeline-arrow { display: none !important; }
-  .tech-grid { grid-template-columns: repeat(2, 1fr); }
-  .tech-item:nth-child(2n) { border-right: none; }
-  .tech-item:nth-child(n+5) { border-bottom: 1px solid var(--border); }
-  .tech-item:nth-child(n+7) { border-bottom: none; }
-  .qs-blocks { grid-template-columns: 1fr; }
-  .qs-block-full { grid-column: 1; }
-}
-@media (max-width: 640px) {
-  .nav-links { display: none; }
-  .hero-title { font-size: 3.5rem; }
-  .hero-meta { flex-wrap: wrap; gap: 2rem; }
-  .hero::after { display: none; }
-  .tech-grid { grid-template-columns: 1fr; }
-  .tech-item { border-right: none !important; border-bottom: 1px solid var(--border) !important; }
-  .tech-item:last-child { border-bottom: none !important; }
-  .footer { flex-direction: column; gap: 1.5rem; text-align: center; }
-  .team-list { gap: 2rem; }
-}
-</style>
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1200px) {
+            .feat-grid { grid-template-columns: repeat(2, 1fr); }
+            .arch-layout { grid-template-columns: 1fr; gap: 2rem; }
+        }
+        @media (max-width: 1024px) {
+            html { scroll-snap-type: none; font-size: 18px; }
+            .page, .hero, .sub-slide { min-height: auto; }
+            .pi { padding: 3.5rem 2.5rem 3.5rem 2.5rem; min-height: auto; }
+            .hero-content { padding: 0 2.5rem 4rem; }
+            .hero-strip { grid-template-columns: 1fr; }
+            .hs-item:first-child { padding-left: 2rem; }
+            .slide-body { padding: 2rem 2.5rem 5rem; }
+            .slide-title { font-size: 3rem; }
+            .slide-bottom { flex-direction: column; align-items: flex-start; }
+            .slide-right { align-items: flex-start; width: 100%; }
+            .slide-person { min-width: unset; width: 100%; }
+            .team-grid { grid-template-columns: repeat(2, 1fr); }
+            .footer { padding: 3rem 2.5rem; }
+            .footer-in { grid-template-columns: 1fr 1fr; gap: 2rem; }
+        }
+        @media (max-width: 768px) {
+            html { font-size: 16px; }
+            /* Dock moves to bottom */
+            .dock-wrap { left: 50%; top: auto; bottom: 0.7rem; transform: translateX(-50%); }
+            .dock { flex-direction: row; border-radius: 1rem; padding: 0.48rem 0.55rem; gap: 0.4rem; }
+            .d-sep { width: 1px; height: 20px; margin: 0 0.05rem; }
+            .di { --sz: 52px; }
+            .di-icon { width: 1.35rem; height: 1.35rem; }
+            .di-label { display: none; }
+            .di:hover { transform: translateY(-3px) !important; }
+            /* Content — no need for extra left offset, dock is at bottom */
+            .pi { padding: 2.5rem 1.5rem 5.5rem; }
+            .hero-content { padding: 0 1.5rem 2.75rem; }
+            .slide-body { padding: 1.5rem 1.5rem 5.5rem; }
+            .slide-title { font-size: 2.5rem; }
+            .slide-specs { display: none; }
+            .hs-item { padding: 1.25rem 1.5rem; }
+            .hs-item:first-child { padding-left: 1.5rem; }
+            .footer { padding: 2.5rem 1.5rem 5.5rem; }
+            .footer-in { grid-template-columns: 1fr; }
+            .gal-grid { grid-template-columns: 1fr 1fr; }
+            .feat-grid { grid-template-columns: 1fr; }
+            .team-grid { grid-template-columns: 1fr 1fr; }
+            .arch-specs { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 480px) {
+            html { font-size: 15px; }
+            .hero-title { letter-spacing: -1px; }
+            .team-grid { grid-template-columns: 1fr; }
+            .gal-grid { grid-template-columns: 1fr; }
+            .arch-specs { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="#" class="nav-brand">Holo<span>Assist</span></a>
-    <ul class="nav-links">
-      <li><a href="#about">About</a></li>
-      <li><a href="#pipeline">Pipeline</a></li>
-      <li><a href="#capabilities">Capabilities</a></li>
-      <li><a href="#stack">Stack</a></li>
-      <li><a href="#start">Start</a></li>
-    </ul>
-    <a href="https://github.com/John-A-Chen/HoloAssist" class="nav-gh">GitHub</a>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-label">Mixed-reality robot control platform</div>
-  <h1 class="hero-title">
-    Holo<br><span class="thin">Assist</span>
-  </h1>
-  <p class="hero-desc">
-    Put on a headset. Pick up an object. The <strong>UR3e does the rest</strong>.
-    HoloAssist connects mixed reality to a real robot arm through
-    ROS&nbsp;2, real-time perception, and autonomous motion planning.
-  </p>
-  <div class="hero-meta">
-    <div>
-      <span class="hero-meta-val">6-DOF</span>
-      UR3e arm
-    </div>
-    <div>
-      <span class="hero-meta-val">4</span>
-      Camera sources
-    </div>
-    <div>
-      <span class="hero-meta-val">11</span>
-      ROS 2 packages
-    </div>
-    <div>
-      <span class="hero-meta-val">1</span>
-      Launch command
-    </div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- ABOUT -->
-<section class="about" id="about">
-  <div class="about-label">What this is</div>
-  <div class="about-body">
-    <p>
-      HoloAssist is a <strong>complete teleoperation and autonomous manipulation stack</strong>
-      for the Universal Robots UR3e, built on ROS 2 Humble. It bridges a Unity-based
-      HoloLens interface to the physical robot through a ROS-TCP endpoint, with
-      auto-discovery so the headset finds the robot without configuration.
-    </p>
-    <p>
-      The system sees objects through <strong>Intel RealSense depth cameras</strong> and
-      AprilTag fiducial markers, fuses their 6-DOF poses in real time, and feeds them
-      to MoveIt 2 for collision-aware motion planning. An operator can teleoperate
-      directly, or trigger autonomous pick-and-place with a single service call.
-    </p>
-    <p>
-      Everything launches from one script. Real robot or simulated hardware, with or
-      without cameras, with or without the dashboard&mdash;same command, different flags.
-      The launcher handles startup ordering, health checks, and coordinated shutdown.
-    </p>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- PIPELINE -->
-<section class="pipeline-section" id="pipeline">
-  <div class="pipeline-inner">
-    <div class="pipeline-header">
-      <div class="about-label">Data flow</div>
-      <h2>From headset to hardware in five stages</h2>
-    </div>
-    <div class="pipeline">
-      <div class="pipeline-stage">
-        <div class="pipeline-num">01</div>
-        <div class="pipeline-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><rect x="4" y="9" width="7" height="5" rx="1"/><rect x="13" y="9" width="7" height="5" rx="1"/></svg>
+<!-- ── HERO ── -->
+<section class="hero" id="home">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb"></div>
+    <!-- <img class="hero-img" src="screenshots/hero.jpg" alt=""> -->
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <img src="screenshots/logo.png" alt="HoloAssist" style="width:60px;height:60px;object-fit:contain;display:block;margin-bottom:1rem;filter:drop-shadow(0 0 14px rgba(244,130,31,0.55));" onerror="this.style.display='none'">
+        <p class="hero-eyebrow">Mixed-reality robot control platform</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">XR-Based<br><span>Human&ndash;Robot</span><br>Collaboration</h1>
+        <p class="hero-desc">
+            HoloAssist integrates a Meta Quest 3 headset with a UR3e collaborative robot for
+            real-time teleoperation, autonomous pick-and-place, and spatial AR visualisation
+            powered by AprilTag cube detection.
+        </p>
+        <div class="hero-cta">
+            <a href="#gallery" class="btn btn-p">View Demo Gallery</a>
+            <a href="docs/" class="btn btn-o">Read the Docs</a>
+            <a href="TESTING_GUIDE.md" class="btn btn-a">Testing Guide</a>
         </div>
-        <h4>HoloLens Input</h4>
-        <p>Unity XR app with gesture controls and holographic workspace overlays</p>
-        <div class="pipeline-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipeline-stage">
-        <div class="pipeline-num">02</div>
-        <div class="pipeline-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="13" y1="9" x2="15" y2="12"/><line x1="13" y1="15" x2="15" y2="12"/></svg>
+    </div>
+    <div class="hero-strip">
+        <a href="#perception" class="hs-item">
+            <div><h3>Perception</h3><p>AprilTag tracking at 20 Hz — single-tag detection</p></div>
+        </a>
+        <a href="#autonomous" class="hs-item">
+            <div><h3>Autonomous Pick-and-Place</h3><p>MoveIt + OnRobot RG2 on UR3e</p></div>
+        </a>
+        <a href="#visualisation" class="hs-item">
+            <div><h3>XR Visualisation</h3><p>Quest 3 AR overlay + hand-gesture teleop</p></div>
+        </a>
+    </div>
+</section>
+
+<!-- ── STATUS ── -->
+<section class="page page-status" id="status">
+    <div class="pi">
+        <div class="ph"><div class="ph-line"></div><h2>System Status</h2><p>All major subsystems operational &mdash; 26 May 2026</p></div>
+        <div class="feat-grid">
+            <div class="feat-item"><span class="feat-name">UR3e Driver &mdash; Real Robot</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">UR3e Driver &mdash; URSim Docker</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">OnRobot RG2 Gripper (real)</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">OnRobot RG2 Gripper (fake)</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Brio Camera AprilTag Detection</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Single-Tag Cube Detection</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Cube Pose Estimation (4 cubes)</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Cube Persistence in RViz</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Bin Verification (20 Hz)</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Trolley Scene in RViz</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">MoveIt Pick-and-Place Stack</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">E-Stop Dashboard</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">UDP IP Beacon Auto-Discovery</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Quest 3 &harr; ROS Bridge (:10000)</span><span class="badge b-test">Testing</span></div>
         </div>
-        <h4>ROS-TCP Bridge</h4>
-        <p>Bidirectional message transport with UDP beacon for zero-config discovery</p>
-        <div class="pipeline-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipeline-stage">
-        <div class="pipeline-num">03</div>
-        <div class="pipeline-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12c2.5-5 6.5-8 10-8s7.5 3 10 8c-2.5 5-6.5 8-10 8s-7.5-3-10-8z"/></svg>
+    </div>
+</section>
+
+<!-- ── PERCEPTION ── -->
+<section class="sub-slide s-perc" id="perception" data-gif="screenshots/perception.gif">
+    <div class="sc-bg"></div>
+    <img class="sc-gif" src="" alt="" aria-hidden="true">
+    <div class="sc-overlay"></div>
+    <div class="slide-body">
+        <div class="slide-top">
+            <span class="slide-num">01 / 04</span>
         </div>
-        <h4>Perception</h4>
-        <p>AprilTag detection, depth tracking, multi-cube pose fusion, TF publishing</p>
-        <div class="pipeline-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipeline-stage">
-        <div class="pipeline-num">04</div>
-        <div class="pipeline-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h4V10H4z"/><path d="M10 18h4V6h-4z"/><path d="M16 18h4v-5h-4z"/><path d="M4 10l6-4 6 3 4-3" stroke-dasharray="2 2"/></svg>
+        <div class="slide-mid">
+            <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+            <h2 class="slide-title">Perception</h2>
+            <p class="slide-tag">AprilTag cube tracking &middot; 20 Hz &middot; 4 cubes &middot; single-tag detection</p>
+            <p class="slide-desc">AprilTag-based pipeline detecting up to 4 physical 40 mm cubes at 20 Hz. Single-face detection supported — multi-face consensus filter averages estimates within 5 cm. Positions freeze in RViz on tag loss. Camera-agnostic: RealSense, Brio 4K, or USB webcam.</p>
         </div>
-        <h4>MoveIt 2 Planner</h4>
-        <p>Collision-aware trajectory generation and pick-and-place sequencing</p>
-        <div class="pipeline-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipeline-stage">
-        <div class="pipeline-num">05</div>
-        <div class="pipeline-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="17" width="10" height="5" rx="1"/><rect x="9" y="13" width="6" height="4"/><line x1="12" y1="5" x2="12" y2="13"/><circle cx="12" cy="4" r="2"/><line x1="8" y1="2" x2="10" y2="4"/><line x1="16" y1="2" x2="14" y2="4"/></svg>
+        <div class="slide-bottom">
+            <div class="slide-specs">
+                <div class="slide-spec"><span>20</span>Hz rate</div>
+                <div class="slide-spec"><span>4</span>cubes</div>
+                <div class="slide-spec"><span>8cm</span>bin margin</div>
+            </div>
+            <div class="slide-right">
+            <a href="docs/perception.html" class="slide-docs">Read Docs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+            <div class="slide-person">
+                <div class="sp-photo">
+                    <img src="screenshots/team/john.jpg" alt="John Chen" onerror="this.style.display='none'">
+                    <div class="sp-init">JC</div>
+                </div>
+                <div class="sp-info"><h3>John Chen</h3><p>Perception</p></div>
+                <div class="sp-links">
+                    <a href="https://www.linkedin.com/in/john-a-chen/" target="_blank" rel="noreferrer" class="sp-link sp-link-li"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+                    <a href="https://github.com/John-A-Chen" target="_blank" rel="noreferrer" class="sp-link sp-link-gh"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg> GitHub</a>
+                </div>
+            </div>
+            </div>
         </div>
-        <h4>UR3e + RG2</h4>
-        <p>6-DOF arm execution and parallel gripper actuation via ros2_control</p>
-      </div>
     </div>
-  </div>
 </section>
 
-<!-- CAPABILITIES -->
-<section class="capabilities" id="capabilities">
-  <div class="cap-header">
-    <div class="about-label">Capabilities</div>
-    <h2>What the system does</h2>
-  </div>
-  <div class="cap-grid">
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Teleoperation
-      </div>
-      <div class="cap-detail">
-        Direct joint and Cartesian control from the mixed-reality headset, with OnRobot RG2 gripper force feedback and hardware-level e-stop.
-        <ul>
-          <li>Real-time joint + Cartesian modes</li>
-          <li>Seamless real/simulated hardware switch</li>
-          <li>Force-feedback gripper control</li>
-        </ul>
-      </div>
+<!-- ── AUTONOMOUS ── -->
+<section class="sub-slide s-auto" id="autonomous" data-gif="screenshots/autonomous.gif">
+    <div class="sc-bg"></div>
+    <img class="sc-gif" src="" alt="" aria-hidden="true">
+    <div class="sc-overlay"></div>
+    <div class="slide-body">
+        <div class="slide-top">
+            <span class="slide-num">02 / 04</span>
+        </div>
+        <div class="slide-mid">
+            <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
+            <h2 class="slide-title">Autonomous</h2>
+            <p class="slide-tag">MoveIt 2 pick-and-place &middot; OnRobot RG2 &middot; collision-aware planning</p>
+            <p class="slide-desc">MoveIt 2 pick-and-place stack consuming live cube poses from perception. Generates collision-aware trajectories via OMPL, executes on the UR3e with the OnRobot RG2 gripper. Triggered by a single ROS service call with automatic pre-grasp, grasp, carry, and place sequencing.</p>
+        </div>
+        <div class="slide-bottom">
+            <div class="slide-specs">
+                <div class="slide-spec"><span>6</span>DOF plan</div>
+                <div class="slide-spec"><span>RG2</span>gripper</div>
+                <div class="slide-spec"><span>4</span>bin targets</div>
+            </div>
+            <div class="slide-right">
+            <a href="docs/autonomous.html" class="slide-docs">Read Docs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+            <div class="slide-person">
+                <div class="sp-photo">
+                    <img src="screenshots/team/oliver.jpg" alt="Oliver" onerror="this.style.display='none'">
+                    <div class="sp-init">OL</div>
+                </div>
+                <div class="sp-info"><h3>Oliver</h3><p>Autonomous</p></div>
+                <div class="sp-links">
+                    <a href="https://www.linkedin.com/in/lau-oliver/" target="_blank" rel="noreferrer" class="sp-link sp-link-li"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+                    <a href="https://github.com/ollie-lau" target="_blank" rel="noreferrer" class="sp-link sp-link-gh"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg> GitHub</a>
+                </div>
+            </div>
+            </div>
+        </div>
     </div>
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Mixed Reality
-      </div>
-      <div class="cap-detail">
-        Unity-based HoloLens interface with holographic workspace overlays, radial menus, and a trolley scene with live 3D models.
-        <ul>
-          <li>ROS-TCP bridge with low latency</li>
-          <li>UDP beacon for zero-config discovery</li>
-          <li>Holographic workspace overlays</li>
-        </ul>
-      </div>
-    </div>
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Perception
-      </div>
-      <div class="cap-detail">
-        Multi-sensor pipeline with automatic camera fallback: RealSense, Brio, generic USB, or simulated. AprilTag detection with 6-DOF cube pose fusion.
-        <ul>
-          <li>4-source camera cascade</li>
-          <li>AprilTag fiducial tracking</li>
-          <li>Debug overlay diagnostics stream</li>
-        </ul>
-      </div>
-    </div>
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Motion Planning
-      </div>
-      <div class="cap-detail">
-        MoveIt 2 consumes live cube poses and generates collision-aware trajectories. Pick-and-place triggered via a single ROS service call.
-        <ul>
-          <li>Collision-aware planning</li>
-          <li>Live pose-to-target adapter</li>
-          <li>Service-based pick/place API</li>
-        </ul>
-      </div>
-    </div>
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Dashboard
-      </div>
-      <div class="cap-detail">
-        PyQt operator panel showing live joint rates, gripper state, perception health, camera feeds, and e-stop controls.
-        <ul>
-          <li>Real-time system monitoring</li>
-          <li>Camera feed display</li>
-          <li>Emergency stop with resume</li>
-        </ul>
-      </div>
-    </div>
-    <div class="cap-item">
-      <div class="cap-name">
-        <div class="cap-marker"></div>
-        Calibration
-      </div>
-      <div class="cap-detail">
-        Eye-to-hand calibration via easy_handeye2 computes the camera-to-base transform. Run once, persist, auto-publish on startup.
-        <ul>
-          <li>AprilTag-based estimation</li>
-          <li>Persistent calibration files</li>
-          <li>Auto static TF publishing</li>
-        </ul>
-      </div>
-    </div>
-  </div>
 </section>
 
-<!-- TECH STACK -->
-<section class="tech-section" id="stack">
-  <div class="tech-inner">
-    <div class="tech-header">
-      <div class="about-label">Stack</div>
-      <h2>What it runs on</h2>
+<!-- ── TELEOPERATION ── -->
+<section class="sub-slide s-tele" id="teleoperation" data-gif="screenshots/teleoperation.gif">
+    <div class="sc-bg"></div>
+    <img class="sc-gif" src="" alt="" aria-hidden="true">
+    <div class="sc-overlay"></div>
+    <div class="slide-body">
+        <div class="slide-top">
+            <span class="slide-num">03 / 04</span>
+        </div>
+        <div class="slide-mid">
+            <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg></div>
+            <h2 class="slide-title">Teleop&shy;eration</h2>
+            <p class="slide-tag">Quest 3 hand-gesture control &middot; ROS-TCP bridge &middot; UDP auto-discovery</p>
+            <p class="slide-desc">Hand-gesture control of the UR3e via Meta Quest 3 hand tracking. Unity C# classifies pinch and grip gestures, publishes commands over ROS-TCP-Endpoint on port 10000. UDP beacon handles IP auto-discovery so the headset connects without manual configuration.</p>
+        </div>
+        <div class="slide-bottom">
+            <div class="slide-specs">
+                <div class="slide-spec"><span>Quest</span>3 input</div>
+                <div class="slide-spec"><span>:10k</span>TCP port</div>
+                <div class="slide-spec"><span>UDP</span>discovery</div>
+            </div>
+            <div class="slide-right">
+            <a href="docs/teleoperation.html" class="slide-docs">Read Docs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+            <div class="slide-person">
+                <div class="sp-photo">
+                    <img src="screenshots/team/nic.jpg" alt="Nic" onerror="this.style.display='none'">
+                    <div class="sp-init">NC</div>
+                </div>
+                <div class="sp-info"><h3>Nic</h3><p>Teleoperation</p></div>
+                <div class="sp-links">
+                    <a href="https://www.linkedin.com/in/nicholas-sabatta/" target="_blank" rel="noreferrer" class="sp-link sp-link-li"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+                    <a href="https://github.com/Mafia-Pineapple" target="_blank" rel="noreferrer" class="sp-link sp-link-gh"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg> GitHub</a>
+                </div>
+            </div>
+            </div>
+        </div>
     </div>
-    <div class="tech-grid">
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/></svg>
-        <div class="tech-name">ROS 2 Humble</div>
-        <div class="tech-desc">Robot middleware, DDS transport, lifecycle management</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>
-        <div class="tech-name">Unity 3D</div>
-        <div class="tech-desc">HoloLens mixed-reality application runtime</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l4-4 3 3 4-4 3 3"/><path d="M3 17l4-4 4 4 4-4 4 4"/></svg>
-        <div class="tech-name">MoveIt 2</div>
-        <div class="tech-desc">Motion planning, manipulation, collision checking</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5"/></svg>
-        <div class="tech-name">Intel RealSense</div>
-        <div class="tech-desc">Depth camera, point cloud, RGB-D perception</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="2"/></svg>
-        <div class="tech-name">AprilTag</div>
-        <div class="tech-desc">Fiducial marker detection and 6-DOF pose estimation</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="17" width="10" height="5" rx="1"/><rect x="9" y="13" width="6" height="4"/><line x1="12" y1="5" x2="12" y2="13"/><circle cx="12" cy="4" r="2"/></svg>
-        <div class="tech-name">Universal Robots</div>
-        <div class="tech-desc">UR3e 6-DOF industrial manipulator, ros2_control driver</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="8" rx="1"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="7" y1="14" x2="17" y2="14"/><line x1="7" y1="14" x2="7" y2="22"/><line x1="17" y1="14" x2="17" y2="22"/></svg>
-        <div class="tech-name">OnRobot RG2</div>
-        <div class="tech-desc">Collaborative parallel gripper, position + force control</div>
-      </div>
-      <div class="tech-item">
-        <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <div class="tech-name">Ubuntu 22.04</div>
-        <div class="tech-desc">Target deployment platform for ROS 2 Humble</div>
-      </div>
-    </div>
-  </div>
 </section>
 
-<!-- QUICKSTART -->
-<section class="quickstart" id="start">
-  <div class="qs-header">
-    <div class="about-label">Quick start</div>
-    <h2>Three commands to a working stack</h2>
-  </div>
-  <div class="qs-blocks">
-    <div class="qs-block qs-block-full">
-      <div class="qs-block-label">Build</div>
-      <div class="qs-code">
-        <span class="c"># clone + build</span><br>
-        <span class="w">git clone</span> <span class="a">https://github.com/John-A-Chen/HoloAssist.git</span><br>
-        <span class="w">cd</span> HoloAssist/main/ros2_ws<br>
-        <span class="w">source</span> /opt/ros/humble/setup.bash<br>
-        <span class="w">colcon build</span> <span class="a">--symlink-install</span><br>
-        <span class="w">source</span> install/setup.bash
-      </div>
+<!-- ── VISUALISATION ── -->
+<section class="sub-slide s-visu" id="visualisation" data-gif="screenshots/visualisation.gif">
+    <div class="sc-bg"></div>
+    <img class="sc-gif" src="" alt="" aria-hidden="true">
+    <div class="sc-overlay"></div>
+    <div class="slide-body">
+        <div class="slide-top">
+            <span class="slide-num">04 / 04</span>
+        </div>
+        <div class="slide-mid">
+            <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/></svg></div>
+            <h2 class="slide-title">Visua&shy;lisation</h2>
+            <p class="slide-tag">Quest 3 AR overlay &middot; Unity + AR Foundation &middot; live ROS TF</p>
+            <p class="slide-desc">Holographic twin of the robot workspace rendered in Quest 3 AR passthrough. The UR3e arm, trolley, and detected cubes are displayed as 3D overlays anchored to the physical scene. Joint states and cube poses flow live from ROS via ROS-TCP-Endpoint.</p>
+        </div>
+        <div class="slide-bottom">
+            <div class="slide-specs">
+                <div class="slide-spec"><span>AR</span>passthrough</div>
+                <div class="slide-spec"><span>Live</span>ROS TF</div>
+                <div class="slide-spec"><span>Unity</span>runtime</div>
+            </div>
+            <div class="slide-right">
+            <a href="docs/visualisation.html" class="slide-docs">Read Docs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+            <div class="slide-person">
+                <div class="sp-photo">
+                    <img src="screenshots/team/sebastian.jpg" alt="Sebastian" onerror="this.style.display='none'">
+                    <div class="sp-init">SB</div>
+                </div>
+                <div class="sp-info"><h3>Sebastian</h3><p>Visualisation</p></div>
+                <div class="sp-links">
+                    <a href="https://www.linkedin.com/in/sebastian-baudille-56ab542a0/" target="_blank" rel="noreferrer" class="sp-link sp-link-li"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</a>
+                    <a href="https://github.com/Sebastian-Baudille" target="_blank" rel="noreferrer" class="sp-link sp-link-gh"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg> GitHub</a>
+                </div>
+            </div>
+            </div>
+        </div>
     </div>
-    <div class="qs-block">
-      <div class="qs-block-label">Simulated</div>
-      <div class="qs-code">
-        <span class="c"># no hardware required</span><br>
-        <span class="w">./launch.sh</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--perception</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--moveit</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--dashboard</span>
-      </div>
-    </div>
-    <div class="qs-block">
-      <div class="qs-block-label">Real Hardware</div>
-      <div class="qs-code">
-        <span class="c"># connect to UR3e</span><br>
-        <span class="w">./launch.sh</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--robot-ip</span> <span class="w">192.168.0.194</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--perception</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--moveit</span> <span class="a">\</span><br>
-        &nbsp;&nbsp;<span class="a">--dashboard</span>
-      </div>
-    </div>
-  </div>
 </section>
 
-<!-- TEAM -->
-<section class="team-section">
-  <div class="team-inner">
-    <div class="about-label">Team</div>
-    <div class="team-list">
-      <div class="team-member">
-        <div class="team-member-name">John Chen</div>
-        <div class="team-member-role">Project Lead</div>
-      </div>
-      <div class="team-member">
-        <div class="team-member-name">Nic</div>
-        <div class="team-member-role">Contributor</div>
-      </div>
-      <div class="team-member">
-        <div class="team-member-name">Oliver Lau</div>
-        <div class="team-member-role">Contributor</div>
-      </div>
-      <div class="team-member">
-        <div class="team-member-name">Sebastian</div>
-        <div class="team-member-role">Contributor</div>
-      </div>
+<!-- ── ARCHITECTURE ── -->
+<section class="page page-arch" id="architecture">
+    <div class="pi">
+        <div class="ph"><div class="ph-line"></div><h2>System Architecture</h2><p>Data flows from Brio camera through ROS 2 Humble to the UR3e and Quest 3.</p></div>
+        <div class="arch-layout">
+            <div class="arch-code"><span class="an">Brio / RealSense</span>  <span class="aa">30 fps</span>
+  │  /camera/color/image_raw
+  ▼
+<span class="an">AprilTag Detector</span>  <span class="aa">[36h11 family]</span>
+  │  /detections_all
+  ▼
+<span class="an">Cube Pose Node</span>  <span class="aa">[20 Hz timer — TF safe]</span>
+  │  /holoassist/perception/april_cube_N_pose
+  │  /holoassist/perception/april_cube_N_bin_check
+  │  4 cubes · single-tag · freeze on loss
+  ▼
+<span class="an">MoveIt Pick-and-Place</span>  <span class="aa">[scaled_joint_trajectory]</span>
+  ▼
+<span class="an">UR3e + OnRobot RG2</span>
+  │  /joint_states  ·  TF tree
+  ▼
+<span class="an">RViz</span>  +  <span class="an">ROS-TCP :10000</span>
+              │
+       <span class="an">Quest 3  (Unity)</span>
+        <span class="aa">AR overlay + teleop controls</span></div>
+            <div class="arch-specs">
+                <div class="spec"><div class="spec-lbl">Detection Rate</div><div class="spec-val">20</div><div class="spec-sub">Hz — timer-based (TF safe)</div></div>
+                <div class="spec"><div class="spec-lbl">AprilTag Cubes</div><div class="spec-val">4</div><div class="spec-sub">physical 40 mm cubes (36h11)</div></div>
+                <div class="spec"><div class="spec-lbl">Robot Platform</div><div class="spec-val" style="font-size:1.4rem">UR3e</div><div class="spec-sub">Universal Robots + RG2 gripper</div></div>
+                <div class="spec"><div class="spec-lbl">XR Headset</div><div class="spec-val" style="font-size:1.4rem">Quest&nbsp;3</div><div class="spec-sub">ROS-TCP endpoint :10000</div></div>
+                <div class="spec"><div class="spec-lbl">Bin XY Margin</div><div class="spec-val">8</div><div class="spec-sub">cm — tunable in cubes.yaml</div></div>
+                <div class="spec"><div class="spec-lbl">Middleware</div><div class="spec-val" style="font-size:1.15rem">ROS 2</div><div class="spec-sub">Humble · Ubuntu 22.04</div></div>
+            </div>
+        </div>
     </div>
-  </div>
 </section>
 
-<!-- FOOTER -->
+<!-- ── GALLERY ── -->
+<section class="page page-gallery" id="gallery">
+    <div class="pi">
+        <div class="ph"><div class="ph-line"></div><h2>Gallery</h2><p>Drop images / GIFs into <code style="background:rgba(139,92,246,.18);color:var(--purple-light);padding:2px 7px;border-radius:4px">screenshots/</code> and uncomment the img tags.</p></div>
+        <div class="gal-grid">
+            <div class="gal-item"><!-- <img src="screenshots/rviz_cubes.png" alt="RViz"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>rviz_cubes.png</span></div><div class="gal-lbl">RViz — 4 cubes detected</div></div>
+            <div class="gal-item"><!-- <img src="screenshots/quest_ar_overlay.png" alt="Quest AR"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>quest_ar_overlay.png</span></div><div class="gal-lbl">Quest 3 AR overlay</div></div>
+            <div class="gal-item"><!-- <img src="screenshots/robot_pick_place.png" alt="Pick place"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>robot_pick_place.png</span></div><div class="gal-lbl">UR3e pick-and-place</div></div>
+            <div class="gal-item"><!-- <img src="screenshots/dashboard.png" alt="Dashboard"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>dashboard.png</span></div><div class="gal-lbl">E-stop dashboard</div></div>
+            <div class="gal-item"><!-- <img src="screenshots/calibration.png" alt="Calibration"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>calibration.png</span></div><div class="gal-lbl">Hand-eye calibration</div></div>
+            <div class="gal-item"><!-- <img src="screenshots/april_tag_detection.gif" alt="AprilTag GIF"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>april_tag_detection.gif</span></div><div class="gal-lbl">AprilTag single-tag detection</div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ── FOOTER ── -->
 <footer class="footer">
-  <div class="footer-brand">Holo<span>Assist</span></div>
-  <ul class="footer-links">
-    <li><a href="https://github.com/John-A-Chen/HoloAssist">Source</a></li>
-    <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/LICENSE">License</a></li>
-    <li><a href="https://github.com/John-A-Chen/HoloAssist/blob/main/README.md">Docs</a></li>
-  </ul>
-  <span class="footer-copy">MIT 2026</span>
+    <div class="footer-in">
+        <div class="ft-brand">
+            <h3>HoloAssist</h3>
+            <p>Mixed-reality robot control platform integrating a Meta Quest 3 with a UR3e for spatial AR, teleoperation, and autonomous pick-and-place via AprilTag perception.</p>
+            <p style="margin-top:.65rem;color:#2e2850">University of Technology Sydney &mdash; Robotics Studio 2, 2026</p>
+        </div>
+        <div class="ft-col"><h4>Docs</h4><ul>
+            <li><a href="docs/">Overview</a></li>
+            <li><a href="docs/running.html">Running the System</a></li>
+            <li><a href="docs/perception.html">Perception</a></li>
+            <li><a href="docs/robot.html">Robot Control</a></li>
+            <li><a href="docs/visualisation.html">Visualisation</a></li>
+            <li><a href="docs/calibration.html">Calibration</a></li>
+        </ul></div>
+        <div class="ft-col"><h4>Repository</h4><ul>
+            <li><a href="https://github.com/John-A-Chen/HoloAssist" target="_blank">GitHub</a></li>
+            <li><a href="https://github.com/John-A-Chen/HoloAssist/issues" target="_blank">Issues</a></li>
+            <li><a href="TESTING_GUIDE.md">Testing Guide</a></li>
+        </ul></div>
+        <div class="ft-col"><h4>Quick Start</h4><ul>
+            <li><a href="docs/running.html#option-a-real-robot">Real Robot</a></li>
+            <li><a href="docs/running.html#option-b-ursim-docker-simulator">URSim</a></li>
+            <li><a href="docs/running.html#option-c-fully-fake-hardware">Fully Fake</a></li>
+        </ul></div>
+    </div>
+    <div class="ft-bot">
+        <span>&copy; 2026 HoloAssist Team &mdash; University of Technology Sydney</span>
+        <a href="https://github.com/John-A-Chen/HoloAssist" target="_blank" style="color:var(--amber);text-decoration:none">GitHub →</a>
+    </div>
 </footer>
 
+<script>
+// ── DOCK ──
+(function () {
+    const ITEMS = [
+        { label:'Home',          href:'#home',          id:'home',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+        { label:'Status',        href:'#status',        id:'status',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+        { label:'Perception',    href:'#perception',    id:'perception',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' },
+        { label:'Autonomous',    href:'#autonomous',    id:'autonomous',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>' },
+        { label:'Teleoperation', href:'#teleoperation', id:'teleoperation',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg>' },
+        { label:'Visualisation', href:'#visualisation', id:'visualisation',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/></svg>' },
+        { label:'Architecture',  href:'#architecture',  id:'architecture',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+        { label:'Gallery',       href:'#gallery',       id:'gallery',
+          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' },
+    ];
+    const GH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>';
+
+    const wrap = document.createElement('aside');
+    wrap.className = 'dock-wrap';
+    const nav = document.createElement('nav');
+    nav.className = 'dock';
+    nav.setAttribute('aria-label', 'Page navigation');
+
+    const links = ITEMS.map(item => {
+        const a = document.createElement('a');
+        a.className = 'di'; a.href = item.href; a.dataset.id = item.id;
+        a.setAttribute('aria-label', item.label);
+        a.innerHTML = `<span class="di-icon">${item.svg}</span><span class="di-label">${item.label}</span>`;
+        nav.appendChild(a);
+        return a;
+    });
+
+    nav.appendChild(Object.assign(document.createElement('div'), { className: 'd-sep' }));
+
+    const ghLink = document.createElement('a');
+    ghLink.className = 'di gh'; ghLink.href = 'https://github.com/John-A-Chen/HoloAssist';
+    ghLink.target = '_blank'; ghLink.rel = 'noreferrer';
+    ghLink.setAttribute('aria-label', 'GitHub');
+    ghLink.innerHTML = `<span class="di-icon">${GH}</span><span class="di-label">GitHub</span>`;
+    nav.appendChild(ghLink);
+
+    wrap.appendChild(nav);
+    document.body.appendChild(wrap);
+
+    // Active section highlight — same logic as doc pages
+    const io = new IntersectionObserver(es => {
+        es.forEach(e => { if (e.isIntersecting) links.forEach(l => l.classList.toggle('active', l.dataset.id === e.target.id)); });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('section[id]').forEach(s => io.observe(s));
+
+    // Magnification
+    const BASE = 80, MAG = 112, DIST = 180;
+    function setW(el, n) { el.style.setProperty('--sz', n + 'px'); }
+    function reset() { [...nav.querySelectorAll('.di')].forEach(l => setW(l, BASE)); }
+    nav.addEventListener('pointermove', e => {
+        if (window.innerWidth <= 768) return;
+        [...nav.querySelectorAll('.di')].forEach(l => {
+            const r = l.getBoundingClientRect(), c = r.top + r.height / 2;
+            const inf = Math.max(0, 1 - Math.abs(e.clientY - c) / DIST);
+            setW(l, BASE + (MAG - BASE) * inf * inf * (3 - 2 * inf));
+        });
+    });
+    nav.addEventListener('pointerleave', reset);
+    window.addEventListener('resize', reset);
+    reset();
+})();
+
+// ── CLICK SPARK ──
+(function () {
+    const cv = document.createElement('canvas');
+    cv.className = 'spark-canvas'; cv.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    const sparks = [];
+    const ease = t => t * (2 - t);
+
+    function resize() {
+        const r = devicePixelRatio || 1;
+        cv.width  = Math.floor(innerWidth  * r); cv.height = Math.floor(innerHeight * r);
+        cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+        ctx.setTransform(r, 0, 0, r, 0, 0);
+    }
+
+    (function frame(now) {
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        for (let i = sparks.length - 1; i >= 0; i--) {
+            const s = sparks[i], el = now - s.t;
+            if (el >= 380) { sparks.splice(i, 1); continue; }
+            const p = ease(el / 380), d = p * 15, ln = 9 * (1 - p);
+            ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(s.x + d * Math.cos(s.a), s.y + d * Math.sin(s.a));
+            ctx.lineTo(s.x + (d + ln) * Math.cos(s.a), s.y + (d + ln) * Math.sin(s.a));
+            ctx.stroke();
+        }
+        requestAnimationFrame(frame);
+    })(0);
+
+    resize(); addEventListener('resize', resize);
+    document.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        const now = performance.now();
+        for (let i = 0; i < 8; i++) sparks.push({ x: e.clientX, y: e.clientY, a: Math.PI * 2 * i / 8, t: now });
+    }, { passive: true });
+})();
+
+// ── GIF HOVER ──
+document.querySelectorAll('.sub-slide[data-gif]').forEach(slide => {
+    const gif = slide.querySelector('.sc-gif');
+    if (!gif) return;
+    slide.addEventListener('mouseenter', () => { gif.src = ''; gif.src = slide.dataset.gif; });
+    slide.addEventListener('mouseleave', () => { gif.addEventListener('transitionend', () => { gif.src = ''; }, { once: true }); });
+});
+
+// ── CURSOR PLUS ──
+(function () {
+    if (!matchMedia('(pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const c = document.createElement('div');
+    c.className = 'cursor-plus'; c.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(c); document.body.classList.add('has-cursor');
+    const SEL = 'a,button,input,textarea,select,[role="button"],.di';
+    let px = -100, py = -100, raf = 0;
+    addEventListener('pointermove', e => {
+        px = e.clientX; py = e.clientY;
+        c.classList.add('on');
+        c.classList.toggle('act', !!e.target.closest?.(SEL));
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; c.style.transform = `translate3d(${px}px,${py}px,0) translate(-50%,-50%) rotate(var(--r))`; });
+    }, { passive: true });
+    addEventListener('pointerdown', () => c.classList.add('dn'));
+    addEventListener('pointerup',   () => c.classList.remove('dn'));
+    document.addEventListener('pointerleave', () => c.classList.remove('on'));
+})();
+</script>
 </body>
 </html>
