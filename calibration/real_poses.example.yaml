@@ -1,0 +1,19 @@
+# Copy this to a hardware-specific poses file only after reviewing each pose
+# in MoveIt/RViz and at low speed with the real workcell clear.
+#
+# Values below are intentionally examples, not an approved motion sequence.
+# They must be replaced or verified against the actual trolley, bin, camera,
+# tool-mounted tag, cables, and robot installation before running calibration.
+# Automated calibration requires at least eight varied, reviewed poses. This
+# intentionally incomplete template cannot command motion until it is filled in.
+joint_names:
+  - shoulder_pan_joint
+  - shoulder_lift_joint
+  - elbow_joint
+  - wrist_1_joint
+  - wrist_2_joint
+  - wrist_3_joint
+poses_deg:
+  - [0, -90, -95, -85, 90, 0]
+  - [-20, -82, -100, -84, 75, -20]
+  - [20, -82, -100, -84, 105, 20]

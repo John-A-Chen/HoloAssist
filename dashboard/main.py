@@ -1461,6 +1461,145 @@ class CubePickScreen(QWidget):
         self._set_buttons_enabled(self._cube_buttons_enabled)
 
 
+# ── Screen: Hand-Eye Calibration ───────────────────────────────────
+
+class CalibrationScreen(QWidget):
+    """Controls automatic physical hand-eye sampling through MoveIt."""
+
+    def __init__(self, ros: RosInterface, parent=None):
+        super().__init__(parent)
+        self.ros = ros
+        self._last_detail = ""
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 8, 10, 10)
+        layout.setSpacing(10)
+
+        header = QHBoxLayout()
+        title = QLabel("HAND-EYE CALIBRATION")
+        title.setFont(QFont("monospace", 11, QFont.Bold))
+        title.setStyleSheet(f"color: {BLUE};")
+        header.addWidget(title)
+        header.addStretch()
+        self.ready_label = QLabel("SERVER: WAITING")
+        self.ready_label.setFont(QFont("monospace", 10, QFont.Bold))
+        header.addWidget(self.ready_label)
+        layout.addLayout(header)
+
+        self.tag_label = QLabel("Physical marker: tag36h11:1")
+        self.tag_label.setFont(QFont("monospace", 9))
+        self.tag_label.setStyleSheet(f"color: {TEXT_DIM};")
+        layout.addWidget(self.tag_label)
+
+        self.state_label = QLabel("Waiting for calibration coordinator...")
+        self.state_label.setFont(QFont("monospace", 11, QFont.Bold))
+        self.state_label.setWordWrap(True)
+        layout.addWidget(self.state_label)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 1)
+        self.progress.setFormat("POSE %v / %m")
+        layout.addWidget(self.progress)
+
+        self.sample_label = QLabel("Samples: 0")
+        self.sample_label.setFont(QFont("monospace", 10, QFont.Bold))
+        layout.addWidget(self.sample_label)
+
+        buttons = QHBoxLayout()
+        self.start_btn = self._button("START AUTO", "start")
+        self.stop_btn = self._button("STOP", "stop")
+        self.sample_btn = self._button("TAKE SAMPLE", "sample")
+        self.compute_btn = self._button("COMPUTE", "compute")
+        self.save_btn = self._button("SAVE", "save")
+        for button in (
+            self.start_btn,
+            self.stop_btn,
+            self.sample_btn,
+            self.compute_btn,
+            self.save_btn,
+        ):
+            buttons.addWidget(button, 1)
+        layout.addLayout(buttons)
+
+        warning = QLabel(
+            "START AUTO commands physical MoveIt motion. Check tool tag visibility, "
+            "pose clearance and workcell safety before starting."
+        )
+        warning.setFont(QFont("monospace", 8, QFont.Bold))
+        warning.setStyleSheet(f"color: {ORANGE};")
+        warning.setWordWrap(True)
+        layout.addWidget(warning)
+
+        self.details = QTextEdit()
+        self.details.setReadOnly(True)
+        self.details.setFont(QFont("monospace", 9))
+        layout.addWidget(self.details, 1)
+        self.apply_scale(1.0)
+
+    def _button(self, text, action):
+        button = QPushButton(text)
+        button.setFont(QFont("monospace", 10, QFont.Bold))
+        button.setCursor(Qt.PointingHandCursor)
+        button.clicked.connect(
+            lambda checked=False, command=action: self.ros.calibration_command(command)
+        )
+        return button
+
+    def update_status(self, status):
+        ready = status.calibration_ready
+        running = status.calibration_running
+        state = status.calibration_state.upper() if status.calibration_state else "WAITING"
+        color = BLUE if running else YELLOW
+        if state in {"SAVED", "COMPUTED"}:
+            color = GREEN
+        elif state == "ERROR":
+            color = RED
+        self.ready_label.setText("SERVER: READY" if ready else "SERVER: WAITING")
+        self.ready_label.setStyleSheet(f"color: {GREEN if ready else YELLOW};")
+        self.state_label.setText(f"{state}: {status.calibration_message or 'Waiting for status'}")
+        self.state_label.setStyleSheet(f"color: {color};")
+        self.tag_label.setText(f"Physical marker: {status.calibration_marker_frame}")
+        self.progress.setMaximum(max(status.calibration_pose_total, 1))
+        self.progress.setValue(status.calibration_pose_index)
+        self.sample_label.setText(
+            f"Samples: {status.calibration_sample_count}  |  "
+            f"Result: {'computed' if status.calibration_computed else 'not computed'}"
+        )
+        self.start_btn.setEnabled(ready and not running)
+        self.stop_btn.setEnabled(running)
+        self.sample_btn.setEnabled(ready and not running)
+        self.compute_btn.setEnabled(ready and not running and status.calibration_sample_count >= 8)
+        self.save_btn.setEnabled(ready and not running and status.calibration_computed)
+
+        detail = [
+            f"State: {state}",
+            f"Marker frame: {status.calibration_marker_frame}",
+            f"Samples: {status.calibration_sample_count}",
+            "Minimum compute samples: 8 varied poses",
+        ]
+        if status.calibration_latest_path:
+            detail.append(f"Newest default: {status.calibration_latest_path}")
+        if status.calibration_archive_path:
+            detail.append(f"History copy: {status.calibration_archive_path}")
+        if status.calibration_error:
+            detail.append(f"Error: {status.calibration_error}")
+        text = "\n".join(detail)
+        if text != self._last_detail:
+            self._last_detail = text
+            self.details.setPlainText(text)
+
+    def apply_scale(self, scale: float):
+        self.progress.setFixedHeight(_scaled_px(32, scale, 26))
+        for button in (
+            self.start_btn,
+            self.stop_btn,
+            self.sample_btn,
+            self.compute_btn,
+            self.save_btn,
+        ):
+            button.setFixedHeight(_scaled_px(54, scale, 42))
+
+
 # ── Main Window ─────────────────────────────────────────────────────
 
 class MainWindow(QMainWindow):
@@ -1512,8 +1651,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.debug_screen, "DEBUG")
 
         self.cube_screen = CubePickScreen(ros)
-        self._cube_tab_index = None
-        self._cube_tab_insert_index = self.tabs.count()
+        self.calibration_screen = CalibrationScreen(ros)
 
         left_col.addWidget(self.tabs, 1)
 
@@ -1540,6 +1678,7 @@ class MainWindow(QMainWindow):
         self._active_mode = "TELEOP"
         self._update_mode_buttons()
         self._set_cube_tab_visible(False)
+        self._set_calibration_tab_visible(False)
 
         left_col.addLayout(mode_row)
         body.addLayout(left_col, 1)
@@ -1603,6 +1742,7 @@ class MainWindow(QMainWindow):
         self.estop.apply_scale(scale, self.width())
         self.debug_screen.apply_scale(scale)
         self.cube_screen.apply_scale(scale)
+        self.calibration_screen.apply_scale(scale)
         self.mode_row.setContentsMargins(
             _scaled_px(4, scale, 2),
             _scaled_px(4, scale, 2),
@@ -1626,33 +1766,49 @@ class MainWindow(QMainWindow):
         self.camera_screen.update_status(status)
         self.debug_screen.update_status(status)
         self.cube_screen.update_status(status)
+        self.calibration_screen.update_status(status)
         self.estop.sync_state(status)
         if status.operating_mode != self._active_mode:
             self._active_mode = status.operating_mode
             self._update_mode_buttons()
         self._set_cube_tab_visible(status.operating_mode == "MOVEIT")
+        self._set_calibration_tab_visible(
+            status.operating_mode == "MOVEIT" or status.calibration_ready
+        )
 
     def _on_teleop(self):
         self._active_mode = "TELEOP"
         self._update_mode_buttons()
         self._set_cube_tab_visible(False)
+        self._set_calibration_tab_visible(False)
         self.ros.switch_to_teleop()
 
     def _on_moveit(self):
         self._active_mode = "MOVEIT"
         self._update_mode_buttons()
         self._set_cube_tab_visible(True)
+        self._set_calibration_tab_visible(True)
         self.ros.switch_to_moveit()
 
     def _set_cube_tab_visible(self, visible: bool):
-        if visible and self._cube_tab_index is None:
-            insert_at = min(self._cube_tab_insert_index, self.tabs.count())
-            self._cube_tab_index = self.tabs.insertTab(insert_at, self.cube_screen, "CUBE")
-        elif not visible and self._cube_tab_index is not None:
+        index = self.tabs.indexOf(self.cube_screen)
+        if visible and index < 0:
+            calibration_index = self.tabs.indexOf(self.calibration_screen)
+            insert_at = calibration_index if calibration_index >= 0 else self.tabs.count()
+            self.tabs.insertTab(insert_at, self.cube_screen, "CUBE")
+        elif not visible and index >= 0:
             if self.tabs.currentWidget() is self.cube_screen:
                 self.tabs.setCurrentIndex(0)
-            self.tabs.removeTab(self._cube_tab_index)
-            self._cube_tab_index = None
+            self.tabs.removeTab(index)
+
+    def _set_calibration_tab_visible(self, visible: bool):
+        index = self.tabs.indexOf(self.calibration_screen)
+        if visible and index < 0:
+            self.tabs.addTab(self.calibration_screen, "CALIBRATION")
+        elif not visible and index >= 0:
+            if self.tabs.currentWidget() is self.calibration_screen:
+                self.tabs.setCurrentIndex(0)
+            self.tabs.removeTab(index)
 
     def _update_mode_buttons(self):
         border = _scaled_px(3, self._ui_scale, 2)

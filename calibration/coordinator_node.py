@@ -16,7 +16,7 @@ from std_msgs.msg import String
 import yaml
 
 import easy_handeye2 as hec
-import easy_handeye2_msgs as ehm
+from easy_handeye2_msgs import srv as eh_srv
 
 
 COMMAND_TOPIC = "/holoassist/calibration/command"
@@ -29,8 +29,7 @@ JOINT_TARGET_TOPIC = "/moveit_robot_control/target_joint_state"
 class CalibrationCoordinator(Node):
     def __init__(self):
         super().__init__("holoassist_calibration_coordinator")
-        default_poses = str(pathlib.Path(__file__).with_name("sim_poses.yaml"))
-        self.declare_parameter("poses_file", default_poses)
+        self.declare_parameter("poses_file", "")
         self.declare_parameter("algorithm", "OpenCV/Tsai-Lenz")
         self.declare_parameter("settle_seconds", 0.8)
         self.declare_parameter("move_timeout_seconds", 60.0)
@@ -39,7 +38,10 @@ class CalibrationCoordinator(Node):
         self.declare_parameter("calibration_name", "holoassist_calibration")
         self.declare_parameter("marker_frame", "tag36h11:1")
 
-        self.poses_file = pathlib.Path(self.get_parameter("poses_file").value)
+        poses_value = str(self.get_parameter("poses_file").value).strip()
+        if not poses_value:
+            raise ValueError("poses_file parameter is required; no automatic pose default is permitted")
+        self.poses_file = pathlib.Path(poses_value)
         self.algorithm = str(self.get_parameter("algorithm").value)
         self.settle_seconds = float(self.get_parameter("settle_seconds").value)
         self.move_timeout = float(self.get_parameter("move_timeout_seconds").value)
@@ -54,18 +56,18 @@ class CalibrationCoordinator(Node):
         self.create_subscription(String, COMMAND_TOPIC, self._command_cb, 10)
         self.create_subscription(String, MOVE_STATE_TOPIC, self._move_state_cb, 10)
 
-        self.sample_client = self.create_client(ehm.srv.TakeSample, hec.TAKE_SAMPLE_TOPIC)
+        self.sample_client = self.create_client(eh_srv.TakeSample, hec.TAKE_SAMPLE_TOPIC)
         self.sample_list_client = self.create_client(
-            ehm.srv.TakeSample, hec.GET_SAMPLE_LIST_TOPIC
+            eh_srv.TakeSample, hec.GET_SAMPLE_LIST_TOPIC
         )
         self.compute_client = self.create_client(
-            ehm.srv.ComputeCalibration, hec.COMPUTE_CALIBRATION_TOPIC
+            eh_srv.ComputeCalibration, hec.COMPUTE_CALIBRATION_TOPIC
         )
         self.save_client = self.create_client(
-            ehm.srv.SaveCalibration, hec.SAVE_CALIBRATION_TOPIC
+            eh_srv.SaveCalibration, hec.SAVE_CALIBRATION_TOPIC
         )
         self.algorithm_client = self.create_client(
-            ehm.srv.SetAlgorithm, hec.SET_ALGORITHM_TOPIC
+            eh_srv.SetAlgorithm, hec.SET_ALGORITHM_TOPIC
         )
 
         self._lock = threading.Lock()
@@ -99,8 +101,10 @@ class CalibrationCoordinator(Node):
             [math.radians(float(value)) for value in pose]
             for pose in content["poses_deg"]
         ]
-        if not poses or any(len(pose) != len(names) for pose in poses):
-            raise ValueError(f"Invalid calibration poses in {self.poses_file}")
+        if len(poses) < 8 or any(len(pose) != len(names) for pose in poses):
+            raise ValueError(
+                f"Calibration needs at least eight varied poses in {self.poses_file}"
+            )
         return names, poses
 
     def _services_ready(self):
@@ -215,19 +219,19 @@ class CalibrationCoordinator(Node):
         return response
 
     def _set_algorithm(self):
-        request = ehm.srv.SetAlgorithm.Request()
+        request = eh_srv.SetAlgorithm.Request()
         request.new_algorithm = self.algorithm
         response = self._call(self.algorithm_client, request)
         if not response.success:
             raise RuntimeError(f"Calibration algorithm rejected: {self.algorithm}")
 
     def _get_sample_count(self):
-        response = self._call(self.sample_list_client, ehm.srv.TakeSample.Request())
+        response = self._call(self.sample_list_client, eh_srv.TakeSample.Request())
         return len(response.samples.samples)
 
     def _take_sample(self):
         before = self._get_sample_count()
-        response = self._call(self.sample_client, ehm.srv.TakeSample.Request())
+        response = self._call(self.sample_client, eh_srv.TakeSample.Request())
         after = len(response.samples.samples)
         if after <= before:
             raise RuntimeError("easy_handeye2 did not add a sample; check tag/tool TFs")
@@ -260,7 +264,13 @@ class CalibrationCoordinator(Node):
     def _run_sequence(self):
         self._set_status(state="running", message="Starting automated calibration", computed=False)
         self._set_algorithm()
-        self._set_status(sample_count=self._get_sample_count())
+        existing_samples = self._get_sample_count()
+        if existing_samples:
+            raise RuntimeError(
+                "Automatic sequence requires an empty sample set; restart the "
+                "calibration stack or compute/save the current manual set"
+            )
+        self._set_status(sample_count=0)
         for index, pose in enumerate(self.poses, start=1):
             if self._cancel.is_set():
                 raise RuntimeError("Calibration stopped")
@@ -296,7 +306,7 @@ class CalibrationCoordinator(Node):
         self._start_worker(self._compute_impl)
 
     def _compute_impl(self):
-        response = self._call(self.compute_client, ehm.srv.ComputeCalibration.Request())
+        response = self._call(self.compute_client, eh_srv.ComputeCalibration.Request())
         if not response.valid:
             raise RuntimeError("No valid calibration result; capture more varied samples")
         tf = response.calibration.transform
@@ -322,13 +332,13 @@ class CalibrationCoordinator(Node):
         canonical = calibration_dir / f"{self.calibration_name}.calib"
         history = calibration_dir / "history"
         history.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         prior_path = ""
         if canonical.exists():
             prior = history / f"{self.calibration_name}_prior_{stamp}.calib"
             shutil.copy2(canonical, prior)
             prior_path = str(prior)
-        response = self._call(self.save_client, ehm.srv.SaveCalibration.Request())
+        response = self._call(self.save_client, eh_srv.SaveCalibration.Request())
         if not response.success:
             raise RuntimeError("easy_handeye2 failed to save calibration")
         latest = pathlib.Path(response.filepath.data)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import deque
+import re
 from typing import Optional
 
 import cv2
@@ -12,6 +13,7 @@ from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
+from std_msgs.msg import String
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from holo_assist_depth_tracker.utils.math3d import rotation_matrix_from_quaternion
@@ -31,6 +33,8 @@ _CUBE_COLORS = [
 ]
 _COLOR_CALIB   = (100, 255, 120)
 _COLOR_UNKNOWN = (140, 140, 140)
+_COLOR_BIN     = (198, 121, 255)
+_COLOR_NOT_IN_BIN = (60, 60, 255)
 
 class DepthTrackerNode(Node):
     """RGB debug viewer: AprilTag outlines + oriented cube wireframes from cube_pose topics."""
@@ -84,6 +88,7 @@ class DepthTrackerNode(Node):
         self._camera_info: Optional[CameraInfo] = None
 
         self._cube_pose: dict[int, Optional[PoseStamped]] = {idx: None for idx in range(4)}
+        self._cube_bin: dict[int, str] = {idx: "" for idx in range(4)}
 
         reliable_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -124,6 +129,13 @@ class DepthTrackerNode(Node):
                 self._make_cube_pose_cb(idx),
                 10,
             )
+            bin_topic = f"{self.cube_pose_topic_prefix}/april_cube_{idx + 1}_bin_check"
+            self.create_subscription(
+                String,
+                bin_topic,
+                self._make_cube_bin_cb(idx),
+                10,
+            )
 
         self._debug_pub = self.create_publisher(
             Image, "/holo_assist_depth_tracker/debug_image", reliable_qos
@@ -152,6 +164,20 @@ class DepthTrackerNode(Node):
     def _make_cube_pose_cb(self, cube_idx: int):
         def _cb(msg: PoseStamped) -> None:
             self._cube_pose[cube_idx] = msg
+
+        return _cb
+
+    def _make_cube_bin_cb(self, cube_idx: int):
+        def _cb(msg: String) -> None:
+            raw = str(msg.data)
+            sorted_match = re.search(r"\bsorted=(true|false)", raw, re.IGNORECASE)
+            bin_match = re.search(r"\bbin=([^\s]+)", raw)
+            if sorted_match and sorted_match.group(1).lower() == "true" and bin_match:
+                self._cube_bin[cube_idx] = bin_match.group(1).replace("_", " ")
+            elif sorted_match and sorted_match.group(1).lower() == "false":
+                self._cube_bin[cube_idx] = "NOT IN BIN"
+            else:
+                self._cube_bin[cube_idx] = ""
 
         return _cb
 
@@ -357,13 +383,14 @@ class DepthTrackerNode(Node):
             (f"Calib id={self.calib_tag_id}: {'VISIBLE' if calib_vis else '--'}",
              _COLOR_CALIB if calib_vis else dim),
         ]
+        cube_line_start = len(lines)
         for cube_idx, group in enumerate(self._cube_groups):
             seen = sorted(t for t in group if t in visible_ids)
             color = _CUBE_COLORS[cube_idx] if seen else dim
             lines.append((f"Cube {cube_idx + 1}: {seen if seen else '--'}", color))
 
         font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.46, 1
-        pad, line_h, panel_w = 7, 17, 230
+        pad, line_h, panel_w = 7, 17, 315
         panel_h = pad * 2 + len(lines) * line_h
         x0, y0 = 8, 8
 
@@ -374,8 +401,28 @@ class DepthTrackerNode(Node):
         for i, (text, color) in enumerate(lines):
             if not text:
                 continue
-            cv2.putText(canvas, text, (x0 + pad, y0 + pad + (i + 1) * line_h - 2),
+            baseline = y0 + pad + (i + 1) * line_h - 2
+            text_origin = (x0 + pad, baseline)
+            cv2.putText(canvas, text, text_origin,
                         font, scale, color, thick, cv2.LINE_AA)
+            cube_idx = i - cube_line_start
+            if 0 <= cube_idx < len(self._cube_groups) and self._cube_bin[cube_idx]:
+                text_width = cv2.getTextSize(text, font, scale, thick)[0][0]
+                bin_color = (
+                    _COLOR_NOT_IN_BIN
+                    if self._cube_bin[cube_idx] == "NOT IN BIN"
+                    else _COLOR_BIN
+                )
+                cv2.putText(
+                    canvas,
+                    f"  {self._cube_bin[cube_idx]}",
+                    (text_origin[0] + text_width, baseline),
+                    font,
+                    scale,
+                    bin_color,
+                    thick,
+                    cv2.LINE_AA,
+                )
 
 
 def main(args=None):

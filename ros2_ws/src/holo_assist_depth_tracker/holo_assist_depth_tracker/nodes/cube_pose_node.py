@@ -253,9 +253,6 @@ class CubePoseNode(Node):
             stamp = self.get_clock().now()
         self._latest_detection_stamp = stamp
 
-        # Process immediately at detection rate rather than waiting for the timer.
-        self._on_timer()
-
     def _on_timer(self) -> None:
         # Skip full processing if no new detection has arrived since last run.
         # The timer's only job between detections is staleness/cleanup.

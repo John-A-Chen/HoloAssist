@@ -25,11 +25,9 @@ import socket
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROS2_WS = os.path.join(SCRIPT_DIR, "ros2_ws")
-MAIN_WS = os.path.join(os.path.dirname(SCRIPT_DIR), "main", "ros2_ws")
 SOURCE_CMD = (
     f"source /opt/ros/humble/setup.bash"
     f" && source {ROS2_WS}/install/setup.bash"
-    f" && [ -f {MAIN_WS}/install/setup.bash ] && source {MAIN_WS}/install/setup.bash || true"
 )
 
 DEFAULT_WIFI_IP = "10.84.45.11"
@@ -155,12 +153,10 @@ def get_wifi_ip():
 def _wait_for_driver(timeout: int = 30) -> bool:
     """Poll until joint_state_broadcaster is active in controller_manager."""
     deadline = time.time() + timeout
+    cmd = ["bash", "-c", "ros2 control list_controllers 2>/dev/null"]
     while time.time() < deadline:
         try:
-            r = subprocess.run(
-                ["bash", "-c", f"{SOURCE_CMD} && ros2 control list_controllers 2>/dev/null"],
-                capture_output=True, text=True, timeout=5,
-            )
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             if "joint_state_broadcaster" in r.stdout and "[active]" in r.stdout:
                 return True
         except Exception:
@@ -282,16 +278,6 @@ def cleanup(*_):
             else:
                 _pinfo(f"force kill {name}")
             _kill_group(proc, signal.SIGKILL)
-    # ros2 launch spawns children in their own process groups — sweep known stragglers
-    _STRAY_PATTERNS = [
-        "ur_ros2_control_node",
-        "ros2_control_node",
-        "move_group",
-        "robot_state_publisher",
-        "controller_manager",
-    ]
-    for pat in _STRAY_PATTERNS:
-        subprocess.run(["pkill", "-9", "-f", pat], capture_output=True)
     if _verbose:
         print(">>> All stopped.")
     else:

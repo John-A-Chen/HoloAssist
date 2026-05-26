@@ -98,7 +98,7 @@ def main():
     print("    robot_base_frame:    base_link")
     print("    robot_effector_frame: tool0")
     print("    tracking_base_frame: camera_link        <-- IMPORTANT")
-    print("    tracking_marker_frame: tag36h11:0")
+    print("    tracking_marker_frame: tag36h11:1")
     print("=" * 65)
 
     signal.signal(signal.SIGINT, cleanup)
