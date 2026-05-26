@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand-Eye Calibration — HoloAssist</title>
+    <link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="../index.html" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+        </a>
+        <span class="nav-brand">Holo<span>Assist</span> &mdash; Setup</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">HoloAssist &mdash; Setup</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">Cali<span class="thin">bra</span><br>tion</h1>
+        <p class="hero-desc">One-time hand-eye calibration aligns the camera to the robot base frame. Survives reboots.</p>
+        <div class="hero-meta">
+            <div><span class="hero-meta-val">&lt;2mm</span>target error</div>
+            <div><span class="hero-meta-val">12&ndash;15</span>samples</div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: OVERVIEW -->
+<section class="section" id="overview">
+    <div class="section-in">
+        <p class="section-lbl">Overview</p>
+        <div class="ph-line"></div>
+        <h2>What calibration does</h2>
+        <p>The camera must be calibrated relative to the robot base so cube poses are expressed in robot frame. Calibration is performed once and saved to:</p>
+        <div class="code-block">~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib</div>
+        <p>The launcher reads this at startup and publishes the static TF automatically. Calibration survives reboots &mdash; no re-calibration needed unless the camera is physically moved.</p>
+    </div>
+</section>
+
+<!-- SECTION: RUNNING CALIBRATION -->
+<section class="section alt" id="running">
+    <div class="section-in">
+        <p class="section-lbl">Running</p>
+        <div class="ph-line"></div>
+        <h2>Running calibration</h2>
+        <div class="code-block">cd ~/git/RS2-HoloAssist/main
+./calibrate.sh</div>
+        <p>Uses easy_handeye2 to collect robot pose / camera pose pairs.</p>
+        <h3>Process</h3>
+        <ol>
+            <li>Attach a calibration target (AprilTag board) to the robot end-effector</li>
+            <li>Run <code>./calibrate.sh</code> &mdash; RViz opens with the calibration GUI</li>
+            <li>Move the arm to each sample pose (the GUI shows where to move)</li>
+            <li>Press <strong>Take Sample</strong> at each pose</li>
+            <li>After 12&ndash;15 samples: press <strong>Compute</strong> &rarr; check reprojection error (&lt;&nbsp;2&nbsp;mm is good)</li>
+            <li>Press <strong>Save</strong> &mdash; writes <code>.calib</code> file</li>
+        </ol>
+        <h3>Verification</h3>
+        <p>After saving, restart the launcher and check the TF tree:</p>
+        <div class="code-block">ros2 run tf2_tools view_frames
+<span class="cm"># Should show: world &rarr; base_link &rarr; camera_color_optical_frame</span></div>
+        <p>Or check the transform directly:</p>
+        <div class="code-block">ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame</div>
+    </div>
+</section>
+
+<!-- SECTION: FILE FORMAT -->
+<section class="section" id="format">
+    <div class="section-in">
+        <p class="section-lbl">File Format</p>
+        <div class="ph-line"></div>
+        <h2>Calibration file format</h2>
+        <div class="code-block"><span class="cm"># ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib</span>
+transform:
+  translation: {x: 0.xxx, y: 0.xxx, z: 0.xxx}
+  rotation: {x: 0.xxx, y: 0.xxx, z: 0.xxx, w: 0.xxx}
+parameters:
+  tracking_base_frame: base_link
+  tracking_marker_frame: camera_color_optical_frame</div>
+    </div>
+</section>
+
+<!-- SECTION: BIN VERIFICATION IMPACT -->
+<section class="section alt" id="impact">
+    <div class="section-in">
+        <p class="section-lbl">Bin Verification</p>
+        <div class="ph-line"></div>
+        <h2>Impact on bin verification</h2>
+        <ul class="issues">
+            <li>
+                <span class="issue-ttl">Without calibration</span>
+                <span class="issue-body">Cube poses published in <code>camera_color_optical_frame</code> (not robot frame). Bin verification silently skips &mdash; logs a throttled warning, no crash.</span>
+            </li>
+            <li>
+                <span class="issue-ttl">With calibration loaded</span>
+                <span class="issue-body">Bin verification activates automatically. The TF lookup <code>camera_color_optical_frame &rarr; base_link</code> succeeds and XY bin matching works.</span>
+            </li>
+            <li>
+                <span class="issue-ttl">When to re-calibrate</span>
+                <span class="issue-body">If the camera is physically moved or remounted. Re-run <code>./calibrate.sh</code>.</span>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+    <div class="doc-footer-in">
+        <div>
+            <h3>Hand-Eye Calibration</h3>
+            <p>UTS Robotics Studio 2, 2026</p>
+        </div>
+        <a href="../index.html" class="doc-footer-back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Main Site
+        </a>
+    </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+    {
+        label: 'Home',
+        href: '../index.html',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
+    },
+    {
+        label: 'Overview',
+        href: '#overview',
+        id: 'overview',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    },
+    {
+        label: 'Running',
+        href: '#running',
+        id: 'running',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>'
+    },
+    {
+        label: 'File Format',
+        href: '#format',
+        id: 'format',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    },
+    {
+        label: 'Bin Check',
+        href: '#impact',
+        id: 'impact',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
+    }
+]);
+</script>
+
+</body>
+</html>

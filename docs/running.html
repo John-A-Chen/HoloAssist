@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running the System — HoloAssist</title>
+    <link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="../index.html" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+        </a>
+        <span class="nav-brand">Holo<span>Assist</span> &mdash; Operations</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">HoloAssist &mdash; Operations</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">Run<span class="thin">ning</span><br>the System</h1>
+        <p class="hero-desc">Prerequisites, launch options, Quest&nbsp;3 connection, and troubleshooting.</p>
+        <div class="hero-meta">
+            <div><span class="hero-meta-val">3</span>launch modes</div>
+            <div><span class="hero-meta-val">1</span>command</div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: PREREQUISITES -->
+<section class="section" id="prereqs">
+    <div class="section-in">
+        <p class="section-lbl">Prerequisites</p>
+        <div class="ph-line"></div>
+        <h2>Prerequisites</h2>
+        <p>Source ROS&nbsp;2 Humble and the workspace before any launch command:</p>
+        <div class="code-block">source /opt/ros/humble/setup.bash
+source ~/git/RS2-HoloAssist/demo/ros2_ws/install/setup.bash</div>
+        <p>Build (first time or after source changes):</p>
+        <div class="code-block">cd ~/git/RS2-HoloAssist/demo/ros2_ws
+colcon build --symlink-install</div>
+    </div>
+</section>
+
+<!-- SECTION: LAUNCH FLAGS -->
+<section class="section alt" id="flags">
+    <div class="section-in">
+        <p class="section-lbl">Launch Flags</p>
+        <div class="ph-line"></div>
+        <h2>All available flags</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Flag</th>
+                    <th>Effect</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>--robot-ip &lt;IP&gt;</td>
+                    <td>Connect to real UR3e or URSim at this IP</td>
+                </tr>
+                <tr>
+                    <td>--fake-gripper</td>
+                    <td>Skip Modbus/serial gripper comms &mdash; required for URSim</td>
+                </tr>
+                <tr>
+                    <td>--perception</td>
+                    <td>Start Brio/RealSense camera + AprilTag cube detection</td>
+                </tr>
+                <tr>
+                    <td>--moveit</td>
+                    <td>Start MoveIt pick-and-place stack</td>
+                </tr>
+                <tr>
+                    <td>--dashboard</td>
+                    <td>Open e-stop dashboard (Qt window, bridge on :9090)</td>
+                </tr>
+                <tr>
+                    <td>--no-rviz</td>
+                    <td>Skip RViz</td>
+                </tr>
+                <tr>
+                    <td>--verbose</td>
+                    <td>Print full node logs to terminal</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: REAL ROBOT -->
+<section class="section" id="real">
+    <div class="section-in">
+        <p class="section-lbl">Option A</p>
+        <div class="ph-line"></div>
+        <h2>Real Robot</h2>
+        <p>Default IP: <code>192.168.0.194</code> (check the robot&rsquo;s touchscreen if different)</p>
+        <div class="code-block">cd ~/git/RS2-HoloAssist/demo
+./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard</div>
+        <p>The launcher prints startup info including the WiFi IP &mdash; enter that in the Quest Unity app under ROS Settings.</p>
+    </div>
+</section>
+
+<!-- SECTION: URSIM -->
+<section class="section alt" id="ursim">
+    <div class="section-in">
+        <p class="section-lbl">Option B</p>
+        <div class="ph-line"></div>
+        <h2>URSim (Docker Simulator)</h2>
+        <p>Use when the physical robot is not available. URSim runs Polyscope at <code>192.168.56.101</code> over a VirtualBox host-only network.</p>
+        <h3>Step 1 &mdash; Start URSim</h3>
+        <div class="code-block">docker run --rm -it \
+  -p 5900:5900 -p 6080:6080 \
+  -p 29999:29999 -p 30001-30004:30001-30004 \
+  -p 50001-50002:50001-50002 \
+  --name ursim \
+  universalrobots/ursim_e-series</div>
+        <p>Wait for <code>Polyscope started</code>, then open Polyscope at <code>http://localhost:6080</code> (noVNC). Navigate to Run Program &rarr; External Control. Do not click Play yet.</p>
+        <h3>Step 2 &mdash; Launch</h3>
+        <div class="code-block">cd ~/git/RS2-HoloAssist/demo
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</div>
+        <div class="callout callout-warn"><strong>--fake-gripper is required with URSim.</strong> URSim does not expose port 54321 (OnRobot serial relay). Without it, the controller manager blocks indefinitely.</div>
+        <p>Once the launcher settles, click Play in Polyscope. The log confirms: <code>Robot connected to reverse interface. Ready to receive control commands.</code></p>
+    </div>
+</section>
+
+<!-- SECTION: FULLY FAKE -->
+<section class="section" id="fake">
+    <div class="section-in">
+        <p class="section-lbl">Option C</p>
+        <div class="ph-line"></div>
+        <h2>Fully Fake Hardware</h2>
+        <p>No robot IP = fully simulated arm. Perception still runs.</p>
+        <div class="code-block">cd ~/git/RS2-HoloAssist/demo
+./launch.sh --perception --dashboard</div>
+    </div>
+</section>
+
+<!-- SECTION: QUEST 3 -->
+<section class="section alt" id="quest">
+    <div class="section-in">
+        <p class="section-lbl">Quest 3</p>
+        <div class="ph-line"></div>
+        <h2>Connecting the Quest 3</h2>
+        <ol>
+            <li>Connect Quest and laptop to the same WiFi network.</li>
+            <li>Note the WiFi IP printed by the launcher at startup.</li>
+            <li>In the Unity app: open ROS Settings &rarr; set host IP to that address.</li>
+            <li>The launcher broadcasts a UDP beacon for auto-discovery.</li>
+            <li>ROS-TCP-Endpoint listens on port <strong>10000</strong>.</li>
+        </ol>
+    </div>
+</section>
+
+<!-- SECTION: STOPPING -->
+<section class="section" id="stopping">
+    <div class="section-in">
+        <p class="section-lbl">Stopping</p>
+        <div class="ph-line"></div>
+        <h2>Stopping the System</h2>
+        <p><code>Ctrl+C</code> in the launcher terminal. The launcher sends SIGTERM, waits 2&nbsp;s, then SIGKILLs all child processes.</p>
+        <p>If processes remain:</p>
+        <div class="code-block">pkill -9 -f ur_ros2_control_node
+pkill -9 -f move_group</div>
+        <h3>Monitoring Logs</h3>
+        <p>All logs go to <code>/tmp/holoassist_*.log</code>:</p>
+        <div class="code-block"><span class="cm"># UR driver</span>
+tail -f /tmp/holoassist_ur_onrobot_driver.log | grep -E "connected|error|failed|RTDE"
+
+<span class="cm"># AprilTag detection</span>
+tail -f /tmp/holoassist_cube_pose.log
+
+<span class="cm"># MoveIt</span>
+tail -f /tmp/holoassist_moveit.log</div>
+    </div>
+</section>
+
+<!-- SECTION: KNOWN ISSUES -->
+<section class="section alt" id="issues">
+    <div class="section-in">
+        <p class="section-lbl">Known Issues</p>
+        <div class="ph-line"></div>
+        <h2>Troubleshooting</h2>
+        <ul class="issues">
+            <li>
+                <span class="issue-ttl">URSim WiFi disconnect</span>
+                <span class="issue-body">If the laptop&rsquo;s WiFi drops, RTDE is lost. Stop Program in Polyscope, Ctrl+C the launcher, re-run, then click Play again.</span>
+            </li>
+            <li>
+                <span class="issue-ttl">&ldquo;Receive program failed: 192.168.56.1:50002&rdquo;</span>
+                <span class="issue-body">Driver failed before port 50002 was ready. Restart the launcher first, then click Play.</span>
+            </li>
+            <li>
+                <span class="issue-ttl">High CPU after Ctrl+C</span>
+                <span class="issue-body">Zombie <code>ur_ros2_control_node</code> processes. Run: <code>pkill -9 -f ur_ros2_control_node</code></span>
+            </li>
+            <li>
+                <span class="issue-ttl">Arm not visible in RViz</span>
+                <span class="issue-body">Robot description takes ~15&nbsp;s. If nothing after 30&nbsp;s, check <code>tail -f /tmp/holoassist_ur_onrobot_driver.log</code></span>
+            </li>
+            <li>
+                <span class="issue-ttl">Cubes not visible in RViz</span>
+                <span class="issue-body">Point the Brio at a cube face until the marker appears &mdash; then it persists.</span>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+    <div class="doc-footer-in">
+        <div>
+            <h3>Running the System</h3>
+            <p>UTS Robotics Studio 2, 2026</p>
+        </div>
+        <a href="../index.html" class="doc-footer-back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Main Site
+        </a>
+    </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+    {
+        label: 'Home',
+        href: '../index.html',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
+    },
+    {
+        label: 'Prerequisites',
+        href: '#prereqs',
+        id: 'prereqs',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'
+    },
+    {
+        label: 'Flags',
+        href: '#flags',
+        id: 'flags',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>'
+    },
+    {
+        label: 'Real Robot',
+        href: '#real',
+        id: 'real',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>'
+    },
+    {
+        label: 'URSim',
+        href: '#ursim',
+        id: 'ursim',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>'
+    },
+    {
+        label: 'Issues',
+        href: '#issues',
+        id: 'issues',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    }
+]);
+</script>
+
+</body>
+</html>

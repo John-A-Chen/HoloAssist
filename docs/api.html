@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS API Reference — HoloAssist</title>
+    <link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="../index.html" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+        </a>
+        <span class="nav-brand">Holo<span>Assist</span> &mdash; Reference</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">HoloAssist &mdash; Reference</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">ROS<br><span class="thin">API</span></h1>
+        <p class="hero-desc">All ROS topics, services, TF frames, and log files for the HoloAssist stack.</p>
+    </div>
+</section>
+
+<!-- SECTION: PERCEPTION TOPICS -->
+<section class="section" id="perception">
+    <div class="section-in">
+        <p class="section-lbl">Perception</p>
+        <div class="ph-line"></div>
+        <h2>Perception topics</h2>
+        <p>All published at 20&nbsp;Hz. Replace <code>N</code> with cube number (1&ndash;4).</p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Topic</th>
+                    <th>Type</th>
+                    <th>Publisher</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/holoassist/perception/april_cube_1_pose</td>
+                    <td>PoseStamped</td>
+                    <td>cube_pose_node</td>
+                    <td>Cube 1 centre (tags 10&ndash;15)</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_2_pose</td>
+                    <td>PoseStamped</td>
+                    <td>cube_pose_node</td>
+                    <td>Cube 2 centre (tags 16&ndash;21)</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_3_pose</td>
+                    <td>PoseStamped</td>
+                    <td>cube_pose_node</td>
+                    <td>Cube 3 centre (tags 22&ndash;27)</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_4_pose</td>
+                    <td>PoseStamped</td>
+                    <td>cube_pose_node</td>
+                    <td>Cube 4 centre (tags 28&ndash;33)</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_N_marker</td>
+                    <td>Marker</td>
+                    <td>cube_pose_node</td>
+                    <td>RViz cube marker (N&nbsp;=&nbsp;1&ndash;4)</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_N_status</td>
+                    <td>String</td>
+                    <td>cube_pose_node</td>
+                    <td>Detection state + diagnostics</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/april_cube_N_bin_check</td>
+                    <td>String</td>
+                    <td>cube_pose_node</td>
+                    <td>Bin verification result</td>
+                </tr>
+                <tr>
+                    <td>/detections_all</td>
+                    <td>AprilTagDetectionArray</td>
+                    <td>apriltag_ros</td>
+                    <td>Raw tag detections from camera</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: ROBOT DRIVER TOPICS -->
+<section class="section alt" id="robot-topics">
+    <div class="section-in">
+        <p class="section-lbl">Robot Driver</p>
+        <div class="ph-line"></div>
+        <h2>Robot driver topics</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Topic</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/joint_states</td>
+                    <td>JointState</td>
+                    <td>Arm + gripper joint positions</td>
+                </tr>
+                <tr>
+                    <td>/tcp_pose_broadcaster/pose</td>
+                    <td>PoseStamped</td>
+                    <td>End-effector TCP pose (real robot only)</td>
+                </tr>
+                <tr>
+                    <td>/io_and_status_controller/robot_mode</td>
+                    <td>RobotModeMsg</td>
+                    <td>UR robot mode</td>
+                </tr>
+                <tr>
+                    <td>/scaled_joint_trajectory_controller/joint_trajectory</td>
+                    <td>JointTrajectory</td>
+                    <td>MoveIt trajectory input</td>
+                </tr>
+                <tr>
+                    <td>/forward_velocity_controller/commands</td>
+                    <td>Float64MultiArray</td>
+                    <td>Teleop velocity input</td>
+                </tr>
+                <tr>
+                    <td>/finger_width_controller/commands</td>
+                    <td>Float64MultiArray</td>
+                    <td>Gripper width (mm) command</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: MOVEIT TOPICS -->
+<section class="section" id="moveit-topics">
+    <div class="section-in">
+        <p class="section-lbl">MoveIt</p>
+        <div class="ph-line"></div>
+        <h2>MoveIt / planning topics</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Topic</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/moveit_robot_control/target_pose</td>
+                    <td>Pose</td>
+                    <td>Command arm to Cartesian pose</td>
+                </tr>
+                <tr>
+                    <td>/moveit_robot_control/target_point</td>
+                    <td>Point</td>
+                    <td>Command arm to XYZ position</td>
+                </tr>
+                <tr>
+                    <td>/moveit_robot_control/status</td>
+                    <td>String</td>
+                    <td>Execution status</td>
+                </tr>
+                <tr>
+                    <td>/planning_scene</td>
+                    <td>PlanningScene</td>
+                    <td>MoveIt planning scene</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: SERVICES -->
+<section class="section alt" id="services">
+    <div class="section-in">
+        <p class="section-lbl">Services</p>
+        <div class="ph-line"></div>
+        <h2>Services</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/controller_manager/switch_controller</td>
+                    <td>SwitchController</td>
+                    <td>Activate/deactivate controllers</td>
+                </tr>
+                <tr>
+                    <td>/holoassist/perception/realign_workspace</td>
+                    <td>Trigger</td>
+                    <td>Re-run workspace board SVD solve</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: TF FRAMES + LOGS -->
+<section class="section" id="tf">
+    <div class="section-in">
+        <p class="section-lbl">TF + Logs</p>
+        <div class="ph-line"></div>
+        <h2>TF frames</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Frame</th>
+                    <th>Parent</th>
+                    <th>Published by</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>world</td>
+                    <td>&mdash;</td>
+                    <td>robot_state_publisher</td>
+                </tr>
+                <tr>
+                    <td>base_link</td>
+                    <td>world</td>
+                    <td>robot_state_publisher</td>
+                </tr>
+                <tr>
+                    <td>camera_color_optical_frame</td>
+                    <td>base_link</td>
+                    <td>hand-eye calibration static TF</td>
+                </tr>
+                <tr>
+                    <td>apriltag_cube_1 .. apriltag_cube_4</td>
+                    <td>camera_color_optical_frame</td>
+                    <td>cube_pose_node</td>
+                </tr>
+                <tr>
+                    <td>tag36h11:&lt;id&gt;</td>
+                    <td>camera_color_optical_frame</td>
+                    <td>apriltag_ros</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 style="margin-top:3rem">Log files</h2>
+        <table class="data-table" style="margin-top:1rem">
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>Content</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/tmp/holoassist_ur_onrobot_driver.log</td>
+                    <td>UR driver, RTDE, gripper</td>
+                </tr>
+                <tr>
+                    <td>/tmp/holoassist_cube_pose.log</td>
+                    <td>AprilTag detection + bin checks</td>
+                </tr>
+                <tr>
+                    <td>/tmp/holoassist_moveit.log</td>
+                    <td>MoveIt planning + execution</td>
+                </tr>
+                <tr>
+                    <td>/tmp/holoassist_bridge.log</td>
+                    <td>ROS-TCP bridge</td>
+                </tr>
+                <tr>
+                    <td>/tmp/holoassist_trolley_scene_publisher.log</td>
+                    <td>Trolley scene TF</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+    <div class="doc-footer-in">
+        <div>
+            <h3>ROS API Reference</h3>
+            <p>UTS Robotics Studio 2, 2026</p>
+        </div>
+        <a href="../index.html" class="doc-footer-back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Main Site
+        </a>
+    </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+    {
+        label: 'Home',
+        href: '../index.html',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
+    },
+    {
+        label: 'Perception',
+        href: '#perception',
+        id: 'perception',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+    },
+    {
+        label: 'Robot Driver',
+        href: '#robot-topics',
+        id: 'robot-topics',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg>'
+    },
+    {
+        label: 'MoveIt',
+        href: '#moveit-topics',
+        id: 'moveit-topics',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>'
+    },
+    {
+        label: 'Services',
+        href: '#services',
+        id: 'services',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>'
+    },
+    {
+        label: 'TF + Logs',
+        href: '#tf',
+        id: 'tf',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+    }
+]);
+</script>
+
+</body>
+</html>

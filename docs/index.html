@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview — HoloAssist</title>
+    <link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="../index.html" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+        </a>
+        <span class="nav-brand">Holo<span>Assist</span> &mdash; Docs</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">HoloAssist &mdash; Documentation</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">Over<span class="thin">view</span></h1>
+        <p class="hero-desc">System overview, quick start commands, and links to all subsystem documentation.</p>
+    </div>
+</section>
+
+<!-- SECTION: OVERVIEW -->
+<section class="section" id="overview">
+    <div class="section-in">
+        <p class="section-lbl">Overview</p>
+        <div class="ph-line"></div>
+        <h2>System Overview</h2>
+        <p>HoloAssist integrates a Meta Quest 3 headset with a UR3e collaborative robot for real-time teleoperation, autonomous pick-and-place, and spatial AR visualisation. AprilTag-equipped cubes are detected at 20&nbsp;Hz by a Brio or RealSense camera; MoveIt 2 drives the physical arm; Unity on the Quest&nbsp;3 renders a holographic twin and accepts hand-gesture teleop commands over ROS-TCP-Endpoint.</p>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subsystem</th>
+                    <th>Lead</th>
+                    <th>Status</th>
+                    <th>Docs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Perception (AprilTag cubes)</td>
+                    <td>John</td>
+                    <td><span class="badge b-ok">Working</span></td>
+                    <td><a href="perception.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">perception.html</a></td>
+                </tr>
+                <tr>
+                    <td>Autonomous Pick-and-Place</td>
+                    <td>Oliver</td>
+                    <td><span class="badge b-ok">Working</span></td>
+                    <td><a href="autonomous.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">autonomous.html</a></td>
+                </tr>
+                <tr>
+                    <td>Teleoperation</td>
+                    <td>Nic</td>
+                    <td><span class="badge b-ok">Working</span></td>
+                    <td><a href="teleoperation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">teleoperation.html</a></td>
+                </tr>
+                <tr>
+                    <td>Visualisation (Quest&nbsp;3 / Unity)</td>
+                    <td>Sebastian</td>
+                    <td><span class="badge b-test">Testing</span></td>
+                    <td><a href="visualisation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">visualisation.html</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: QUICK START -->
+<section class="section alt" id="quickstart">
+    <div class="section-in">
+        <p class="section-lbl">Quick Start</p>
+        <div class="ph-line"></div>
+        <h2>Quick Start</h2>
+        <p>Source ROS&nbsp;2 and the workspace, then use <code>launch.sh</code>:</p>
+        <div class="code-block"><span class="cm"># URSim (simulated robot)</span>
+cd ~/git/RS2-HoloAssist/demo
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard
+
+<span class="cm"># Real robot</span>
+./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard
+
+<span class="cm"># Fully fake (no robot)</span>
+./launch.sh --perception --dashboard</div>
+        <p>See the <a href="running.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">Running guide</a> for full prerequisites, flags, and troubleshooting.</p>
+    </div>
+</section>
+
+<!-- SECTION: ARCHITECTURE -->
+<section class="section" id="architecture">
+    <div class="section-in">
+        <p class="section-lbl">Architecture</p>
+        <div class="ph-line"></div>
+        <h2>Architecture</h2>
+        <div class="code-block">Brio/RealSense Camera
+    &#x2193; AprilTag detection (30 Hz)
+Perception Node  &#x2500;&#x2500;&#x2192;  Cube Poses + Bin Verification
+    &#x2193;
+MoveIt Pick-and-Place &#x2500;&#x2500;&#x2192; UR3e + OnRobot RG2 Gripper
+    &#x2193;
+ROS-TCP Endpoint :10000
+    &#x2193;
+Quest 3 (Unity) &#x2014; AR overlay, teleop controls</div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+    <div class="doc-footer-in">
+        <div>
+            <h3>HoloAssist</h3>
+            <p>UTS Robotics Studio 2, 2026</p>
+        </div>
+        <a href="../index.html" class="doc-footer-back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Main Site
+        </a>
+    </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+    {
+        label: 'Home',
+        href: '../index.html',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
+    },
+    {
+        label: 'Overview',
+        href: '#overview',
+        id: 'overview',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
+    },
+    {
+        label: 'Quick Start',
+        href: '#quickstart',
+        id: 'quickstart',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+    },
+    {
+        label: 'Architecture',
+        href: '#architecture',
+        id: 'architecture',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+    }
+]);
+</script>
+
+</body>
+</html>

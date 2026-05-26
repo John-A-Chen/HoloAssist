@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control — HoloAssist</title>
+    <link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="../index.html" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+        </a>
+        <span class="nav-brand">Holo<span>Assist</span> &mdash; Hardware</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">HoloAssist &mdash; Hardware</p>
+        <div class="hero-line"></div>
+        <h1 class="hero-title">Robot<br><span class="thin">Control</span></h1>
+        <p class="hero-desc">UR3e arm + OnRobot RG2 gripper &mdash; hardware overview, launch modes, MoveIt pick-and-place, and safety.</p>
+        <div class="hero-meta">
+            <div><span class="hero-meta-val">6</span>DOF arm</div>
+            <div><span class="hero-meta-val">RG2</span>gripper</div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: HARDWARE OVERVIEW -->
+<section class="section" id="hardware">
+    <div class="section-in">
+        <p class="section-lbl">Hardware</p>
+        <div class="ph-line"></div>
+        <h2>UR3e + OnRobot RG2</h2>
+        <p>Package: <code>ur_onrobot_control</code>, <code>moveit_robot_control</code></p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Arm</td>
+                    <td>UR3e (6-DOF, 3&nbsp;kg payload, 500&nbsp;mm reach)</td>
+                </tr>
+                <tr>
+                    <td>Gripper</td>
+                    <td>OnRobot RG2 (0&ndash;110&nbsp;mm finger width, 40&nbsp;N force)</td>
+                </tr>
+                <tr>
+                    <td>Driver</td>
+                    <td><code>ur_robot_driver</code> (ROS&nbsp;2 control)</td>
+                </tr>
+                <tr>
+                    <td>Gripper comms</td>
+                    <td>Modbus RS-485 via <code>/tmp/ttyUR</code> (socat &rarr; port 54321)</td>
+                </tr>
+                <tr>
+                    <td>Default IP</td>
+                    <td><code>192.168.0.194</code></td>
+                </tr>
+                <tr>
+                    <td>URSim IP</td>
+                    <td><code>192.168.56.101</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: LAUNCH MODES -->
+<section class="section alt" id="launch">
+    <div class="section-in">
+        <p class="section-lbl">Launch Modes</p>
+        <div class="ph-line"></div>
+        <h2>Starting the System</h2>
+        <h3>Real robot</h3>
+        <div class="code-block">./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard</div>
+        <h3>URSim (simulated)</h3>
+        <div class="code-block"><span class="cm"># Terminal 2 &mdash; start URSim</span>
+docker run --rm -it \
+  -p 5900:5900 -p 6080:6080 \
+  -p 29999:29999 -p 30001-30004:30001-30004 \
+  -p 50001-50002:50001-50002 \
+  --name ursim universalrobots/ursim_e-series
+
+<span class="cm"># Terminal 1 &mdash; launch</span>
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</div>
+        <div class="callout callout-note">After <code>&#x2713;&nbsp; UR + OnRobot Driver</code> appears, click Play &rarr; External Control in Polyscope (<code>http://localhost:6080</code>). URSim does not emulate port 54321 &mdash; <strong>--fake-gripper is required</strong>.</div>
+    </div>
+</section>
+
+<!-- SECTION: EXTERNAL CONTROL -->
+<section class="section" id="external">
+    <div class="section-in">
+        <p class="section-lbl">External Control</p>
+        <div class="ph-line"></div>
+        <h2>How External Control works</h2>
+        <p>The UR driver uses URScript External Control to take over joint control from Polyscope:</p>
+        <ol>
+            <li><code>ur_ros2_control_node</code> connects to robot on ports 30001 (primary) and 30004 (RTDE)</li>
+            <li>Driver uploads the External Control URScript</li>
+            <li>Polyscope connects back to host on port <strong>50002</strong> to download the script</li>
+            <li>Robot enters External Control mode &mdash; ROS controls joints</li>
+        </ol>
+        <p>If you see <em>&ldquo;Receive program failed: 192.168.56.1:50002&rdquo;</em> &mdash; the driver hasn&rsquo;t opened port 50002 yet. Restart the launcher, wait for <code>&#x2713;&nbsp; UR + OnRobot Driver</code>, then click Play.</p>
+    </div>
+</section>
+
+<!-- SECTION: MOVEIT -->
+<section class="section alt" id="moveit">
+    <div class="section-in">
+        <p class="section-lbl">MoveIt</p>
+        <div class="ph-line"></div>
+        <h2>Pick-and-place pipeline</h2>
+        <p>Enabled with <code>--moveit</code>. Launches <code>full_holoassist_hardware.launch.py</code> which starts MoveIt move_group, trajectory execution, and the planning scene.</p>
+        <h3>Cube sorting flow</h3>
+        <ol>
+            <li>Perception node detects cube poses &rarr; publishes to <code>/holoassist/perception/april_cube_N_pose</code></li>
+            <li><code>pick_place_sequencer</code> reads cube poses and target bin assignments</li>
+            <li>Plans Cartesian path (primary) &rarr; OMPL fallback</li>
+            <li>Executes: move above cube &rarr; close gripper &rarr; lift &rarr; move to bin &rarr; open gripper</li>
+            <li>Perception node verifies bin: <code>/holoassist/perception/april_cube_N_bin_check</code></li>
+        </ol>
+        <h3>Controller layout</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Controller</th>
+                    <th>Mode</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>scaled_joint_trajectory_controller</td>
+                    <td>Active (MoveIt)</td>
+                    <td>MoveIt trajectory execution</td>
+                </tr>
+                <tr>
+                    <td>joint_trajectory_controller</td>
+                    <td>Inactive</td>
+                    <td>Alternative trajectory controller</td>
+                </tr>
+                <tr>
+                    <td>forward_velocity_controller</td>
+                    <td>Active (teleop)</td>
+                    <td>Teleop velocity control</td>
+                </tr>
+                <tr>
+                    <td>finger_width_trajectory_controller</td>
+                    <td>Active</td>
+                    <td>Gripper position trajectory</td>
+                </tr>
+                <tr>
+                    <td>finger_width_controller</td>
+                    <td>Inactive</td>
+                    <td>Direct gripper width control</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- SECTION: SAFETY -->
+<section class="section" id="safety">
+    <div class="section-in">
+        <p class="section-lbl">Safety</p>
+        <div class="ph-line"></div>
+        <h2>Safety features</h2>
+        <ul>
+            <li>MoveIt collision check on every trajectory</li>
+            <li>Floor collision object in planning scene prevents table crashes</li>
+            <li>UR flange-to-forearm clamp check rejects self-collision trajectories</li>
+            <li>Robot status checks before execution (safety mode, program running)</li>
+            <li>E-stop available via the dashboard window (red button)</li>
+        </ul>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+    <div class="doc-footer-in">
+        <div>
+            <h3>Robot Control</h3>
+            <p>Oliver &middot; UTS Robotics Studio 2, 2026</p>
+        </div>
+        <a href="../index.html" class="doc-footer-back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Main Site
+        </a>
+    </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+    {
+        label: 'Home',
+        href: '../index.html',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
+    },
+    {
+        label: 'Hardware',
+        href: '#hardware',
+        id: 'hardware',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg>'
+    },
+    {
+        label: 'Launch',
+        href: '#launch',
+        id: 'launch',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+    },
+    {
+        label: 'MoveIt',
+        href: '#moveit',
+        id: 'moveit',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>'
+    },
+    {
+        label: 'Safety',
+        href: '#safety',
+        id: 'safety',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+    }
+]);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,120 @@
+<h2>Site redesign — here's the full plan</h2>
+<p class="subtitle">Portal 1 Option A palette · shared stylesheet · all docs as HTML pages · GitHub Actions removed. Click to approve.</p>
+
+<style>
+.plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+.plan-section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 18px 20px; }
+.plan-section h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #FF6600; margin-bottom: 12px; font-weight: 700; }
+.plan-section ul { list-style: none; padding: 0; margin: 0; }
+.plan-section li { font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 8px; color: #ccc; }
+.plan-section li:last-child { border-bottom: none; }
+.tag { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+.tag-new { background: rgba(0,180,255,0.15); color: #33BBFF; border: 1px solid rgba(0,180,255,0.3); }
+.tag-update { background: rgba(255,102,0,0.15); color: #FF6600; border: 1px solid rgba(255,102,0,0.3); }
+.tag-delete { background: rgba(255,80,80,0.12); color: #ff6b6b; border: 1px solid rgba(255,80,80,0.2); }
+.tag-shared { background: rgba(100,220,100,0.12); color: #88dd88; border: 1px solid rgba(100,220,100,0.2); }
+.palette-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.pal { width: 28px; height: 28px; border-radius: 6px; position: relative; cursor: default; }
+.pal-info { font-size: 10px; color: #aaa; flex: 1; min-width: 100px; }
+.swatch-row { display: flex; gap: 6px; margin-top: 4px; }
+</style>
+
+<div class="plan-grid">
+  <div class="plan-section">
+    <h3>Files — what changes</h3>
+    <ul>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">shared.css</code> — single stylesheet for all pages</li>
+      <li><span class="tag tag-update">update</span> <code style="font-size:11px">index.html</code> — Portal 1 palette, fix links</li>
+      <li><span class="tag tag-update">update</span> <code style="font-size:11px">docs/perception.html</code> — use shared.css</li>
+      <li><span class="tag tag-update">update</span> <code style="font-size:11px">docs/autonomous.html</code> — use shared.css</li>
+      <li><span class="tag tag-update">update</span> <code style="font-size:11px">docs/teleoperation.html</code> — use shared.css</li>
+      <li><span class="tag tag-update">update</span> <code style="font-size:11px">docs/visualisation.html</code> — use shared.css</li>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">docs/index.html</code> — overview + quick start</li>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">docs/running.html</code> — from running.md</li>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">docs/robot.html</code> — from robot.md</li>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">docs/calibration.html</code> — from calibration.md</li>
+      <li><span class="tag tag-new">new</span> <code style="font-size:11px">docs/api.html</code> — from api.md</li>
+      <li><span class="tag tag-delete">remove</span> All <code style="font-size:11px">.md</code> files in docs/</li>
+    </ul>
+  </div>
+
+  <div class="plan-section">
+    <h3>Portal 1 Option A — palette</h3>
+    <ul>
+      <li>
+        <div class="swatch-row">
+          <div class="pal" style="background:#1a1a1a" title="#1a1a1a"></div>
+          <div class="pal" style="background:#111111" title="#111111"></div>
+          <div class="pal" style="background:#0d0d0d" title="#0d0d0d"></div>
+        </div>
+        <div class="pal-info">Backgrounds — neutral charcoal (no purple tint)</div>
+      </li>
+      <li>
+        <div class="swatch-row">
+          <div class="pal" style="background:#FF6600" title="#FF6600"></div>
+          <div class="pal" style="background:#FF9944" title="#FF9944"></div>
+        </div>
+        <div class="pal-info">Orange — primary accent, eyebrows, labels</div>
+      </li>
+      <li>
+        <div class="swatch-row">
+          <div class="pal" style="background:#33BBFF" title="#33BBFF"></div>
+          <div class="pal" style="background:#99DDFF" title="#99DDFF"></div>
+        </div>
+        <div class="pal-info">Electric blue — replaces purple, highlights</div>
+      </li>
+      <li>
+        <div class="swatch-row">
+          <div class="pal" style="background:#FFFFFF" title="#FFFFFF"></div>
+          <div class="pal" style="background:#CCCCCC" title="#CCCCCC"></div>
+        </div>
+        <div class="pal-info">White + grey — headings, body text</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="plan-section">
+    <h3>Shared stylesheet covers</h3>
+    <ul>
+      <li><span class="tag tag-shared">shared</span> CSS custom properties (all colours)</li>
+      <li><span class="tag tag-shared">shared</span> Base reset + typography</li>
+      <li><span class="tag tag-shared">shared</span> Dock nav (both variants: 80px main, 64px docs)</li>
+      <li><span class="tag tag-shared">shared</span> Doc page nav bar + hero layout</li>
+      <li><span class="tag tag-shared">shared</span> Section, table, code block, pipeline grid</li>
+      <li><span class="tag tag-shared">shared</span> Buttons, badges, click-spark, cursor</li>
+      <li><span class="tag tag-shared">shared</span> Footer styles</li>
+      <li><span class="tag tag-shared">shared</span> Responsive breakpoints</li>
+    </ul>
+  </div>
+
+  <div class="plan-section">
+    <h3>Fixes + removals</h3>
+    <ul>
+      <li><span class="tag tag-update">fix</span> Footer links → all now point to .html pages</li>
+      <li><span class="tag tag-update">fix</span> Hero "Docs" link → <code style="font-size:11px">docs/index.html</code></li>
+      <li><span class="tag tag-delete">remove</span> "Testing Guide" button (links to missing file)</li>
+      <li><span class="tag tag-delete">remove</span> GitHub Actions references site-wide</li>
+      <li><span class="tag tag-update">fix</span> Hero gradient — charcoal not purple-black</li>
+      <li><span class="tag tag-update">fix</span> Dock colours → blue instead of purple</li>
+      <li><span class="tag tag-update">fix</span> Click sparks → orange instead of violet</li>
+      <li><span class="tag tag-update">fix</span> Gallery instruction text → updated</li>
+    </ul>
+  </div>
+</div>
+
+<div class="options" style="margin-top: 8px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve — build it</h3>
+      <p>Looks good, proceed with the full implementation.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">↩</div>
+    <div class="content">
+      <h3>Revise first</h3>
+      <p>I want to change something before you start.</p>
+    </div>
+  </div>
+</div>
