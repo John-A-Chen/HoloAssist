@@ -163,6 +163,19 @@ class NetInterface:
                 pick_place_state=d.get("pick_place_state", ""),
                 pick_place_error=d.get("pick_place_error", ""),
                 pick_place_error_detail=d.get("pick_place_error_detail", ""),
+                calibration_ready=d.get("calibration_ready", False),
+                calibration_running=d.get("calibration_running", False),
+                calibration_state=d.get("calibration_state", ""),
+                calibration_message=d.get("calibration_message", ""),
+                calibration_sample_count=d.get("calibration_sample_count", 0),
+                calibration_pose_index=d.get("calibration_pose_index", 0),
+                calibration_pose_total=d.get("calibration_pose_total", 0),
+                calibration_computed=d.get("calibration_computed", False),
+                calibration_result=d.get("calibration_result", {}),
+                calibration_latest_path=d.get("calibration_latest_path", ""),
+                calibration_archive_path=d.get("calibration_archive_path", ""),
+                calibration_error=d.get("calibration_error", ""),
+                calibration_marker_frame=d.get("calibration_marker_frame", "tag36h11:1"),
                 camera_type=d.get("camera_type", ""),
                 headset_type=d.get("headset_type", ""),
                 velocity_history=d.get("velocity_history", []),
@@ -188,6 +201,9 @@ class NetInterface:
             "cube_id": cube_id,
             "bin_id": bin_id if bin_id is not None else cube_id,
         })
+
+    def calibration_command(self, action: str):
+        self._send_cmd({"cmd": "calibration", "action": action})
 
     def reconfigure_camera(self, width: int, height: int, fps: float):
         self._send_cmd({"cmd": "reconfigure_camera", "width": width,

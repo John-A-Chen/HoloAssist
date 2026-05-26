@@ -1,0 +1,39 @@
+site_name: HoloAssist
+site_description: XR-Based Human–Robot Collaboration Framework
+site_author: RS2 Team
+repo_url: https://github.com/John-A-Chen/HoloAssist
+repo_name: John-A-Chen/HoloAssist
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.integrate
+
+nav:
+  - Home: index.md
+  - Running the System: running.md
+  - Perception: perception.md
+  - Robot Control: robot.md
+  - Visualisation: visualisation.md
+  - Calibration: calibration.md
+  - ROS API Reference: api.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - tables
+  - toc:
+      permalink: true

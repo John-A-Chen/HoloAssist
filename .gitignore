@@ -2,6 +2,9 @@
 node_modules/
 dist/
 
+# MkDocs build output
+site/
+
 # External packages — clone manually per SETUP.md
 ROS-TCP-Connector/
 URDF-Importer/

@@ -150,6 +150,11 @@ def generate_launch_description() -> LaunchDescription:
         default_value="true",
         description="Launch pick_place_sequencer and pick_place_service_node.",
     )
+    start_perception_arg = DeclareLaunchArgument(
+        "start_perception",
+        default_value="true",
+        description="Launch simulated camera/cube perception and its MoveIt adapters.",
+    )
 
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     rviz_config_arg = DeclareLaunchArgument("rviz_config", default_value=rviz_default)
@@ -257,6 +262,7 @@ def generate_launch_description() -> LaunchDescription:
     # ── Perception sim (truth cubes, fake D435i camera, visibility-based perception) ─
     perception_stack = GroupAction(
         scoped=True,
+        condition=IfCondition(LaunchConfiguration("start_perception")),
         actions=[
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(perception_launch),
@@ -280,6 +286,7 @@ def generate_launch_description() -> LaunchDescription:
         executable="sim_cube_moveit_bridge_node",
         name="holoassist_sim_cube_moveit_bridge",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("start_perception")),
         parameters=[
             LaunchConfiguration("sim_scene_config"),
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
@@ -294,6 +301,7 @@ def generate_launch_description() -> LaunchDescription:
         executable="selected_cube_to_moveit_target_node",
         name="holoassist_selected_cube_to_moveit_target",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("start_perception")),
         parameters=[
             LaunchConfiguration("sim_scene_config"),
             LaunchConfiguration("full_sim_config"),
@@ -365,6 +373,7 @@ def generate_launch_description() -> LaunchDescription:
         [
             start_moveit_arg,
             start_pick_place_arg,
+            start_perception_arg,
             robot_base_yaw_rad_arg,
             moveit_launch_file_arg,
             ur_type_arg,

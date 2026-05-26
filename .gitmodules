@@ -1,0 +1,3 @@
+[submodule "ros2_ws/src/easy_handeye2"]
+	path = ros2_ws/src/easy_handeye2
+	url = https://github.com/marcoesposito1988/easy_handeye2.git

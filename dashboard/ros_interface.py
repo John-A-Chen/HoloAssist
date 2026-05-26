@@ -121,6 +121,20 @@ class DashboardStatus:
     pick_place_state: str = ""
     pick_place_error: str = ""
     pick_place_error_detail: str = ""
+    # Automated hand-eye calibration
+    calibration_ready: bool = False
+    calibration_running: bool = False
+    calibration_state: str = ""
+    calibration_message: str = ""
+    calibration_sample_count: int = 0
+    calibration_pose_index: int = 0
+    calibration_pose_total: int = 0
+    calibration_computed: bool = False
+    calibration_result: dict = field(default_factory=dict)
+    calibration_latest_path: str = ""
+    calibration_archive_path: str = ""
+    calibration_error: str = ""
+    calibration_marker_frame: str = "tag36h11:1"
     camera_type: str = ""   # "realsense", "webcam", "brio", or ""
     headset_type: str = ""  # "quest2", "quest3", or ""
     # Rolling graph data (downsampled for display)
@@ -147,6 +161,8 @@ TOPIC_DEFAULTS = {
 PICK_PLACE_MODE_TOPIC = "/pick_place/mode"
 PICK_PLACE_STATUS_TOPIC = "/pick_place/status"
 PICK_CUBE_SERVICE = "/holoassist/pick_cube_to_bin"
+CALIBRATION_COMMAND_TOPIC = "/holoassist/calibration/command"
+CALIBRATION_STATUS_TOPIC = "/holoassist/calibration/status"
 
 
 class RosInterface:
@@ -192,6 +208,7 @@ class RosInterface:
         self._fake_hardware: bool = False  # set by _check_controller_status on startup
         self._pick_cube_client = None
         self._camera_reconfigure_pub = None
+        self._calibration_command_pub = None
 
     def start(self):
         """Initialize rclpy and start spinning in a background thread."""
@@ -218,6 +235,9 @@ class RosInterface:
         )
         self._pick_place_mode_pub = self._node.create_publisher(
             String, PICK_PLACE_MODE_TOPIC, 10
+        )
+        self._calibration_command_pub = self._node.create_publisher(
+            String, CALIBRATION_COMMAND_TOPIC, 10
         )
         if PICK_CUBE_SERVICE_AVAILABLE:
             self._pick_cube_client = self._node.create_client(
@@ -308,6 +328,10 @@ class RosInterface:
         self._node.create_subscription(
             String, PICK_PLACE_STATUS_TOPIC,
             self._pick_place_status_cb, 10,
+        )
+        self._node.create_subscription(
+            String, CALIBRATION_STATUS_TOPIC,
+            self._calibration_status_cb, 10,
         )
 
         # Camera type (published by launch/camera node, or auto-detected)
@@ -574,6 +598,30 @@ class RosInterface:
             self._status.pick_place_state = state
             self._status.pick_place_error = error
             self._status.pick_place_error_detail = error_detail
+
+    def _calibration_status_cb(self, msg):
+        try:
+            payload = json.loads(msg.data)
+            if not isinstance(payload, dict):
+                return
+        except (json.JSONDecodeError, Exception):
+            return
+        with self._lock:
+            self._status.calibration_ready = bool(payload.get("ready", False))
+            self._status.calibration_running = bool(payload.get("running", False))
+            self._status.calibration_state = str(payload.get("state", ""))
+            self._status.calibration_message = str(payload.get("message", ""))
+            self._status.calibration_sample_count = int(payload.get("sample_count", 0) or 0)
+            self._status.calibration_pose_index = int(payload.get("pose_index", 0) or 0)
+            self._status.calibration_pose_total = int(payload.get("pose_total", 0) or 0)
+            self._status.calibration_computed = bool(payload.get("computed", False))
+            self._status.calibration_result = dict(payload.get("result", {}) or {})
+            self._status.calibration_latest_path = str(payload.get("latest_path", ""))
+            self._status.calibration_archive_path = str(payload.get("archive_path", ""))
+            self._status.calibration_error = str(payload.get("error", ""))
+            self._status.calibration_marker_frame = str(
+                payload.get("marker_frame", "tag36h11:1")
+            )
 
     def _sample_velocities(self):
         """Downsample joint velocities + latency to 10Hz for rolling graphs."""
@@ -882,6 +930,19 @@ class RosInterface:
                 pick_place_state=self._status.pick_place_state,
                 pick_place_error=self._status.pick_place_error,
                 pick_place_error_detail=self._status.pick_place_error_detail,
+                calibration_ready=self._status.calibration_ready,
+                calibration_running=self._status.calibration_running,
+                calibration_state=self._status.calibration_state,
+                calibration_message=self._status.calibration_message,
+                calibration_sample_count=self._status.calibration_sample_count,
+                calibration_pose_index=self._status.calibration_pose_index,
+                calibration_pose_total=self._status.calibration_pose_total,
+                calibration_computed=self._status.calibration_computed,
+                calibration_result=dict(self._status.calibration_result),
+                calibration_latest_path=self._status.calibration_latest_path,
+                calibration_archive_path=self._status.calibration_archive_path,
+                calibration_error=self._status.calibration_error,
+                calibration_marker_frame=self._status.calibration_marker_frame,
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
@@ -904,6 +965,15 @@ class RosInterface:
         msg.data = mode
         self._pick_place_mode_pub.publish(msg)
         self._add_event(f"Published {PICK_PLACE_MODE_TOPIC}: {mode}")
+
+    def calibration_command(self, action: str):
+        if not ROS_AVAILABLE or self._node is None or self._calibration_command_pub is None:
+            self._add_event(f"Calibration command unavailable: {action}")
+            return
+        msg = String()
+        msg.data = json.dumps({"action": str(action).strip().lower()})
+        self._calibration_command_pub.publish(msg)
+        self._add_event(f"Calibration command: {action}")
 
     # ── MOVEIT CUBE PICK/PLACE ─────────────────────────────────────
 

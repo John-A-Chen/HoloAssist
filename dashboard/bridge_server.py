@@ -69,6 +69,8 @@ class BridgeServer:
             self.ros.switch_to_moveit()
         elif cmd == "pick_cube":
             self.ros.pick_cube_to_bin(msg.get("cube_id"), msg.get("bin_id"))
+        elif cmd == "calibration":
+            self.ros.calibration_command(msg.get("action", ""))
         elif cmd == "reconfigure_camera":
             self.ros.reconfigure_camera(
                 int(msg.get("width", 640)),
@@ -152,6 +154,19 @@ class BridgeServer:
             "pick_place_state": status.pick_place_state,
             "pick_place_error": status.pick_place_error,
             "pick_place_error_detail": status.pick_place_error_detail,
+            "calibration_ready": status.calibration_ready,
+            "calibration_running": status.calibration_running,
+            "calibration_state": status.calibration_state,
+            "calibration_message": status.calibration_message,
+            "calibration_sample_count": status.calibration_sample_count,
+            "calibration_pose_index": status.calibration_pose_index,
+            "calibration_pose_total": status.calibration_pose_total,
+            "calibration_computed": status.calibration_computed,
+            "calibration_result": status.calibration_result,
+            "calibration_latest_path": status.calibration_latest_path,
+            "calibration_archive_path": status.calibration_archive_path,
+            "calibration_error": status.calibration_error,
+            "calibration_marker_frame": status.calibration_marker_frame,
             "camera_type": status.camera_type,
             "headset_type": status.headset_type,
             "velocity_history": status.velocity_history,
