@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visualisation — HoloAssist</title>
+<title>XR Scene &amp; Visualisation — HoloAssist Handover</title>
 <link rel="icon" href="../screenshots/logo.png">
 <style>
 :root {
@@ -12,6 +12,7 @@
     --dark: #221d38; --darker: #181228; --darkest: #0e0b1e;
     --body: #cdc6e0; --light: #ffffff;
     --orange: #f4821f; --orange-light: #fb9a4b; --steel: #141618;
+    --green: #6ee7a0;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 19px; scroll-behavior: smooth; }
@@ -25,107 +26,145 @@ a { color: inherit; text-decoration: none; }
 .nav-back svg { flex-shrink: 0; }
 .nav-brand { font-size: .88rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--light); }
 .nav-brand span { color: var(--orange); }
+.nav-meta { margin-left: auto; font-size: .7rem; color: rgba(205,198,224,.5); font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: .5px; }
 .hero { min-height: 100vh; position: relative; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 65% 40%, rgba(139,92,246,.2) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 70%, rgba(244,130,31,.12) 0%, transparent 50%), linear-gradient(160deg, #12101c 0%, #181228 40%, #12101c 100%); }
 .hero-grid { position: absolute; inset: 0; opacity: .09; background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 60px 60px; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(14,11,30,.1) 0%, rgba(14,11,30,.5) 60%, rgba(14,11,30,.92) 100%); }
-.hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .28; }
-.hero-content { position: relative; z-index: 2; padding: 0 4rem 5rem 9.5rem; max-width: 860px; }
+.hero-content { position: relative; z-index: 2; padding: 0 4rem 5rem 9.5rem; max-width: 920px; }
 .hero-eyebrow { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--orange); margin-bottom: .6rem; font-weight: 600; }
 .hero-line { width: 48px; height: 2px; background: linear-gradient(90deg, var(--purple), var(--orange)); margin-bottom: 1.5rem; }
 .hero-num { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(205,198,224,.28); margin-bottom: .4rem; }
-.hero-title { font-size: clamp(3rem, 7.5vw, 6.5rem); font-weight: 800; color: var(--light); line-height: .88; margin-bottom: 1.4rem; letter-spacing: -3px; }
+.hero-title { font-size: clamp(2.6rem, 6vw, 5.4rem); font-weight: 800; color: var(--light); line-height: .92; margin-bottom: 1.1rem; letter-spacing: -2.5px; }
 .hero-title .thin { font-weight: 200; color: rgba(205,198,224,.35); }
-.hero-desc { max-width: 540px; font-size: 1.05rem; color: var(--body); line-height: 1.75; font-weight: 300; margin-bottom: 2.5rem; }
+.hero-sub { font-size: 1rem; color: var(--purple-light); margin-bottom: 1.2rem; font-weight: 500; letter-spacing: .3px; }
+.hero-desc { max-width: 620px; font-size: 1.05rem; color: var(--body); line-height: 1.75; font-weight: 300; margin-bottom: 2.2rem; }
 .hero-desc strong { color: var(--light); font-weight: 500; }
-.hero-meta { display: flex; gap: 3rem; flex-wrap: wrap; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(205,198,224,.35); }
-.hero-meta-val { display: block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 2rem; font-weight: 800; color: var(--light); letter-spacing: -2px; line-height: 1; margin-bottom: .25rem; }
-.section { padding: 5rem 4rem 5rem 9.5rem; }
+.hero-meta { display: flex; gap: 2.6rem; flex-wrap: wrap; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(205,198,224,.35); }
+.hero-meta-val { display: block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 1.7rem; font-weight: 800; color: var(--light); letter-spacing: -1.5px; line-height: 1; margin-bottom: .25rem; }
+.hero-stamp { margin-top: 1.4rem; display: inline-flex; align-items: center; gap: .55rem; padding: .35rem .8rem; border: 1px solid rgba(110,231,160,.35); border-radius: 4px; background: rgba(110,231,160,.06); font-family: 'SFMono-Regular', Consolas, monospace; font-size: .7rem; color: var(--green); letter-spacing: 1px; }
+.hero-stamp::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(110,231,160,.6); }
+.section { padding: 4.5rem 4rem 4.5rem 9.5rem; }
 .section.alt { background: var(--steel); }
-.section-in { max-width: 1100px; margin: 0; }
+.section-in { max-width: 1180px; margin: 0; }
 .ph-line { width: 42px; height: 3px; background: linear-gradient(90deg, var(--purple), var(--orange)); margin-bottom: .9rem; }
-.section-lbl { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--orange); margin-bottom: .5rem; }
-.section h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 700; color: var(--light); letter-spacing: -.5px; line-height: 1.1; margin-bottom: 1.5rem; }
-.section p { font-size: 1rem; color: var(--body); line-height: 1.75; margin-bottom: 1.1rem; max-width: 780px; }
+.section-lbl { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--light); margin-bottom: 1.4rem; line-height: 1.2; }
+.section h2 { font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-weight: 700; color: var(--light); letter-spacing: -.5px; line-height: 1.1; margin-bottom: 1.4rem; }
+.section h3 { font-size: .82rem; font-weight: 700; color: var(--purple-light); letter-spacing: 2px; text-transform: uppercase; margin-top: 2.2rem; margin-bottom: .8rem; }
+.section h3.alt-h3 { color: var(--orange); }
+.section h4 { font-size: .92rem; font-weight: 700; color: var(--light); margin-top: 1.4rem; margin-bottom: .5rem; }
+.section p { font-size: .96rem; color: var(--body); line-height: 1.7; margin-bottom: .9rem; max-width: 920px; }
 .section p strong { color: var(--light); font-weight: 600; }
-.photo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 2rem; }
-.photo-slot { aspect-ratio: 16/9; overflow: hidden; border-radius: 6px; background: rgba(139,92,246,.06); border: 1px dashed rgba(139,92,246,.22); display: flex; align-items: center; justify-content: center; position: relative; }
-.photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.photo-slot-ph { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; color: rgba(139,92,246,.35); letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
-.pipe-grid { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid rgba(244,130,31,.14); margin-top: 2rem; }
-.pipe-step { padding: 2rem 1.75rem; border-right: 1px solid rgba(244,130,31,.14); position: relative; transition: background .2s; }
+.section ul, .section ol { margin: 0 0 1rem 1.25rem; color: var(--body); font-size: .94rem; line-height: 1.75; }
+.section ul li, .section ol li { margin-bottom: .35rem; }
+.section code, .section p code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .82rem; color: var(--purple-light); background: rgba(139,92,246,.1); padding: 1px 6px; border-radius: 3px; }
+.section pre { background: #080a0b; border: 1px solid rgba(244,130,31,.18); border-radius: 4px; padding: 1.1rem 1.3rem; margin: 1rem 0; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .8rem; color: #ded7f5; line-height: 1.65; }
+.section pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.pre-token-c { color: var(--purple-light); }
+.pre-token-k { color: var(--orange); }
+.pre-token-s { color: var(--green); }
+span.verify { display: inline-block; padding: 1px 7px; border-radius: 3px; background: rgba(251,191,36,.14); color: var(--amber); font-size: .65rem; font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid rgba(251,191,36,.3); margin-left: .3rem; vertical-align: middle; }
+span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; background: rgba(110,231,160,.1); color: var(--green); font-size: .65rem; font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid rgba(110,231,160,.25); margin-left: .3rem; vertical-align: middle; }
+.callout { border-left: 3px solid var(--orange); background: rgba(244,130,31,.05); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 0 4px 4px 0; font-size: .9rem; color: var(--body); }
+.callout strong { color: var(--orange); }
+.data-table { width: 100%; border-collapse: collapse; margin-top: 1.2rem; }
+.data-table th { text-align: left; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .6rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(205,198,224,.35); padding: .65rem .9rem .65rem 0; border-bottom: 1px solid rgba(244,130,31,.14); font-weight: 400; }
+.data-table td { padding: .8rem .9rem .8rem 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .87rem; vertical-align: top; color: var(--body); line-height: 1.55; }
+.data-table td:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .8rem; white-space: nowrap; }
+.data-table td.wrap-first:first-child { white-space: normal; }
+.data-table td code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .76rem; color: var(--purple-light); background: rgba(139,92,246,.1); padding: 1px 5px; border-radius: 3px; }
+.pipe-grid { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid rgba(244,130,31,.14); margin-top: 1.4rem; }
+.pipe-step { padding: 1.6rem 1.4rem; border-right: 1px solid rgba(244,130,31,.14); position: relative; transition: background .2s; }
 .pipe-step:last-child { border-right: none; }
 .pipe-step:hover { background: rgba(139,92,246,.06); }
-.pipe-num { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; color: var(--orange); letter-spacing: 2px; margin-bottom: 1.25rem; }
-.pipe-step h4 { font-size: 0.95rem; font-weight: 600; color: var(--light); margin-bottom: .5rem; }
-.pipe-step p { font-size: 0.82rem; color: var(--body); line-height: 1.6; }
-.pipe-step p code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .78rem; color: var(--purple-light); background: rgba(139,92,246,.1); padding: 1px 5px; border-radius: 3px; }
+.pipe-num { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; color: var(--orange); letter-spacing: 2px; margin-bottom: 1rem; }
+.pipe-step h4 { font-size: 0.9rem; font-weight: 600; color: var(--light); margin: 0 0 .45rem 0; }
+.pipe-step p { font-size: 0.78rem; color: var(--body); line-height: 1.55; margin: 0; }
+.pipe-step p code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .72rem; color: var(--purple-light); background: rgba(139,92,246,.1); padding: 1px 4px; border-radius: 3px; }
 .pipe-arrow { position: absolute; right: -7px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; background: var(--steel); border: 1px solid rgba(244,130,31,.3); color: var(--orange); display: flex; align-items: center; justify-content: center; font-size: .6rem; z-index: 2; }
 .pipe-step:last-child .pipe-arrow { display: none; }
-.data-table { width: 100%; border-collapse: collapse; margin-top: 1.75rem; }
-.data-table th { text-align: left; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .6rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(205,198,224,.35); padding: .65rem 1rem .65rem 0; border-bottom: 1px solid rgba(244,130,31,.14); font-weight: 400; }
-.data-table td { padding: .9rem 1rem .9rem 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .9rem; vertical-align: top; color: var(--body); }
-.data-table td:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .82rem; white-space: nowrap; }
-.data-table td:nth-child(2) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .82rem; }
-.cfg-table { border: 1px solid rgba(244,130,31,.14); margin-top: 1.75rem; }
-.cfg-row { display: grid; grid-template-columns: 200px 120px 1fr; border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+.cfg-table { border: 1px solid rgba(244,130,31,.14); margin-top: 1.4rem; }
+.cfg-row { display: grid; grid-template-columns: minmax(260px, 320px) minmax(120px, 180px) 1fr; border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+.cfg-row > div:first-child, .cfg-row > div:nth-child(2) { word-break: break-word; overflow-wrap: anywhere; }
 .cfg-row:last-child { border-bottom: none; }
 .cfg-row:hover { background: rgba(139,92,246,.05); }
-.cfg-row > div { padding: .9rem 1.25rem; font-size: .9rem; color: var(--body); }
-.cfg-row > div:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .82rem; border-right: 1px solid rgba(255,255,255,.04); }
-.cfg-row > div:nth-child(2) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .82rem; border-right: 1px solid rgba(255,255,255,.04); }
-.issues { list-style: none; margin-top: 1.75rem; }
-.issues li { padding: 1.5rem 0; border-bottom: 1px solid rgba(255,255,255,.05); display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
+.cfg-row > div { padding: .85rem 1.1rem; font-size: .86rem; color: var(--body); line-height: 1.55; }
+.cfg-row > div:first-child { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--purple-light); font-size: .78rem; border-right: 1px solid rgba(255,255,255,.04); }
+.cfg-row > div:nth-child(2) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .78rem; border-right: 1px solid rgba(255,255,255,.04); }
+.cfg-row > div:nth-child(2) code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.issues { list-style: none; margin: 1.4rem 0 0 0; }
+.issues li { padding: 1.3rem 0; border-bottom: 1px solid rgba(255,255,255,.05); display: grid; grid-template-columns: 240px 1fr; gap: 1.6rem; align-items: start; }
 .issues li:last-child { border-bottom: none; }
-.issue-ttl { font-size: .9rem; font-weight: 600; color: var(--light); }
-.issue-body { font-size: .9rem; color: var(--body); line-height: 1.68; }
-.issue-body code { background: rgba(139,92,246,.12); padding: 1px 6px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .78rem; color: var(--purple-light); }
+.issue-ttl { font-size: .88rem; font-weight: 600; color: var(--light); line-height: 1.45; }
+.issue-body { font-size: .87rem; color: var(--body); line-height: 1.65; }
+.issue-body code { background: rgba(139,92,246,.12); padding: 1px 6px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .75rem; color: var(--purple-light); }
+.issue-body strong { color: var(--light); font-weight: 600; }
+.test-card { border: 1px solid rgba(244,130,31,.14); border-radius: 4px; padding: 1.4rem 1.6rem; margin-bottom: 1.4rem; background: rgba(8,5,18,.4); }
+.test-card h4 { margin: 0 0 1rem 0; font-size: 1rem; font-weight: 700; color: var(--light); padding-bottom: .6rem; border-bottom: 1px solid rgba(255,255,255,.05); }
+.test-card .test-grid { display: grid; grid-template-columns: 150px 1fr; gap: .55rem 1.1rem; font-size: .85rem; align-items: start; }
+.test-card .test-grid > div:nth-child(odd) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .68rem; letter-spacing: 1.3px; text-transform: uppercase; padding-top: 4px; white-space: nowrap; }
+.test-card .test-grid > div:nth-child(even) { color: var(--body); line-height: 1.6; overflow-wrap: anywhere; min-width: 0; }
+.test-card .test-grid code { background: rgba(139,92,246,.12); padding: 1px 5px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .76rem; color: var(--purple-light); }
+.diagram { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .82rem; background: #080a0b; border: 1px solid rgba(139,92,246,.18); border-radius: 4px; padding: 1.5rem; color: var(--body); line-height: 1.65; white-space: pre; overflow-x: auto; margin: 1.2rem 0; }
+.diagram .dn { color: var(--light); font-weight: 600; }
+.diagram .da { color: var(--orange); }
+.diagram .dg { color: var(--green); }
+.evidence-slot { aspect-ratio: 16/9; overflow: hidden; border-radius: 4px; background: rgba(139,92,246,.04); border: 1px dashed rgba(139,92,246,.22); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; padding: 1rem; color: rgba(139,92,246,.45); }
+.evidence-slot .ph-label { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(139,92,246,.55); }
+.evidence-slot .ph-cap { font-size: .76rem; color: rgba(205,198,224,.45); text-align: center; }
+.evidence-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+.limitation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.4rem; }
+.limitation-card { border: 1px solid rgba(255,255,255,.06); border-radius: 4px; padding: 1.25rem 1.4rem; background: rgba(8,5,18,.35); min-width: 0; overflow-wrap: anywhere; }
+.limitation-card ul li code { word-break: break-all; }
+.limitation-card h4 { font-size: .95rem; font-weight: 700; letter-spacing: .2px; margin-bottom: .8rem; }
+.limitation-card.confirmed h4 { color: var(--green); }
+.limitation-card.assumption h4 { color: var(--purple-light); }
+.limitation-card.verify h4 { color: var(--amber); }
+.limitation-card.future h4 { color: var(--orange); }
+.limitation-card ul { margin: 0 0 0 1.1rem; font-size: .85rem; line-height: 1.65; }
+.limitation-card ul li { margin-bottom: .45rem; }
 .doc-footer { background: #0a0b0c; border-top: 1px solid rgba(139,92,246,.14); padding: 2.5rem 4rem; }
-.doc-footer-in { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.doc-footer-in { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
 .doc-footer h3 { color: var(--light); font-size: .9rem; font-weight: 700; margin-bottom: .25rem; }
 .doc-footer p { font-size: .78rem; color: rgba(205,198,224,.38); }
 .doc-footer-back { display: flex; align-items: center; gap: .4rem; font-size: .72rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--orange); transition: color .15s; }
 .doc-footer-back:hover { color: var(--orange-light); }
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
     .pipe-grid { grid-template-columns: 1fr 1fr; }
     .pipe-step { border-bottom: 1px solid rgba(244,130,31,.14); }
     .pipe-arrow { display: none !important; }
     .cfg-row { grid-template-columns: 1fr; }
     .cfg-row > div:first-child, .cfg-row > div:nth-child(2) { border-right: none; border-bottom: 1px solid rgba(255,255,255,.04); }
-    .issues li { grid-template-columns: 1fr; gap: .5rem; }
+    .issues li { grid-template-columns: 1fr; gap: .4rem; }
+    .limitation-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
     html { font-size: 17px; }
-    .nav-links { display: none; }
-    .section { padding: 3.5rem 1.75rem; }
+    .nav-inner { padding: 0 1.5rem; gap: 1rem; }
+    .nav-meta { display: none; }
+    .section { padding: 3rem 1.75rem; }
     .hero-content { padding: 0 1.75rem 4rem; }
     .pipe-grid { grid-template-columns: 1fr; }
-    .photo-row { grid-template-columns: 1fr; }
     .doc-footer { padding: 2rem 1.75rem; }
     .doc-footer-in { flex-direction: column; gap: 1.5rem; text-align: center; }
 }
 
-/* ── DOCK (matches index.html) ── */
+/* DOCK */
 .dock-wrap { position: fixed; left: 0.75rem; top: 50%; transform: translateY(-50%); z-index: 200; pointer-events: none; }
-.dock { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; border-radius: 1.1rem; border: 1px solid rgba(139,92,246,0.35); background: rgba(10,7,22,0.92); backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1); padding: 0.5rem; }
-.di { --sz: 64px; width: var(--sz); height: var(--sz); display: inline-flex; align-items: center; justify-content: center; border-radius: 0.9rem; border: 1px solid rgba(139,92,246,0.22); background: rgba(20,14,40,0.9); color: #4a3f68; position: relative; text-decoration: none; transition: width 160ms ease, height 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.dock { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; border-radius: 1.1rem; border: 1px solid rgba(139,92,246,0.35); background: rgba(10,7,22,0.92); backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1); padding: 0.45rem; max-height: 92vh; overflow-y: auto; }
+.dock::-webkit-scrollbar { width: 0; }
+.di { --sz: 44px; width: var(--sz); height: var(--sz); display: inline-flex; align-items: center; justify-content: center; border-radius: 0.75rem; border: 1px solid rgba(139,92,246,0.22); background: rgba(20,14,40,0.9); color: #4a3f68; position: relative; text-decoration: none; transition: width 160ms ease, height 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease; flex-shrink: 0; }
 .di:hover, .di:focus-visible { transform: translateX(4px); border-color: rgba(139,92,246,0.7); background: rgba(60,28,110,0.9); color: var(--purple-light); }
 .di.active { border-color: rgba(139,92,246,0.85); background: linear-gradient(180deg, rgba(139,92,246,0.38), rgba(139,92,246,0.2)); color: var(--purple-light); }
 .di.gh { color: var(--amber); }
 .di.gh:hover { color: var(--amber-light); border-color: rgba(251,191,36,0.6); background: rgba(80,55,8,0.85); }
-.di-icon { width: 1.65rem; height: 1.65rem; }
+.di-icon { width: 1.35rem; height: 1.35rem; }
 .di-icon svg { width: 100%; height: 100%; display: block; }
-.di-label { position: absolute; left: calc(100% + 0.7rem); top: 50%; transform: translateY(-50%) translateX(-6px); opacity: 0; pointer-events: none; border-radius: 0.5rem; border: 1px solid rgba(139,92,246,0.3); background: rgba(10,7,22,0.97); color: #ede8ff; white-space: nowrap; padding: 0.28rem 0.65rem; font-size: 0.76rem; font-weight: 500; letter-spacing: 0.3px; transition: opacity 150ms ease, transform 150ms ease; }
+.di-label { position: absolute; left: calc(100% + 0.7rem); top: 50%; transform: translateY(-50%) translateX(-6px); opacity: 0; pointer-events: none; border-radius: 0.5rem; border: 1px solid rgba(139,92,246,0.3); background: rgba(10,7,22,0.97); color: #ede8ff; white-space: nowrap; padding: 0.28rem 0.65rem; font-size: 0.74rem; font-weight: 500; letter-spacing: 0.3px; transition: opacity 150ms ease, transform 150ms ease; }
 .di:hover .di-label, .di:focus-visible .di-label { opacity: 1; transform: translateY(-50%) translateX(0); }
-.d-sep { width: 22px; height: 1px; background: rgba(139,92,246,0.2); margin: 0.08rem 0; }
-@media (max-width: 768px) {
-    .dock-wrap { left: 50%; top: auto; bottom: 0.7rem; transform: translateX(-50%); }
-    .dock { flex-direction: row; border-radius: 1rem; padding: 0.48rem 0.55rem; gap: 0.4rem; }
-    .d-sep { width: 1px; height: 20px; margin: 0 0.05rem; }
-    .di { --sz: 44px; }
-    .di-icon { width: 1.2rem; height: 1.2rem; }
-    .di-label { display: none; }
-    .di:hover { transform: translateY(-3px) !important; }
+.d-sep { width: 22px; height: 1px; background: rgba(139,92,246,0.2); margin: 0.08rem 0; flex-shrink: 0; }
+@media (max-width: 1100px) {
+    .dock-wrap { display: none; }
 }
 </style>
 </head>
@@ -138,165 +177,706 @@ a { color: inherit; text-decoration: none; }
       Back
     </a>
     <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
+    <span class="nav-meta">Subsystem 4 · XR Scene &amp; Visualisation · Last updated 2026-05-27</span>
   </div>
 </nav>
 
-<section class="hero">
+<!-- ── HERO ── -->
+<section class="hero" id="home">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div class="hero-overlay"></div>
-  <!-- <img class="hero-photo" src="../screenshots/visualisation.png" alt=""> -->
   <div class="hero-content">
-    <div class="hero-num">04 / 04</div>
-    <div class="hero-eyebrow">HoloAssist — Subsystem</div>
+    <div class="hero-num">Subsystem 04 / Visualisation</div>
+    <div class="hero-eyebrow">HoloAssist — Project Handover</div>
     <div class="hero-line"></div>
-    <h1 class="hero-title">Visua<span class="thin">lisa</span><br>tion</h1>
+    <h1 class="hero-title">XR Scene <span class="thin">and</span><br>Visualisation</h1>
+    <p class="hero-sub">Subsystem owner: <strong style="color:var(--light)">Sebastian Baudille</strong> · Unity XR Handover</p>
     <p class="hero-desc">
-      Unity AR overlays on the <strong>Meta Quest 3</strong> rendering the robot arm, trolley scene,
-      and live cube positions as spatial holographics anchored to the physical workspace.
+      The headset-side XR scene that runs HoloAssist on the <strong>Meta Quest 3</strong>. It renders
+      the AR workspace around the operator, hosts the in-headset UI for monitoring and driving the
+      robot, and bridges the Unity client into the wider HoloAssist <strong>ROS</strong> stack.
     </p>
     <div class="hero-meta">
-      <div><span class="hero-meta-val">Quest</span>3 AR</div>
-      <div><span class="hero-meta-val">Unity</span>runtime</div>
-      <div><span class="hero-meta-val">Live</span>ROS TF</div>
-      <div><span class="hero-meta-val">AR</span>Foundation</div>
+      <div><span class="hero-meta-val">Quest&nbsp;3</span>headset</div>
+      <div><span class="hero-meta-val">6000.3.9f1</span>Unity 6.3 LTS</div>
+      <div><span class="hero-meta-val">85.0.0</span>Meta XR SDK</div>
+      <div><span class="hero-meta-val">:10000</span>ROS-TCP</div>
+    </div>
+    <div class="hero-stamp">Handover document · 2026-05-27</div>
+  </div>
+</section>
+
+<!-- ── QUICKSTART ── -->
+<section class="section" id="quickstart">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">01 — Client Quick Start</div>
+
+    <h3>Required hardware</h3>
+    <ul>
+      <li>Meta Quest 3 headset, paired controllers, charged. Developer mode enabled.</li>
+      <li>USB-C cable for the Quest (build and run from Editor)</li>
+      <li>Linux laptop running Ubuntu 22.04 with ROS 2 Humble installed.</li>
+      <li>Logitech Brio 4K (or any UVC webcam / Intel RealSense) for AprilTag cube perception.</li>
+      <li>Printed 36h11 AprilTags on 40 mm cubes (tag IDs 10–33, four cubes). Refer to the perception documentation for details.</li>
+      <li>UR3e + OnRobot RG2 on the robot router (<code>192.168.0.194</code>) or URSim in Docker (<code>192.168.56.101</code>).</li>
+    </ul>
+
+    <h3>Required software</h3>
+    <ul>
+      <li><strong>Unity 6.3 LTS (6000.3.9f1)</strong> with Android Build Support module installed (OpenJDK + SDK + NDK).</li>
+      <li><strong>Meta XR SDK 85.0.0</strong> and all packages listed in <a href="#stack">Software stack</a> — installed via Unity Package Manager when the project first opens.</li>
+      <li>ROS 2 Humble + the project's <code>ros2_ws</code> built (<code>colcon build --symlink-install</code>).</li>
+    </ul>
+
+    <h3>Step 1 — Clone &amp; open the Unity project</h3>
+<pre><code><span class="pre-token-c"># Repository root</span>
+git clone git@github.com:John-A-Chen/HoloAssist.git
+cd HoloAssist
+git checkout demo</code></pre>
+    <p>Open <code>Unity/My project/</code> in Unity Hub. The first import is slow, it will take several minutes.</p>
+
+    <h3>Step 2 — Open the demo scene</h3>
+    <p>In the Project window navigate to <code>Assets/Scenes/SampleScene.unity</code> and open it. This is the only scene used for the demo.</p>
+
+    <h3>Step 3 — Start the ROS side</h3>
+<pre><code><span class="pre-token-c"># From repo root, in a fresh terminal</span>
+source /opt/ros/humble/setup.bash
+source ros2_ws/install/setup.bash
+
+<span class="pre-token-c"># Fake hardware + perception + dashboard</span>
+./launch.sh --perception --dashboard
+
+<span class="pre-token-c"># OR — URSim + full stack (need URSim Docker running on 192.168.56.101)</span>
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</code></pre>
+    <p>Note the <code>WiFi IP</code> printed by the launcher — this is what Unity needs.</p>
+
+    <h3>Step 4 — Connect Unity to ROS</h3>
+    <p>In Unity Editor open <strong>Robotics - ROS Settings</strong>. Set:</p>
+    <ul>
+      <li><strong>ROS IP Address</strong>: the laptop WiFi IP from Step 3.</li>
+      <li><strong>ROS Port</strong>: <code>10000</code>.</li>
+    </ul>
+    <p>On the robot router subnet (<code>192.168.0.x</code>) the in-scene <code>ROSAutoConnect</code> component will discover the host automatically. On any other network (uni WiFi, phone hotspot) disable it and enter the IP manually.</p>
+
+    <h3>Step 5 — Deploy to Quest 3</h3>
+    <ol>
+      <li>Connect the Quest to the laptop via USB-C, accept the "Allow USB debugging" prompt inside the headset.</li>
+      <li>Unity - <strong>File - Build Profiles</strong> - ensure Android is the active platform.</li>
+      <li>Click <strong>Build And Run</strong>. APK installs to the Quest and launches.</li>
+    </ol>
+
+    <h3>What success looks like</h3>
+    <ul>
+      <li>Quest passthrough shows the physical room with a UR3e holographic twin anchored at the trolley.</li>
+      <li>Cube holograms appear within 1–2 seconds of pointing the Brio at a printed cube face.</li>
+      <li>The <strong>RobotHUD</strong> floats in front of the operator showing mode + joint angles + EE pose.</li>
+      <li>Holding the left primary button (<code>X</code>) opens the radial menu; selecting a mode switches RMRC / Direct Joint / Hand Guide.</li>
+      <li>Right stick moves the arm; right trigger drives the gripper.</li>
+    </ul>
+    <div class="evidence-row">
+      <figure class="evidence-slot"><div class="ph-label">Screenshot</div><div class="ph-cap">Unity Editor in Play mode with the digital twin mirroring URSim</div></figure>
+      <figure class="evidence-slot"><div class="ph-label">Quest capture</div><div class="ph-cap">Quest passthrough view with HUD, cube holograms, and trolley overlay</div></figure>
     </div>
   </div>
 </section>
 
-<section class="section" id="overview">
+<!-- ── PURPOSE ── -->
+<section class="section alt" id="purpose">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Overview</div>
-    <h2>What this subsystem does</h2>
+    <div class="section-lbl">02 — Purpose and Role</div>
     <p>
-      The visualisation subsystem renders a live <strong>holographic twin</strong> of the robot workspace
-      in the Quest 3 AR passthrough view. The UR3e arm, trolley, and detected cubes are displayed
-      as 3D overlays anchored to the physical scene.
+      Subsystem 4 is the <strong>operator's window</strong> into HoloAssist. The Quest 3 scene is rendered by Unity here, and Subsystem 4
+      is responsible for everything in that scene <em>except</em> the digital twin and manual control core — those are owned by
+      Subsystem&nbsp;3 (Nic). S4 anchors S3's twin in the workspace and wraps it with cube and bin holograms, floating panels,
+      a radial menu, the task / sorting UI, environment themes, and the passthrough toggle. The operator's mode switches and trigger
+      inputs are routed through S4's UI layer into S3's <code>RobotController</code>, which publishes the actual velocity / gripper commands.
     </p>
-    <p>
-      Joint states and cube poses flow from ROS via the ROS-TCP-Endpoint bridge. The Unity app
-      subscribes to these topics and updates the rendered models in real time. The trolley scene
-      is loaded at startup with the correct <strong>180° orientation</strong> matching the physical layout.
-    </p>
-    <p>
-      <strong>Lead:</strong> Sebastian &nbsp;·&nbsp;
-      <strong>Runtime:</strong> Unity + AR Foundation &nbsp;·&nbsp;
-      <strong>Headset:</strong> Meta Quest 3
-    </p>
-    <div class="photo-row">
-      <div class="photo-slot">
-        <!-- <img src="../screenshots/ar_overlay.jpg" alt=""> -->
-        <div class="photo-slot-ph">AR overlay demo photo</div>
-      </div>
-      <div class="photo-slot">
-        <!-- <img src="../screenshots/unity_scene.jpg" alt=""> -->
-        <div class="photo-slot-ph">Unity scene setup</div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="section alt" id="pipeline">
-  <div class="section-in">
-    <div class="ph-line"></div>
-    <div class="section-lbl">Pipeline</div>
-    <h2>From ROS to holographic overlay</h2>
-    <div class="pipe-grid">
-      <div class="pipe-step">
-        <div class="pipe-num">01</div>
-        <h4>ROS Data</h4>
-        <p>Joint states, TF tree, and cube poses published by the UR driver and perception node over ROS-TCP port 10000.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">02</div>
-        <h4>Unity Subscribers</h4>
-        <p>C# ROS subscribers update shared data objects each frame. TF transforms converted to Unity coordinate space.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">03</div>
-        <h4>Scene Update</h4>
-        <p>Arm URDF model joints updated per joint state. Cube GameObjects positioned from PoseStamped topics. Trolley static.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">04</div>
-        <h4>AR Passthrough</h4>
-        <p>Quest 3 renders virtual objects composited over the passthrough camera. Spatial anchors keep holograms stable as user moves.</p>
-      </div>
-    </div>
-  </div>
-</section>
+    <h3>What the operator sees</h3>
+    <ul>
+      <li>A live <strong>UR3e digital twin</strong> + ArticulationBody joint mirroring <span class="verify">Subsystem&nbsp;3 (Nic) </span></li>
+      <li><strong>AR cube holograms</strong> at the positions detected by perception (AprilTag-based, relayed onto <code>/holoassist/unity/cube_N_pose</code>).</li>
+      <li>A floating <strong>RobotHUD</strong> with mode, joint angles, EE pose, EE lock, gripper state.</li>
+      <li>A grab-and-place <strong>RobotInfoPanel</strong> with the full diagnostic readout.</li>
+      <li>A <strong>RadialMenu</strong> on the left primary button: mode switching (RMRC Translate/Rotate, Direct Joint, Hand Guide), passthrough toggle, environment cycling, task control, confetti / banner, etc.</li>
+      <li><strong>BinDetector</strong> trigger zones with a <strong>BinStatusPanel</strong> counter; <strong>TaskConfigPanel</strong> sets target count / completion mode; <strong>TaskTracker</strong> scores correct vs wrong sorts.</li>
+      <li><strong>PassthroughToggle</strong> swaps between MR (passthrough) and full VR (skybox + virtual environment).</li>
+      <li><strong>EnvironmentCycler</strong> swaps decorative theme roots (e.g. Portal Chamber / grass / open room).</li>
+      <li><strong>JointTFVisualizer</strong> + <strong>TFAxisMarker</strong> overlay coordinate axes on each link for debugging.</li>
+    </ul>
 
-<section class="section" id="topics">
-  <div class="section-in">
-    <div class="ph-line"></div>
-    <div class="section-lbl">Topics</div>
-    <h2>Subscribed topics</h2>
-    <p>Unity subscribes to these ROS topics via the ROS-TCP-Connector package. Direction: ROS → Quest.</p>
+    <h3>Visualisation-only vs ROS-connected parts</h3>
     <table class="data-table">
-      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <thead><tr><th>Component</th><th>Type</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td>/joint_states</td><td>JointState</td><td>Live UR3e joint angles — drives arm URDF render</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Cube N centre position — drives cube hologram</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_marker</td><td>Marker</td><td>Cube RViz marker (also rendered in Unity)</td></tr>
-        <tr><td>/tf</td><td>TFMessage</td><td>Full TF tree for coordinate frame transforms</td></tr>
-        <tr><td>/robot_description</td><td>String</td><td>URDF model for arm rendering (loaded at startup)</td></tr>
+        <tr><td>Digital twin (URDF arm)</td><td>ROS-connected</td><td>ArticulationBody joints driven from <code>/joint_states</code>. <strong>Owned by Subsystem 3 (Nic).</strong> S4 only anchors and renders it.</td></tr>
+        <tr><td>Cube holograms</td><td>ROS-connected</td><td>PoseStamped from perception relay</td></tr>
+        <tr><td>EE pose readout</td><td>ROS-connected</td><td><code>/tcp_pose_broadcaster/pose</code> (real / URSim only)</td></tr>
+        <tr><td>Velocity teleop</td><td>ROS-connected (publish)</td><td>RobotController publishes Float64MultiArray on <code>/forward_velocity_controller/commands</code></td></tr>
+        <tr><td>Gripper teleop</td><td>ROS-connected (publish)</td><td>RobotController publishes width on <code>/finger_width_controller/commands</code></td></tr>
+        <tr><td>Trolley mesh / floor / skybox</td><td>Visualisation only</td><td>Static scene geometry</td></tr>
+        <tr><td>BinDetector trigger zones</td><td>Visualisation only</td><td>Unity physics triggers — does not feed back to ROS</td></tr>
+        <tr><td>Task counters / banners / confetti</td><td>Visualisation only</td><td>In-headset feedback, computed entirely in Unity</td></tr>
+        <tr><td>Radial menu / mode UX</td><td>Visualisation + input</td><td>Drives RobotController mode state which then publishes velocity</td></tr>
+        <tr><td>Passthrough / Environment cycler</td><td>Visualisation only</td><td>No ROS effect</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How Subsystem 4 supports the other subsystems</h3>
+    <ul>
+      <li><strong>Perception (S1, John)</strong> — Subsystem 4 visualises the cube poses S1 publishes. The cube hologram smoothing (averaging, jitter rejection, <code>persistOnTagLoss</code>) is owned here so perception jitter doesn't ruin the AR experience.</li>
+      <li><strong>Autonomous (S2, Oliver)</strong> — The <strong>TaskConfigPanel</strong> is the operator-facing entry point. Task mode (FixedTarget / OneOfEach / OneOfEachClass) drives how completion is scored; tags on perception-spawned cubes (<code>ObjectClass</code>) flow into <code>TaskTracker</code>.</li>
+      <li><strong>Digital Twin + Manual Control (S3, Nic)</strong> — Nic owns the URDF-imported UR3e, the ArticulationBody hierarchy, <code>JointStateSubscriber</code>, <code>RobotBasePlacer</code>, and <code>RobotController</code> (the script that publishes velocity / gripper commands). S4 sits on top: the radial menu, EE lock, sub-mode toggle, and gripper trigger are S4's UI / input layer, and they call into Nic's <code>RobotController</code>. S4 makes Nic's twin and controller usable inside the headset; Nic owns the twin's correctness and the control publisher.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── STACK ── -->
+<section class="section" id="stack">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">03 — Software Stack</div>
+    <p>All versions below are read directly from the project's package manifest and editor version files in the demo branch. Run <code>cat Unity/My\ project/Packages/manifest.json</code> to verify.</p>
+    <table class="data-table">
+      <thead><tr><th>Component</th><th>Version / Setting</th><th>Source / Evidence</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Unity Editor</td><td>6000.3.9f1 (Unity 6.3 LTS)</td><td><code>ProjectSettings/ProjectVersion.txt</code></td><td>Required — opening with a different version forces a re-import.</td></tr>
+        <tr><td>Meta XR SDK (All)</td><td>85.0.0</td><td><code>Packages/manifest.json</code></td><td>Primary XR runtime for Quest 3. Provides camera rig building blocks, passthrough feature, controllers.</td></tr>
+        <tr><td>ROS-TCP-Connector</td><td>v0.7.0 (vendored)</td><td><code>ROS-TCP-Connector/</code> (file: package ref)</td><td>Unity-side TCP bridge. Pairs with <code>ros_tcp_endpoint</code> v0.7.0 on the ROS side.</td></tr>
+        <tr><td>URDF-Importer</td><td>v0.5.2 (vendored)</td><td><code>URDF-Importer/</code> (file: package ref)</td><td>Used to import UR3e + OnRobot URDF into Unity as ArticulationBody hierarchy.</td></tr>
+        <tr><td>XR Interaction Toolkit</td><td>3.3.1</td><td><code>Packages/manifest.json</code></td><td>Drives <code>XRGrabInteractable</code> on panels (via PanelPlacer).</td></tr>
+        <tr><td>OpenXR Plugin</td><td>1.16.1</td><td><code>Packages/manifest.json</code></td><td>Underlying runtime for Meta OpenXR.</td></tr>
+        <tr><td>Meta OpenXR</td><td>2.3.0</td><td><code>Packages/manifest.json</code></td><td>Quest-specific OpenXR features.</td></tr>
+        <tr><td>XR Hands</td><td>1.7.3</td><td><code>Packages/manifest.json</code></td><td>Hand-tracking samples present; current teleop uses controllers.</td></tr>
+        <tr><td>AR Foundation</td><td>6.3.2</td><td><code>Packages/manifest.json</code></td><td>Installed alongside Meta XR; the active XR loader is Meta OpenXR.</td></tr>
+        <tr><td>Android XR OpenXR</td><td>1.1.0</td><td><code>Packages/manifest.json</code></td><td>Android-specific OpenXR loader for Quest builds.</td></tr>
+        <tr><td>Universal Render Pipeline</td><td>17.3.0</td><td><code>Packages/manifest.json</code></td><td>Project uses URP — materials must be URP-compatible.</td></tr>
+        <tr><td>Input System</td><td>1.18.0</td><td><code>Packages/manifest.json</code></td><td>New Input System; binding asset at <code>Assets/Scripts/RobotControlActions.inputactions</code>.</td></tr>
+        <tr><td>Build target</td><td>Android / Quest 3 (ARM64)</td><td>Build Profiles</td><td>IL2CPP scripting backend, ARM64 architecture.</td></tr>
+        <tr><td>Scripting define</td><td><code>ROS2</code></td><td><code>ProjectSettings/ProjectSettings.asset</code> (Standalone defines)</td><td>Required — without it the generated ROS message types fail to compile.</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
-<section class="section alt" id="config">
+<!-- ── REPO MAP ── -->
+<section class="section alt" id="repo">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Configuration</div>
-    <h2>Unity scene settings</h2>
-    <p>Configured via Unity Inspector. ROS connection set at runtime in the Quest app's ROS Settings panel.</p>
-    <div class="cfg-table">
-      <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>Enter WiFi IP printed by launcher — or use UDP auto-discovery</div></div>
-      <div class="cfg-row"><div>ROS Port</div><div>10000</div><div>ROS-TCP-Endpoint listen port</div></div>
-      <div class="cfg-row"><div>Trolley Rotation</div><div>180°</div><div>Y-axis rotation to match physical trolley orientation</div></div>
-      <div class="cfg-row"><div>Cube Render Scale</div><div><!-- fill --></div><div>Hologram scale multiplier relative to real cube size</div></div>
-      <div class="cfg-row"><div>AR Passthrough Mode</div><div>colour</div><div>Quest 3 passthrough type — colour or mono</div></div>
-      <div class="cfg-row"><div>Anchor Strategy</div><div><!-- fill --></div><div>Spatial anchor method for hologram stability</div></div>
+    <div class="section-lbl">04 — Code and Repo Structure</div>
+    <p>Only paths owned or maintained by Subsystem 4 are listed. Scripts authored by Subsystem 3 (teleop) are noted where Subsystem 4 references them.</p>
+    <table class="data-table">
+      <thead><tr><th>File / folder</th><th>Purpose</th><th>Main class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="wrap-first">Assets/Scenes/SampleScene.unity</td><td>The single demo scene</td><td>—</td><td>Open this scene for every Editor and Quest build.</td></tr>
+        <tr><td class="wrap-first">Assets/Resources/ROSConnectionPrefab.prefab</td><td>ROS IP / port settings</td><td><code>ROSConnection</code></td><td>Loaded via <code>ROSConnection.GetOrCreateInstance()</code>; do not delete.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/CubePoseSubscriber.cs</td><td>Cube hologram spawn, smoothing, persistence, object tagging</td><td><code>CubePoseSubscriber</code></td><td>Owns the <code>persistOnTagLoss</code> and averaging logic.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotHUD.cs</td><td>Floating HUD — mode, joints, EE, gripper</td><td><code>RobotHUD</code></td><td>Subscribes directly to <code>/joint_states</code>. Has <code>followCamera</code> flag for PanelPlacer.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotInfoPanel.cs</td><td>Full multi-row diagnostic panel</td><td><code>RobotInfoPanel</code></td><td>Subscribes to <code>/joint_states</code> + <code>/tcp_pose_broadcaster/pose</code>. Replaces RobotDataPanel.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotDataPanel.cs</td><td>Legacy data panel</td><td><code>RobotDataPanel</code></td><td>Kept for compatibility. New work should use RobotInfoPanel.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RadialMenu.cs</td><td>Multi-page radial UI for mode &amp; feature switching</td><td><code>RadialMenu</code></td><td>Wires references to every other UI subsystem (HUD, panels, env, passthrough, task).</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/PanelPlacer.cs</td><td>XR Grab Interactable wrapper for panels</td><td><code>PanelPlacer</code></td><td>Flips each panel's <code>followCamera</code> flag on grab instead of disabling the script.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/PassthroughToggle.cs</td><td>MR ↔ VR toggle</td><td><code>PassthroughToggle</code></td><td>Toggles renderers / skybox / virtual environment.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/EnvironmentCycler.cs</td><td>Cycle decorative environment themes</td><td><code>EnvironmentCycler</code></td><td>Themes are child GameObjects under an "Environments" root. List populated in Inspector.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/BinDetector.cs</td><td>Per-bin trigger zone + container colliders</td><td><code>BinDetector</code></td><td>Auto-builds wall colliders so cubes don't escape rotated bins.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/BinStatusPanel.cs</td><td>Per-bin sort counter UI</td><td><code>BinStatusPanel</code></td><td>Auto-discovers all BinDetectors via FindObjectsByType.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TaskTracker.cs</td><td>Task state, completion mode, scoring</td><td><code>TaskTracker</code></td><td>Singleton. Modes: FixedTarget / OneOfEach / OneOfEachClass.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TaskConfigPanel.cs</td><td>In-headset task setup UI</td><td><code>TaskConfigPanel</code></td><td>followCamera-aware (PanelPlacer-safe).</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/CoachingPanel.cs</td><td>Coaching / instruction panel</td><td><code>CoachingPanel</code></td><td>Hidden by default; toggled via radial menu.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/ObjectClass.cs</td><td>Per-cube class + goodness tag</td><td><code>ObjectClass</code></td><td>Added by CubePoseSubscriber when <code>tagSpawnedCubes = true</code>.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/JointTFVisualizer.cs</td><td>TF axis overlays on robot links</td><td><code>JointTFVisualizer</code></td><td>Toggled from the radial menu.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TFAxisMarker.cs</td><td>Single TF axis marker helper</td><td><code>TFAxisMarker</code></td><td>Used by JointTFVisualizer.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TrolleySurfaceCollider.cs</td><td>Collider on the trolley work surface</td><td><code>TrolleySurfaceCollider</code></td><td>Keeps cubes from falling through.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/EventBanner.cs</td><td>Task event banner (correct / wrong / complete)</td><td><code>EventBanner</code></td><td>Triggered by TaskTracker.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/ConfettiBlaster.cs</td><td>Task-complete celebration</td><td><code>ConfettiBlaster</code></td><td>Triggered by TaskTracker on completion.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/HeadsetStreamPublisher.cs</td><td>Quest camera / scene capture publisher</td><td><code>HeadsetStreamPublisher</code></td><td>Publishes JPEG to <code>/headset/image_compressed</code>. Disable if bridge buffer overflows.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/Editor/HoloAssistSetup.cs</td><td>One-click scene setup</td><td><code>HoloAssistSetup</code></td><td>Menu: <code>Tools - HoloAssist - Setup All UI Features</code>. Creates panels, radial menu, virtual environment, wires references.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotControlActions.inputactions</td><td>Input bindings asset</td><td>—</td><td>Owned upstream by S3 (Nic); referenced here.</td></tr>
+        <tr><td class="wrap-first">Assets/LowlyPoly/</td><td>LowlyPoly grass + textures</td><td>—</td><td>Environment assets for the "grass" theme.</td></tr>
+        <tr><td class="wrap-first">Assets/PortalMesh/</td><td>Portal-style test chamber assets</td><td>—</td><td>Environment assets for the "Portal Chamber" theme.</td></tr>
+        <tr><td class="wrap-first">Assets/Materials/</td><td>Trolley, Ground, Skybox materials</td><td>—</td><td>URP-compatible materials.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── SCENE ── -->
+<section class="section" id="scene">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">05 — Scene and Object Structure</div>
+    <p>Main scene: <code>Assets/Scenes/SampleScene.unity</code>. The objects listed below are the ones a client needs to know about to debug. Exact hierarchy paths can shift between builds — confirm in the Hierarchy window.</p>
+
+    <h3>Required GameObjects</h3>
+    <table class="data-table">
+      <thead><tr><th>Object</th><th>Component(s)</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>XR Origin / Camera Rig</td><td>Meta XR Camera Rig</td><td>Quest 3 head + controller tracking. Drives Camera.main.</td></tr>
+        <tr><td>ROSConnection</td><td><code>ROSConnection</code> (auto-loaded from <code>Assets/Resources/ROSConnectionPrefab.prefab</code>)</td><td>TCP link to <code>ros_tcp_endpoint</code>. Singleton.</td></tr>
+        <tr><td>ROSAutoConnect</td><td><code>ROSAutoConnect</code></td><td>Scans <code>192.168.0.101–110</code> for a ROS endpoint on port 10000. Disable on non-robot-router networks.</td></tr>
+        <tr><td>UR3e robot root</td><td>ArticulationBody hierarchy (imported via URDF-Importer)</td><td>Digital twin — <strong>owned by S3 (Nic)</strong>. Children include <code>base_link</code> and <code>tool0</code>. S4 references this hierarchy via <code>CubePoseSubscriber.robotBase</code> and the HUD picker logic.</td></tr>
+        <tr><td>Trolley</td><td>Mesh renderer + <code>TrolleySurfaceCollider</code></td><td>Static workspace surface. Yaw set to 180° to match physical mount.</td></tr>
+        <tr><td>VirtualEnvironment</td><td>(created by HoloAssistSetup) — children: VRGround, GroundSafety</td><td>Shown in VR mode, hidden in passthrough.</td></tr>
+        <tr><td>Environments root</td><td><code>EnvironmentCycler</code> + child theme GameObjects</td><td>Theme cycling. Empty list = no environment cycling.</td></tr>
+        <tr><td>RadialMenu</td><td><code>RadialMenu</code></td><td>Multi-page wheel UI. References every other UI subsystem.</td></tr>
+        <tr><td>PassthroughToggle</td><td><code>PassthroughToggle</code></td><td>MR ↔ VR mode switch.</td></tr>
+        <tr><td>RobotHUD</td><td><code>RobotHUD</code> + <code>PanelPlacer</code></td><td>Floating heads-up readout. <code>followCamera = true</code> by default.</td></tr>
+        <tr><td>RobotInfoPanel</td><td><code>RobotInfoPanel</code> + <code>PanelPlacer</code></td><td>Full diagnostic panel. Grabbable.</td></tr>
+        <tr><td>TaskConfigPanel</td><td><code>TaskConfigPanel</code> + <code>PanelPlacer</code></td><td>Task mode + target count setup.</td></tr>
+        <tr><td>BinStatusPanel</td><td><code>BinStatusPanel</code> + <code>PanelPlacer</code></td><td>Per-bin sort counters.</td></tr>
+        <tr><td>CoachingPanel</td><td><code>CoachingPanel</code> + <code>PanelPlacer</code></td><td>Hidden by default. Step-by-step coaching.</td></tr>
+        <tr><td>Bin_1, Bin_2, ...</td><td><code>BinDetector</code> + colliders</td><td>One per physical bin. Auto-builds container walls.</td></tr>
+        <tr><td>CubePoseSubscriber host</td><td><code>CubePoseSubscriber</code></td><td>Spawns cube holograms. <code>robotBase</code> field must reference the UR3e <code>base_link</code> transform.</td></tr>
+        <tr><td>TaskTracker</td><td><code>TaskTracker</code></td><td>Singleton — listens to BinDetector events.</td></tr>
+        <tr><td>EventBanner</td><td><code>EventBanner</code></td><td>On-screen sort feedback.</td></tr>
+        <tr><td>ConfettiBlaster</td><td><code>ConfettiBlaster</code></td><td>Task-complete particle burst.</td></tr>
+        <tr><td>JointTFVisualizer</td><td><code>JointTFVisualizer</code></td><td>TF axis overlays — toggle via radial menu.</td></tr>
+        <tr><td>RobotController + JointStateSubscriber + RobotBasePlacer</td><td>(authored by S3 Nic — digital twin + manual control)</td><td>Velocity / gripper teleop publisher; joint-state subscriber that drives the twin's ArticulationBody; base placer that anchors the twin in the workspace.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Active / inactive states at scene start</h3>
+    <ul>
+      <li>VirtualEnvironment: <strong>active</strong> (PassthroughToggle re-toggles renderers at runtime).</li>
+      <li>CoachingPanel: <strong>inactive</strong> at start (HoloAssistSetup sets <code>SetActive(false)</code>). The radial menu shows it on demand.</li>
+      <li>Every other UI panel: <strong>active</strong>. Each has <code>followCamera = true</code> by default; flip on grab.</li>
+      <li>RadialMenu: <strong>active</strong>; canvas hidden until the left primary button is held.</li>
+    </ul>
+    <p><strong>Editor helper</strong>: from a stripped scene, run <code>Tools - HoloAssist - Setup All UI Features</code> to regenerate every panel, the radial menu, the virtual environment, and the TF visualizer in one click. The script finds robot root / base_link / tool0 / controllers by name.</p>
+  </div>
+</section>
+
+<!-- ── SCRIPTS ── -->
+<section class="section alt" id="scripts">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">06 — Main Scripts</div>
+    <p>Each card lists the file, attached GameObject (if known), responsibilities, the key Inspector fields, and the failure mode if misconfigured.</p>
+
+    <div class="test-card">
+      <h4>CubePoseSubscriber</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/CubePoseSubscriber.cs</code></div>
+        <div>Attached</div><div>Dedicated GameObject (commonly named CubePoseSubscriber)</div>
+        <div>Responsibility</div><div>Subscribes to <code>{topicPrefix}/cube_N_pose</code> for N=1..cubeCount; transforms pose into Unity space relative to <code>robotBase</code>; spawns and animates a prefab per cube with smoothing, averaging, outlier rejection, and (optionally) tags spawned cubes with an <code>ObjectClass</code> for the task system.</div>
+        <div>Key fields</div><div><code>topicPrefix</code> (default <code>/holoassist/unity</code>), <code>cubeCount</code> (4), <code>robotBase</code> (Transform — MUST be set), <code>cubePrefabs[]</code>, <code>poseTimeout</code> (3 s), <code>persistOnTagLoss</code> (false legacy / true preferred), <code>smoothing</code> (0.5), <code>useAveraging</code> (true), <code>positionAverageWindow</code> (6), <code>rotationAverageWindow</code> (3), <code>outlierRejectDistance</code> (0 = off), <code>tagSpawnedCubes</code>, <code>cubeClassNames[]</code>, <code>cubeIsGood[]</code>, <code>autoAddCollider</code> (true)</div>
+        <div>Inputs</div><div>ROS PoseStamped messages on the topic prefix.</div>
+        <div>Outputs</div><div>Cube GameObjects in the scene; ObjectClass tag on each (when enabled).</div>
+        <div>Breaks if</div><div><code>robotBase</code> unset - cubes spawn at world origin. Wrong <code>topicPrefix</code> - no messages received. Missing <code>topic_tools</code> relay on ROS side - no messages on <code>/holoassist/unity/cube_N_pose</code>.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RobotHUD</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RobotHUD.cs</code></div>
+        <div>Attached</div><div>"RobotHUD" GameObject</div>
+        <div>Responsibility</div><div>Floating gaze-following HUD. Picks the live RobotController and JointStateSubscriber (freshness-based picker), subscribes to <code>/joint_states</code> directly as a self-heal, builds a TextMeshPro panel showing mode / sub-mode / joint angles / EE pose / EE lock / gripper / passthrough / TF state.</div>
+        <div>Key fields</div><div><code>controller</code> (RobotController ref), <code>distanceFromCamera</code> (1.5 m), <code>offset</code> ((0.3, -0.12, 0)), <code>followSpeed</code> (2.5), <code>followCamera</code> (true), panel size, colours, <code>tfVisualizer</code>, <code>passthroughToggle</code></div>
+        <div>Inputs</div><div><code>/joint_states</code>; RobotController state.</div>
+        <div>Outputs</div><div>Camera-relative 3D text panel.</div>
+        <div>Breaks if</div><div>PanelPlacer disables the script (legacy bug; fixed by flipping <code>followCamera</code> instead). Duplicate JointStateSubscriber components in the scene - picker may bind to stale one.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RobotInfoPanel</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RobotInfoPanel.cs</code></div>
+        <div>Attached</div><div>"RobotInfoPanel" GameObject + PanelPlacer for grab</div>
+        <div>Responsibility</div><div>Full multi-row diagnostic panel. Subscribes directly to <code>/joint_states</code> and <code>/tcp_pose_broadcaster/pose</code>. Renders rows for connection / mode / gripper / EE lock / TF axes / view + per-joint angle + EE position &amp; rotation.</div>
+        <div>Key fields</div><div><code>controller</code>, <code>tfVisualizer</code>, <code>passthroughToggle</code>, <code>followCamera</code> (true), <code>distanceFromCamera</code> (1.8 m), <code>offset</code> ((-0.45, 0, 0)), <code>panelWidth</code> (0.8), <code>rowHeight</code> (0.045)</div>
+        <div>Inputs</div><div><code>/joint_states</code>, <code>/tcp_pose_broadcaster/pose</code>, RobotController state.</div>
+        <div>Outputs</div><div>3D world-space TextMeshPro grid.</div>
+        <div>Breaks if</div><div>Real robot / URSim not running - <code>/tcp_pose_broadcaster/pose</code> never publishes and the EE rows stay zero. <code>controller</code> field unset - mode / sub-mode rows show "—".</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RadialMenu</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RadialMenu.cs</code></div>
+        <div>Attached</div><div>"RadialMenu" GameObject</div>
+        <div>Responsibility</div><div>Multi-page radial wheel UI summoned by holding the left primary button. Wires every other UI subsystem via Inspector fields (HUD, infoPanel, binStatusPanel, coachingPanel, passthroughToggle, robotController, confettiBlaster, eventBanner, environmentCycler, trolleySurface, taskConfigPanel, tfVisualizer).</div>
+        <div>Key fields</div><div><code>toggleAction</code> (InputAction), <code>menuRadius</code> (0.1), <code>buttonRadius</code> (0.032), <code>hoverHeight</code> (0.12), colour palette, font sizes, plus all the subsystem references above.</div>
+        <div>Inputs</div><div>Left primary button hold; left controller pointing.</div>
+        <div>Outputs</div><div>Mode switches on RobotController, panel show/hide calls, environment cycle, passthrough toggle.</div>
+        <div>Breaks if</div><div>Any Inspector ref left null - that menu page silently no-ops. The HoloAssistSetup editor menu wires these automatically.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>PanelPlacer</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/PanelPlacer.cs</code></div>
+        <div>Attached</div><div>Any panel GameObject (HUD, InfoPanel, TaskConfigPanel, BinStatusPanel, CoachingPanel, RobotDataPanel)</div>
+        <div>Responsibility</div><div>Adds a BoxCollider + Rigidbody + XRGrabInteractable to make the panel grabbable with the XR rays. On grab, flips the panel's <code>followCamera</code> flag (for panels that have one) instead of disabling the MonoBehaviour — so live data keeps flowing while the panel is being moved.</div>
+        <div>Key fields</div><div><code>colliderWidth</code> (0.8), <code>colliderHeight</code> (0.6), <code>colliderDepth</code> (0.05), <code>returnToFollowOnReset</code> (false)</div>
+        <div>Inputs</div><div>XR grab events.</div>
+        <div>Outputs</div><div>Mutates the panel's Transform + followCamera flag + Rigidbody constraints.</div>
+        <div>Breaks if</div><div>Used on a panel with no <code>followCamera</code> field — falls back to disabling the script's MonoBehaviour, which freezes live data. Workaround: add <code>followCamera</code> to that panel.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>PassthroughToggle</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/PassthroughToggle.cs</code></div>
+        <div>Attached</div><div>"PassthroughToggle" GameObject</div>
+        <div>Responsibility</div><div>Switches between MR passthrough (camera background = transparent, virtual env hidden) and VR (skybox + virtual env shown). Static instance singleton.</div>
+        <div>Key fields</div><div><code>xrCamera</code> (auto-finds Camera.main if blank), <code>virtualEnvironment</code> (set by HoloAssistSetup), <code>keepCollidersInPassthrough</code> (true), <code>vrBackgroundColor</code>, <code>vrSkyboxMaterial</code>, start-passthrough flag</div>
+        <div>Inputs</div><div>Radial menu trigger.</div>
+        <div>Outputs</div><div>Camera background flag, renderer enable on virtualEnvironment, skybox material.</div>
+        <div>Breaks if</div><div><code>virtualEnvironment</code> reference null - toggle becomes a no-op for the VR side.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>EnvironmentCycler</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/EnvironmentCycler.cs</code></div>
+        <div>Attached</div><div>"Environments" root or any GameObject</div>
+        <div>Responsibility</div><div>Cycles through a list of EnvironmentTheme entries (display name + root GameObject). Hides every other theme when one is selected.</div>
+        <div>Key fields</div><div><code>themes[]</code> (List&lt;EnvironmentTheme&gt;), <code>startIndex</code> (0), <code>allowNone</code> (false)</div>
+        <div>Inputs</div><div>Radial menu "Theme" button.</div>
+        <div>Outputs</div><div>SetActive(bool) on each theme root.</div>
+        <div>Breaks if</div><div>Themes list contains the XR rig, robot, or bins — those will be hidden by mistake.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>BinDetector + BinStatusPanel + TaskTracker + ObjectClass</h4>
+      <div class="test-grid">
+        <div>Paths</div><div><code>Assets/Scripts/BinDetector.cs</code>, <code>BinStatusPanel.cs</code>, <code>TaskTracker.cs</code>, <code>ObjectClass.cs</code></div>
+        <div>Responsibility</div><div>BinDetector is a trigger zone on each bin (auto-builds container walls); ObjectClass tags each cube (className + isGood); when a cube enters a bin trigger TaskTracker.OnSort is called and scores it; BinStatusPanel renders one row per bin.</div>
+        <div>Key fields</div><div>BinDetector: <code>binName</code>, <code>triggerSizeMultiplier</code> (1.2), <code>triggerYOffset</code> (0.05), <code>buildContainerColliders</code> (true), <code>wallThickness</code> (0.01). TaskTracker: <code>mode</code> (FixedTarget / OneOfEach / OneOfEachClass), <code>targetCount</code> (5), <code>wrongFailThreshold</code> (-1 = disabled).</div>
+        <div>Breaks if</div><div>Cubes don't have ObjectClass (set <code>tagSpawnedCubes = true</code> on CubePoseSubscriber). Cubes have no Collider (set <code>autoAddCollider = true</code>). Trigger zone too small — increase <code>triggerSizeMultiplier</code>.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>HeadsetStreamPublisher</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/HeadsetStreamPublisher.cs</code></div>
+        <div>Responsibility</div><div>Captures the Quest camera feed (or scene view fallback) and publishes as <code>sensor_msgs/CompressedImage</code> JPEG on <code>/headset/image_compressed</code> for the dashboard.</div>
+        <div>Key fields</div><div><code>topic</code> (default <code>/headset/image_compressed</code>), <code>captureWidth</code> (640), capture height, capture rate.</div>
+        <div>Breaks if</div><div>Bridge buffer overflows on large JPEG payloads ("sequence size exceeds remaining buffer"). Workaround: disable this component for the test, or lower capture resolution.</div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="issues">
+<!-- ── DATAFLOW ── -->
+<section class="section" id="dataflow">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Known Issues</div>
-    <h2>Troubleshooting</h2>
-    <ul class="issues">
-      <li>
-        <div class="issue-ttl">Arm hologram doesn't move</div>
-        <div class="issue-body">Check that <code>/joint_states</code> is being published. The UR driver must be active. With URSim, External Control must be playing in Polyscope.</div>
-      </li>
-      <li>
-        <div class="issue-ttl">Cubes not visible in AR</div>
-        <div class="issue-body">Cubes only appear in the headset after first detection by the perception node. Point the Brio at a cube face until RViz shows the marker — it then publishes to Quest.</div>
-      </li>
-      <li>
-        <div class="issue-ttl">Holograms drift from physical objects</div>
-        <div class="issue-body">Hand-eye calibration must be run and loaded. A stale or missing calibration causes the camera-to-base TF to be incorrect, offsetting all cube positions.</div>
-      </li>
-      <li>
-        <div class="issue-ttl">Quest can't connect</div>
-        <div class="issue-body">Ensure Quest and laptop are on the same WiFi. The launcher prints the correct IP at startup. Enter it manually in ROS Settings if UDP auto-discovery doesn't work.</div>
-      </li>
+    <div class="section-lbl">07 — Data Flow and Integration</div>
+    <p>The bridge is bidirectional. Robot state and perception poses flow into Unity for display; operator input flows back out as velocity / gripper commands to drive the robot.</p>
+
+    <div class="diagram">
+<span class="dn">┌─ Perception (S1, John) ────────────┐    ┌─ Robot Driver / MoveIt (S2 / S3) ──┐</span>
+<span class="dn">│  AprilTag + cube_pose              │    │  ur_robot_driver + controllers     │</span>
+<span class="dn">│  /holoassist/perception            │    │  /joint_states                     │</span>
+<span class="dn">│  /april_cube_N_pose                │    │  /tcp_pose_broadcaster/pose        │</span>
+<span class="dn">└──────────────────┬─────────────────┘    └──────────────────┬─────────────────┘</span>
+<span class="dn">                   │                                         │</span>
+<span class="dn">                   │    </span><span class="da">topic_tools relay</span><span class="dn">                    │</span>
+<span class="dn">                   │                                         │</span>
+<span class="dn">                   │    /holoassist/unity/cube_N_pose        │</span>
+<span class="dn">                   │                                         │</span>
+<span class="dn">                   └────────────────────┬────────────────────┘</span>
+<span class="dn">                                        │</span>
+<span class="dn">                                        ▼</span>
+                          <span class="dg">ros_tcp_endpoint (TCP :10000)</span>
+<span class="dn">                                        │</span>
+<span class="dn">                                        ▼</span>
+<span class="dn">         ┌────────────── Unity / Quest 3 (Subsystem 4) ───────────────┐</span>
+<span class="dn">         │                                                            │</span>
+<span class="dn">         │ ROS-TCP-Connector (v0.7.0)                                 │</span>
+<span class="dn">         │      │                                                     │</span>
+<span class="dn">         │      ├── JointStateSubscriber </span><span class="da">(S3)</span><span class="dn">  ──►  ArticulationBody  │</span>
+<span class="dn">         │      │                                   (digital twin, </span><span class="da">S3</span><span class="dn">)│</span>
+<span class="dn">         │      ├── RobotHUD / RobotInfoPanel  ──►  TextMeshPro       │</span>
+<span class="dn">         │      │                                   (mode, joints, EE)│</span>
+<span class="dn">         │      ├── CubePoseSubscriber  ──►  Cube hologram            │</span>
+<span class="dn">         │      │                            (smoothed, anchored)     │</span>
+<span class="dn">         │      │                                                     │</span>
+<span class="dn">         │ Operator input  (XR controllers + RadialMenu)              │</span>
+<span class="dn">         │      │                                                     │</span>
+<span class="dn">         │      └── RobotController  </span><span class="da">(S3 — manual control)</span><span class="dn">            │</span>
+<span class="dn">         │            │                                               │</span>
+<span class="dn">         │            ├──►  /forward_velocity_controller/commands     │</span>
+<span class="dn">         │            └──►  /finger_width_controller/commands         │</span>
+<span class="dn">         │                                                            │</span>
+<span class="dn">         │ In-Unity loop (no ROS):                                    │</span>
+<span class="dn">         │      BinDetector  →  TaskTracker  →  BinStatusPanel /      │</span>
+<span class="dn">         │                                      EventBanner /         │</span>
+<span class="dn">         │                                      ConfettiBlaster       │</span>
+<span class="dn">         └────────────────────────────────────────────────────────────┘</span>
+<span class="dn">                                        │</span>
+<span class="dn">                                        ▼</span>
+                             <span class="da">Quest 3 operator view</span>
+                         <span class="da">(passthrough + holograms + UI)</span>
+    </div>
+
+    <h3>Integration touch-points</h3>
+    <ul>
+      <li><strong>Inbound from S1 (perception)</strong>: AprilTag-detected cube poses, relayed onto Unity-friendly topic names by <code>topic_tools relay</code> on the ROS side. Subsystem 4 owns the smoothing / averaging / persistence logic that shapes the raw feed into a stable AR hologram.</li>
+      <li><strong>Subsystem 3 (Nic — digital twin + manual control)</strong>: Nic's <code>JointStateSubscriber</code> consumes <code>/joint_states</code> (~500 Hz URSim) and drives the ArticulationBody twin; <code>RobotBasePlacer</code> anchors the twin; <code>RobotController</code> consumes the operator's controller input that S4's radial menu / EE-lock / sub-mode UX routes to it, and publishes <code>/forward_velocity_controller/commands</code> + <code>/finger_width_controller/commands</code>. S4's <code>RobotInfoPanel</code> also subscribes to <code>/tcp_pose_broadcaster/pose</code> directly to show EE pose.</li>
+      <li><strong>No direct ROS link to S2 (autonomous)</strong>.</li>
     </ul>
+  </div>
+</section>
+
+<!-- ── IO ── -->
+<section class="section alt" id="io">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">08 — Inputs and Outputs</div>
+
+    <h3 class="alt-h3">ROS Inbound — Subscribed</h3>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Purpose</th><th>Confirmed source</th></tr></thead>
+      <tbody>
+        <tr><td>/joint_states</td><td>JointState</td><td>Drive the ArticulationBody digital twin; populate RobotHUD &amp; RobotInfoPanel readouts.</td><td>JointStateSubscriber.cs:94, RobotHUD.cs:153, RobotInfoPanel.cs:157, RobotController.cs:192</td></tr>
+        <tr><td>/tcp_pose_broadcaster/pose</td><td>PoseStamped</td><td>Live EE pose for the RobotInfoPanel.</td><td>RobotInfoPanel.cs:167</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Cube hologram positions (N = 1..cubeCount).</td><td>CubePoseSubscriber.cs:106 (topic = <code>{topicPrefix}/cube_{N}_pose</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>ROS Outbound — Published</h3>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Purpose</th><th>Confirmed source</th></tr></thead>
+      <tbody>
+        <tr><td>/forward_velocity_controller/commands</td><td>Float64MultiArray</td><td>6-DOF joint velocity from RMRC / Direct Joint / Hand Guide.</td><td>RobotController.cs:183, 190</td></tr>
+        <tr><td>/finger_width_controller/commands</td><td>Float64MultiArray</td><td>OnRobot RG2 finger width (mm) from right trigger.</td><td>RobotController.cs:184, 191</td></tr>
+        <tr><td>/headset/image_compressed</td><td>CompressedImage</td><td>Quest camera / scene capture for the dashboard.</td><td>HeadsetStreamPublisher.cs (default <code>topic</code> field)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Unity-internal events (no ROS)</h3>
+    <table class="data-table">
+      <thead><tr><th>Source</th><th>Event</th><th>Consumer</th></tr></thead>
+      <tbody>
+        <tr><td>Left primary button hold</td><td>Open radial menu</td><td>RadialMenu</td></tr>
+        <tr><td>RadialMenu mode selection</td><td>SetMode(ControlMode)</td><td>RobotController</td></tr>
+        <tr><td>Left thumbstick click</td><td>EE Lock toggle</td><td>RobotController - published into velocity command stream</td></tr>
+        <tr><td>Left X button</td><td>RMRC sub-mode toggle (Translate ↔ Rotate)</td><td>RobotController</td></tr>
+        <tr><td>XR grab on a panel</td><td>OnGrabbed / OnReleased</td><td>PanelPlacer - flips followCamera or disables MonoBehaviour</td></tr>
+        <tr><td>Cube OnTriggerEnter</td><td>Cube enters bin trigger</td><td>BinDetector - TaskTracker.OnSort(bin, ObjectClass, isGood) - BinStatusPanel / EventBanner / ConfettiBlaster</td></tr>
+        <tr><td>TaskTracker state change</td><td>Idle / InProgress / Complete / Failed</td><td>EventBanner, ConfettiBlaster, TaskConfigPanel</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── TESTING ── -->
+<section class="section" id="testing">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">09 — Running and Testing</div>
+    <p>Run these in order. Each test isolates one capability so a failure points at one place.</p>
+
+    <div class="test-card">
+      <h4>Test 1 — Unity Editor, no ROS</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm the project opens, packages resolve, and the scene plays without errors.</div>
+        <div>Steps</div><div>Open <code>SampleScene.unity</code> - press Play.</div>
+        <div>Expected</div><div>No compile errors. Console shows ROSConnection trying to connect (and failing — that is fine). UI panels render in front of the Editor camera. Radial menu canvas exists but is hidden.</div>
+        <div>Evidence</div><div>Screenshot of Editor in Play mode with no Console errors.</div>
+        <div>Troubleshoot</div><div>Compile errors - missing <code>ROS2</code> scripting define - add it to Standalone Player Settings. Package errors - re-import via Window - Package Manager.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 2 — Unity Editor with live ROS</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm the bridge is up and joint states stream in.</div>
+        <div>Steps</div><div>Start <code>./launch.sh --perception --dashboard</code> in a terminal. Set the ROS IP in Unity. Press Play.</div>
+        <div>Expected</div><div>Launcher terminal logs <code>Connection from &lt;ip&gt;</code> + several <code>RegisterSubscriber</code> + <code>RegisterPublisher</code> entries. Robot arm in scene mirrors URSim / real pose. <code>ros2 topic hz /joint_states</code> reports ~500 Hz.</div>
+        <div>Evidence</div><div>Terminal log + screenshot of arm moving in Unity.</div>
+        <div>Troubleshoot</div><div>No connection - wrong IP, firewall blocking 10000/tcp (<code>sudo ufw allow 10000/tcp</code>). Arm static - joint_states not publishing, External Control not playing on URSim.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 3 — Quest 3 build &amp; run</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm the APK builds and the headset runs the demo.</div>
+        <div>Steps</div><div>Quest connected via USB, developer mode on. File - Build And Run. Watch the build log + <code>adb logcat -s Unity:*</code> in another terminal.</div>
+        <div>Expected</div><div>APK installs, app launches automatically, headset shows the scene with passthrough on.</div>
+        <div>Evidence</div><div>Quest screen recording or photo through the lens.</div>
+        <div>Troubleshoot</div><div>Build fails: most common is Android SDK / NDK / OpenJDK paths in Unity Hub. URDF-Importer assimp.dll Android conflict — set <code>Any: enabled: 0</code> on the .meta files of <code>assimp.dll</code> x86 and x86_64.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 4 — UI panel test</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm RobotHUD, RobotInfoPanel, TaskConfigPanel, BinStatusPanel all show live data and survive a grab.</div>
+        <div>Steps</div><div>With ROS connected, look at each panel. Grab each with the XR ray and move it; release; confirm data continues to update.</div>
+        <div>Expected</div><div>Joint angles update at ~the joint_state rate. Mode / EE lock / gripper rows reflect controller state. After release, the panel stays put and continues to update.</div>
+        <div>Evidence</div><div>Quest recording of grab + release with values changing.</div>
+        <div>Troubleshoot</div><div>Panel froze after grab - check the panel script has a <code>followCamera</code> field and PanelPlacer caches it (see Troubleshooting).</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 5 — Cube visualisation</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm cube holograms appear and track a physical cube.</div>
+        <div>Steps</div><div>Point the Brio at a printed AprilTag cube. Wait 1–2 s. Move the cube around in real space.</div>
+        <div>Expected</div><div>Cube hologram appears at the physical cube's position. With <code>persistOnTagLoss = true</code>, briefly covering the tag does not blink the hologram.</div>
+        <div>Evidence</div><div>Quest recording of physical + hologram tracking together.</div>
+        <div>Troubleshoot</div><div>No cube - check <code>topic_tools relay</code> is running; check <code>topicPrefix</code> matches the relayed topic name. Cube floating above the table - calibration offset (Subsystem 1) or wrong <code>robotBase</code> reference.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 6 — Bin sorting</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm BinDetector - TaskTracker - BinStatusPanel flow.</div>
+        <div>Steps</div><div>Spawn a tagged cube (<code>tagSpawnedCubes = true</code> on CubePoseSubscriber, or drag a Cube prefab manually). Move it into a Bin GameObject's trigger volume.</div>
+        <div>Expected</div><div>BinStatusPanel counter for that bin increments. EventBanner shows correct / wrong feedback. If the cube's <code>isGood = false</code>, the wrong counter increments instead.</div>
+        <div>Evidence</div><div>Screenshot of the panel updating.</div>
+        <div>Troubleshoot</div><div>Counter doesn't move - cube has no ObjectClass component (set <code>tagSpawnedCubes</code> or add it manually). Trigger never fires - cube has no Collider (set <code>autoAddCollider = true</code>) or bin trigger zone is too small (raise <code>triggerSizeMultiplier</code>).</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>Test 7 — Passthrough / VR toggle</h4>
+      <div class="test-grid">
+        <div>Purpose</div><div>Confirm PassthroughToggle switches MR ↔ VR cleanly.</div>
+        <div>Steps</div><div>Open radial menu - select Passthrough.</div>
+        <div>Expected</div><div>Background switches between real room (passthrough on) and virtual environment + skybox (passthrough off). Physics colliders remain active in either mode (<code>keepCollidersInPassthrough = true</code>).</div>
+        <div>Troubleshoot</div><div>Black screen - <code>virtualEnvironment</code> reference unset or VR background colour at full black. The Editor menu helper sets this when run.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── CONFIG ── -->
+<section class="section alt" id="config">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">10 — Configuration Reference</div>
+    <p>All Values Below Are The In-Inspector Defaults Observed In The Demo Branch.</p>
+    <div class="cfg-table">
+      <div class="cfg-row"><div>ROS Host IP</div><div>(auto)</div><div>Set In Robotics - ROS Settings (Editor) Or Via ROSAutoConnect On The Robot Router. Wrong IP - No ROS Data At All.</div></div>
+      <div class="cfg-row"><div>ROS Port</div><div>10000</div><div>ROS-TCP-Endpoint Listen Port. Must Match The Launcher's. Wrong Port - Connect Timeout.</div></div>
+      <div class="cfg-row"><div>ROSAutoConnect.rosPort</div><div>10000</div><div>Subnet Scanner Port. Mismatch With Launcher Port - Silent Failure.</div></div>
+      <div class="cfg-row"><div>ROSAutoConnect range</div><div>192.168.0.101&ndash;110</div><div>Hard-Coded Scan Window. Disable The Component For Any Other Subnet.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.topicPrefix</div><div>/holoassist/unity</div><div>Topic Prefix; Appends <code>/cube_{N}_pose</code>. Must Match <code>topic_tools relay</code> Output On The ROS Side.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.cubeCount</div><div>4</div><div>Number Of Cubes (1..N). Increase If You Add More Tags.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.robotBase</div><div>(Transform ref)</div><div>UR3e base_link Transform. <strong>Unset - Cubes Spawn At World Origin</strong>.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.persistOnTagLoss</div><div>false</div><div>Default Legacy. Set To <code>true</code> To Stop The Blink-On-Occlusion.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.smoothing</div><div>0.5</div><div>Per-Frame Lerp Factor. <code>0</code> = Snap To Perception Update.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.useAveraging</div><div>true</div><div>Sliding-Window Pose Average To Suppress Raw Jitter.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.positionAverageWindow</div><div>6</div><div>Higher = Smoother, More Lag.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.rotationAverageWindow</div><div>3</div><div>Slerp Window For Rotation.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.outlierRejectDistance</div><div>0 (off)</div><div>Metres &mdash; Set &gt;0 To Reject Spike Poses.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.tagSpawnedCubes</div><div>false</div><div>Set To <code>true</code> To Auto-Tag Spawned Cubes With ObjectClass For The Task System.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.cubeClassNames</div><div>["red","green","blue","yellow"]</div><div>Per-Cube Class Name (Index 0 = cube_1).</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.cubeIsGood</div><div>[true &times; 4]</div><div>Whether Each Cube Counts As A "Correct" Target.</div></div>
+      <div class="cfg-row"><div>CubePoseSubscriber.objectScale</div><div>0.04</div><div>Hologram Size &mdash; Matches The 40 Mm Physical Cube Edge.</div></div>
+      <div class="cfg-row"><div>RobotHUD.distanceFromCamera</div><div>1.5 m</div><div>Distance The HUD Floats From The Head.</div></div>
+      <div class="cfg-row"><div>RobotHUD.offset</div><div>(0.3, -0.12, 0)</div><div>Camera-Relative Offset For The HUD.</div></div>
+      <div class="cfg-row"><div>RobotHUD.followCamera</div><div>true</div><div>Flipped By PanelPlacer On Grab &mdash; Do Not Toggle Manually.</div></div>
+      <div class="cfg-row"><div>RobotInfoPanel.distanceFromCamera</div><div>1.8 m</div><div>Distance The Info Panel Floats From The Head.</div></div>
+      <div class="cfg-row"><div>RobotInfoPanel.offset</div><div>(-0.45, 0, 0)</div><div>Camera-Relative Offset.</div></div>
+      <div class="cfg-row"><div>RobotInfoPanel.followCamera</div><div>true</div><div>Flipped By PanelPlacer On Grab.</div></div>
+      <div class="cfg-row"><div>PanelPlacer.colliderWidth / Height / Depth</div><div>0.8 / 0.6 / 0.05</div><div>Grab Collider Dimensions In Metres.</div></div>
+      <div class="cfg-row"><div>PanelPlacer.returnToFollowOnReset</div><div>false</div><div>If <code>true</code>, Releasing The Panel Re-Enables FollowCamera (Panel Snaps Back To Head).</div></div>
+      <div class="cfg-row"><div>PassthroughToggle.keepCollidersInPassthrough</div><div>true</div><div>Keeps Physics Active When Virtual Environment Renderers Are Hidden.</div></div>
+      <div class="cfg-row"><div>BinDetector.triggerSizeMultiplier</div><div>1.2</div><div>Trigger Zone Size Relative To Mesh Bounds.</div></div>
+      <div class="cfg-row"><div>BinDetector.buildContainerColliders</div><div>true</div><div>Auto-Build Wall Colliders So Cubes Don't Escape Rotated/Scaled Bins.</div></div>
+      <div class="cfg-row"><div>TaskTracker.mode</div><div>FixedTarget</div><div>Or OneOfEach / OneOfEachClass &mdash; Settable At Runtime Via TaskConfigPanel.</div></div>
+      <div class="cfg-row"><div>TaskTracker.targetCount</div><div>5</div><div>Required Correct Sorts In FixedTarget Mode.</div></div>
+      <div class="cfg-row"><div>TaskTracker.wrongFailThreshold</div><div>-1 (disabled)</div><div>Set &gt;0 To Auto-Fail After That Many Wrong Sorts.</div></div>
+      <div class="cfg-row"><div>HeadsetStreamPublisher.topic</div><div>/headset/image_compressed</div><div>Dashboard Stream Topic. Disable Component If JPEG Payloads Overflow The Bridge.</div></div>
+      <div class="cfg-row"><div>Trolley yaw</div><div>180&deg;</div><div>Static Yaw To Match The Physical Mount.</div></div>
+      <div class="cfg-row"><div>Scripting define (Standalone)</div><div><code>ROS2</code></div><div>Required For ROS Message Types. Set In ProjectSettings.asset Standalone Defines.</div></div>
+      <div class="cfg-row"><div>Android build architecture</div><div>ARM64 / IL2CPP</div><div>Required For Quest 3.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TROUBLESHOOTING ── -->
+<section class="section" id="troubleshooting">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">11 — Troubleshooting</div>
+    <table class="data-table">
+      <thead><tr><th>Symptom</th><th>Likely cause</th><th>Diagnose</th><th>Fix</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="wrap-first">Unity can't connect to ROS</td><td>Wrong IP / port; firewall; ros_tcp_endpoint not running; not on same WiFi.</td><td><code>nc -zv &lt;laptop-ip&gt; 10000</code> from another device; <code>ros2 topic list</code> shows <code>/unity_endpoint</code> diagnostics.</td><td>Re-enter IP in Robotics - ROS Settings; allow port 10000; restart launcher.</td><td>The bridge is a single TCP socket; the wrong IP or a dropped endpoint is silent.</td></tr>
+        <tr><td class="wrap-first">Quest build fails</td><td>Android Build Support not installed; SDK/NDK paths empty; URDF-Importer assimp.dll Android conflict.</td><td>Watch the build console; look for "duplicate native library" assimp errors.</td><td>Install Android module via Unity Hub; set <code>Any: enabled: 0</code> on the two assimp.dll .meta files.</td><td>URDF-Importer ships x86 + x86_64 native libs that collide with the ARM64 Android build.</td></tr>
+        <tr><td class="wrap-first">Headset shows blank scene</td><td>Wrong scene loaded; XR rig camera disabled; passthrough mode mis-set.</td><td>Open the Build Profile; confirm SampleScene is the active scene at index 0.</td><td>Re-add SampleScene; verify Main Camera tag on the XR rig camera.</td><td>If no Main Camera exists, Camera.main returns null and panels fail to position.</td></tr>
+        <tr><td class="wrap-first">UI panels stop updating after a grab</td><td>PanelPlacer disabled the panel script (legacy behaviour).</td><td>Check the panel's MonoBehaviour <code>enabled</code> flag in the Editor.</td><td>Add a <code>public bool followCamera = true;</code> field to the panel and gate <code>FollowCamera()</code> on it. PanelPlacer flips this instead of disabling the script (already done for RobotHUD, RobotInfoPanel, TaskConfigPanel).</td><td>Disabling the MonoBehaviour halts LateUpdate, so live data subscriptions also freeze.</td></tr>
+        <tr><td class="wrap-first">Cube holograms don't appear</td><td><code>topic_tools relay</code> not running on ROS side; wrong <code>topicPrefix</code>; perception node not detecting tags.</td><td><code>ros2 topic hz /holoassist/perception/april_cube_1_pose</code>, then <code>ros2 topic hz /holoassist/unity/cube_1_pose</code>.</td><td>Start the relay on every cube (one process per cube) — see [perception.html](perception.html). Or change <code>topicPrefix</code> to <code>/holoassist/perception/april</code> and override the topic format.</td><td>Unity subscribes to a Unity-friendly relayed topic name.</td></tr>
+        <tr><td class="wrap-first">Cube hologram floats above the table</td><td>Hand-eye calibration not loaded; <code>robotBase</code> Transform unset; trolley yaw drift.</td><td>Compare physical cube position to RViz — if RViz is wrong, calibration is the cause (Subsystem 1, not 4).</td><td>Load calibration on the perception side; assign <code>robotBase</code> to UR3e base_link in CubePoseSubscriber Inspector.</td><td>The CubePoseSubscriber transforms each pose into <code>robotBase</code>'s frame; an unset reference defaults to world origin.</td></tr>
+        <tr><td class="wrap-first">Bin status doesn't update on cube drop</td><td>Cube has no ObjectClass; cube has no Collider; bin trigger zone too small.</td><td>Inspect the cube prefab; check BinDetector trigger size.</td><td>Set <code>tagSpawnedCubes = true</code> on CubePoseSubscriber; set <code>autoAddCollider = true</code>; raise <code>triggerSizeMultiplier</code> from 1.2 to e.g. 1.6.</td><td>BinDetector relies on OnTriggerEnter with an ObjectClass-tagged Collider.</td></tr>
+        <tr><td class="wrap-first">Robot model misaligned with physical robot</td><td>Calibration; <code>RobotBasePlacer</code> anchor; URDF import scale.</td><td>Compare in passthrough — if joint angles are right but base is wrong, it's anchor; if base is right but joints are wrong, it's a joint mapping issue.</td><td>Re-run hand-eye calibration on the perception side; re-anchor RobotBasePlacer to <code>base_link</code>.</td><td>Twin pose = base anchor × FK from joint_states.</td></tr>
+        <tr><td class="wrap-first">Passthrough doesn't work</td><td>Meta XR settings; OpenXR feature disabled; running in Editor (no real passthrough).</td><td>Check Project Settings - XR Plug-in Management - OpenXR - Quest features.</td><td>Enable Passthrough feature; ensure Meta XR Camera Rig is used.</td><td>Passthrough requires the Meta OpenXR runtime; Editor falls back to a black background.</td></tr>
+        <tr><td class="wrap-first">Wrong IP / port (works in Editor, not Quest)</td><td>Editor and Quest are on different networks; Quest sees an old IP cached from a previous build.</td><td><code>adb logcat -s Unity:* | grep ROSConnection</code>.</td><td>Rebuild after correcting the IP; or use ROSAutoConnect on the same subnet.</td><td>The Quest build bakes the prefab's IP unless ROSAutoConnect overrides at runtime.</td></tr>
+        <tr><td class="wrap-first">Missing Unity package</td><td>Package import skipped; vendored package at wrong relative path.</td><td>Package Manager shows red "missing" entries.</td><td>For ROS-TCP-Connector / URDF-Importer the vendored copies must live at <code>../../ROS-TCP-Connector</code> and <code>../../URDF-Importer</code> relative to <code>Unity/My project/Packages</code>. Re-clone them at the right paths.</td><td>The manifest uses <code>file:</code> URLs — moving the folder breaks resolution.</td></tr>
+        <tr><td class="wrap-first">Broken prefab / inspector reference</td><td>Asset moved; merge wiped a serialised reference.</td><td>Inspector shows "Missing (GameObject)" on the field.</td><td>Re-drag the reference. For systematic regen, run <code>Tools - HoloAssist - Setup All UI Features</code>.</td><td>The editor menu re-wires every UI reference in one pass.</td></tr>
+        <tr><td class="wrap-first">"sequence size exceeds remaining buffer" floods the terminal</td><td>HeadsetStreamPublisher JPEG payload too large for the bridge.</td><td>Watch the launcher terminal.</td><td>Disable HeadsetStreamPublisher, or lower its captureWidth/captureHeight.</td><td>The bridge has a max message size; oversized payloads desynchronise the stream.</td></tr>
+        <tr><td class="wrap-first">Stale joint values in the HUD / InfoPanel</td><td>Duplicate <code>JointStateSubscriber</code> or <code>RobotController</code> in the scene; the freshness picker picked a stale one.</td><td><code>adb logcat -s Unity:* | grep -iE "RobotHUD\|RobotInfoPanel"</code> — look for the bind log with <code>fresh=False</code>.</td><td>Delete duplicates; only one active subscriber/controller should exist.</td><td>The pickers prefer freshness — but freshness fails if no subscriber is receiving messages.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── LIMITATIONS ── -->
+<section class="section alt" id="limitations">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">12 — Limitations and Assumptions</div>
+    <div class="limitation-grid">
+      <div class="limitation-card confirmed">
+        <h4>Confirmed limitations (from code)</h4>
+        <ul>
+          <li>ROSAutoConnect only scans <code>192.168.0.101–110</code>. Disabled in scenarios outside the robot router.</li>
+          <li>CubePoseSubscriber transforms poses through a single <code>robotBase</code> Transform — there is no multi-arm support.</li>
+          <li>PanelPlacer's "flip followCamera" pattern only works on panels that expose the field. RobotDataPanel, BinStatusPanel, CoachingPanel still use the legacy "disable script" path; they will freeze on grab.</li>
+          <li>HeadsetStreamPublisher JPEG payloads can exceed the ROS-TCP bridge buffer; the component must be disabled for some tests.</li>
+          <li>TaskTracker is a singleton with no persistence — every Editor Play restarts state from zero.</li>
+        </ul>
+      </div>
+      <div class="limitation-card assumption">
+        <h4>Assumptions</h4>
+        <ul>
+          <li>The laptop and Quest are on the <strong>same WiFi network</strong> with no AP/client isolation.</li>
+          <li>Perception is publishing <code>/holoassist/perception/april_cube_N_pose</code> and a <code>topic_tools relay</code> is bridging it to <code>/holoassist/unity/cube_N_pose</code> (one process per cube).</li>
+          <li>The ROS side already has hand-eye calibration loaded so cube poses are in <code>base_link</code> frame, not <code>camera_color_optical_frame</code>.</li>
+          <li>The UR3e is mounted on the trolley facing 180° from the URDF default.</li>
+          <li>Subsystem 3 (Nic) owns the digital twin and manual control core: the URDF-imported UR3e, <code>RobotController</code>, <code>JointStateSubscriber</code>, and <code>RobotBasePlacer</code> are present in the scene, current with the demo branch, and not duplicated.</li>
+        </ul>
+      </div>
+      <div class="limitation-card future">
+        <h4>Future improvements</h4>
+        <ul>
+          <li>Add <code>followCamera</code> to BinStatusPanel, CoachingPanel, RobotDataPanel for full PanelPlacer-safe coverage.</li>
+          <li>Add Inspector tuning for <code>minMoveDistance</code>, <code>snapDistanceThreshold</code>, <code>useSmoothDamp</code>, <code>maxSpeed</code>, <code>staleFade</code> on CubePoseSubscriber (planned in <a href="../Dev%20Documentation/CUBE_PERCEPTION_DEV.md">Dev Documentation/CUBE_PERCEPTION_DEV.md</a>).</li>
+          <li>Per-bin <code>acceptedClasses[]</code> for true colour-specific sorting.</li>
+          <li>Direct service call from TaskConfigPanel into Subsystem 2's <code>/holoassist/pick_cube_to_bin</code>.</li>
+          <li>Replace the hard-coded <code>192.168.0.101–110</code> ROSAutoConnect range with an Inspector setting.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
 <footer class="doc-footer">
   <div class="doc-footer-in">
     <div>
-      <h3>Visualisation</h3>
-      <p>Sebastian &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
+      <h3>XR Scene &amp; Visualisation — Subsystem 4</h3>
+      <p>Sebastian Baudille · UTS Robotics Studio 2 · Last updated 2026-05-27</p>
     </div>
     <a href="../index.html" class="doc-footer-back">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -310,12 +890,19 @@ a { color: inherit; text-decoration: none; }
 // ── DOCK ──
 (function () {
     const ITEMS = [
-        { label:'Home',     href:'../index.html', id:'',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
-        { label:'Overview', href:'#overview',     id:'overview', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
-        { label:'Pipeline', href:'#pipeline',     id:'pipeline', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-        { label:'Topics',   href:'#topics',       id:'topics',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-        { label:'Config',   href:'#config',       id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
-        { label:'Issues',   href:'#issues',       id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+        { label:'Home',           href:'../index.html', id:'',               svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+        { label:'Quick start',    href:'#quickstart',   id:'quickstart',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+        { label:'Purpose',        href:'#purpose',      id:'purpose',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>' },
+        { label:'Stack',          href:'#stack',        id:'stack',          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>' },
+        { label:'Repo map',       href:'#repo',         id:'repo',           svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+        { label:'Scene',          href:'#scene',        id:'scene',          svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
+        { label:'Scripts',        href:'#scripts',      id:'scripts',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>' },
+        { label:'Data flow',      href:'#dataflow',     id:'dataflow',       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>' },
+        { label:'I/O',            href:'#io',           id:'io',             svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+        { label:'Testing',        href:'#testing',      id:'testing',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+        { label:'Config',         href:'#config',       id:'config',         svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0A1.65 1.65 0 0 0 9 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
+        { label:'Troubleshoot',   href:'#troubleshooting', id:'troubleshooting', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+        { label:'Limitations',    href:'#limitations',  id:'limitations',    svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' },
     ];
     const GH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>';
 
@@ -352,22 +939,6 @@ a { color: inherit; text-decoration: none; }
         es.forEach(e => { if (e.isIntersecting) sectionLinks.forEach(l => l.classList.toggle('active', l.dataset.id === e.target.id)); });
     }, { threshold: 0.35 });
     document.querySelectorAll('section[id]').forEach(s => io.observe(s));
-
-    // Magnification
-    const BASE = 64, MAG = 88, DIST = 160;
-    function setW(el, n) { el.style.setProperty('--sz', n + 'px'); }
-    function reset() { [...nav.querySelectorAll('.di')].forEach(l => setW(l, BASE)); }
-    nav.addEventListener('pointermove', e => {
-        if (window.innerWidth <= 768) return;
-        [...nav.querySelectorAll('.di')].forEach(l => {
-            const r = l.getBoundingClientRect(), c = r.top + r.height / 2;
-            const inf = Math.max(0, 1 - Math.abs(e.clientY - c) / DIST);
-            setW(l, BASE + (MAG - BASE) * inf * inf * (3 - 2 * inf));
-        });
-    });
-    nav.addEventListener('pointerleave', reset);
-    window.addEventListener('resize', reset);
-    reset();
 })();
 </script>
 
