@@ -31,22 +31,29 @@ public class PanelPlacer : MonoBehaviour
     private Rigidbody panelRigidbody;
     private MonoBehaviour panelBehavior;
     private TaskConfigPanel taskConfigPanel;   // special-cased: needs Update to keep running for button hover feedback
+    private RobotHUD robotHud;                 // also flip-don't-disable so subscriptions + text keep updating after grab
+    private RobotInfoPanel robotInfoPanel;     // same pattern as robotHud
     private bool wasFollowing;
 
     void Start()
     {
-        // TaskConfigPanel is special: it has interactive buttons whose hover/highlight
-        // updates require its Update() to keep running. We don't disable the whole
-        // script on grab — we just flip its `followCamera` field.
+        // Three categories of panel-grab handling:
+        //
+        // 1. TaskConfigPanel — keep script enabled (interactive buttons need its Update),
+        //    just flip its `followCamera` field on grab.
+        // 2. RobotHUD / RobotInfoPanel — keep script enabled (live ROS data must keep
+        //    flowing into the text), just flip their `followCamera` field on grab.
+        //    DISABLING THESE BREAKS DATA UPDATES PERMANENTLY since LateUpdate stops.
+        // 3. Other display-only panels — disable the whole MonoBehaviour on grab.
         taskConfigPanel = GetComponent<TaskConfigPanel>();
+        robotHud = GetComponent<RobotHUD>();
+        robotInfoPanel = GetComponent<RobotInfoPanel>();
 
-        // For other panels (display-only), find the script so we can disable it during grab.
-        if (taskConfigPanel == null)
+        if (taskConfigPanel == null && robotHud == null && robotInfoPanel == null)
         {
             panelBehavior = GetComponent<RobotDataPanel>() as MonoBehaviour;
             if (panelBehavior == null) panelBehavior = GetComponent<BinStatusPanel>() as MonoBehaviour;
             if (panelBehavior == null) panelBehavior = GetComponent<CoachingPanel>() as MonoBehaviour;
-            if (panelBehavior == null) panelBehavior = GetComponent<RobotHUD>() as MonoBehaviour;
         }
 
         // Add box collider sized to panel
@@ -83,14 +90,23 @@ public class PanelPlacer : MonoBehaviour
 
     void OnGrabbed(SelectEnterEventArgs args)
     {
-        // TaskConfigPanel: flip its follow flag, keep the script enabled so per-frame
-        // button hover / status updates keep working while grabbed and after release.
+        // Flip the followCamera flag for panels that need to keep updating after grab.
         if (taskConfigPanel != null && taskConfigPanel.followCamera)
         {
             wasFollowing = true;
             taskConfigPanel.followCamera = false;
         }
-        // Other panels: disable the entire script to stop their follow loop.
+        else if (robotHud != null && robotHud.followCamera)
+        {
+            wasFollowing = true;
+            robotHud.followCamera = false;
+        }
+        else if (robotInfoPanel != null && robotInfoPanel.followCamera)
+        {
+            wasFollowing = true;
+            robotInfoPanel.followCamera = false;
+        }
+        // Other panels (display-only): disable the entire script.
         else if (panelBehavior != null && panelBehavior.enabled)
         {
             wasFollowing = true;
@@ -114,6 +130,8 @@ public class PanelPlacer : MonoBehaviour
         if (returnToFollowOnReset && wasFollowing)
         {
             if (taskConfigPanel != null) taskConfigPanel.followCamera = true;
+            else if (robotHud != null) robotHud.followCamera = true;
+            else if (robotInfoPanel != null) robotInfoPanel.followCamera = true;
             else if (panelBehavior != null) panelBehavior.enabled = true;
         }
 
@@ -126,6 +144,8 @@ public class PanelPlacer : MonoBehaviour
     public void ResetToFollow()
     {
         if (taskConfigPanel != null) taskConfigPanel.followCamera = true;
+        if (robotHud != null) robotHud.followCamera = true;
+        if (robotInfoPanel != null) robotInfoPanel.followCamera = true;
         if (panelBehavior != null) panelBehavior.enabled = true;
         Debug.Log($"[PanelPlacer] Reset {gameObject.name} to follow camera");
     }

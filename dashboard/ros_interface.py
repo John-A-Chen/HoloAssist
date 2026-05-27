@@ -71,7 +71,6 @@ class DashboardStatus:
     joint_hz: float = 0.0
     # E-stop
     events: list = field(default_factory=list)
-    estop_zero_count: int = 0
     # Perception topic rates
     topic_rates: dict = field(default_factory=dict)  # name -> TopicStatus
     # Camera image (latest debug image as raw bytes, or None)
@@ -179,7 +178,6 @@ class RosInterface:
     """
 
     NUM_JOINTS = 6
-    SAFETY_PUBLISH_HZ = 50
     RATE_WINDOW_S = 3.0  # rolling window for Hz calculation
 
     def __init__(self):
@@ -188,8 +186,6 @@ class RosInterface:
         self._events: list[tuple[float, str]] = []
         self._node = None
         self._spin_thread = None
-        self._safety_thread = None
-        self._safety_stop = threading.Event()
         self._running = False
 
         # Per-topic rate tracking: name -> deque of timestamps
@@ -655,33 +651,11 @@ class RosInterface:
             if self._status.robot_state == RobotState.ESTOPPED:
                 return
             self._status.robot_state = RobotState.ESTOPPED
-            self._status.estop_zero_count = 0
 
         self._add_event("EMERGENCY STOP TRIGGERED")
         self._publish_pick_place_mode("stop")
-        self._publish_zeros(count=10)
-
-        self._safety_stop.clear()
-        self._safety_thread = threading.Thread(target=self._safety_publish_loop, daemon=True)
-        self._safety_thread.start()
 
         threading.Thread(target=self._deactivate_controller, daemon=True).start()
-
-    def _publish_zeros(self, count=1):
-        if not ROS_AVAILABLE or self._node is None:
-            return
-        msg = Float64MultiArray()
-        msg.data = [0.0] * self.NUM_JOINTS
-        for _ in range(count):
-            self._vel_pub.publish(msg)
-        with self._lock:
-            self._status.estop_zero_count += count
-
-    def _safety_publish_loop(self):
-        interval = 1.0 / self.SAFETY_PUBLISH_HZ
-        while not self._safety_stop.is_set():
-            self._publish_zeros(count=1)
-            self._safety_stop.wait(timeout=interval)
 
     def _switch_controllers(self, activate: list, deactivate: list) -> tuple:
         """Switch controllers via ros2 service call. Returns (success: bool, error: str)."""
@@ -748,7 +722,6 @@ class RosInterface:
             self._status.robot_state = RobotState.RESUMING
 
         self._add_event("Resuming - reactivating controller...")
-        self._safety_stop.set()
         target_mode = self._operating_mode
         threading.Thread(
             target=self._activate_controller,
@@ -764,7 +737,6 @@ class RosInterface:
                 with self._lock:
                     self._status.robot_state = RobotState.RUNNING
                     self._status.controller_active = True
-                    self._status.estop_zero_count = 0
                 if target_mode == OperatingMode.MOVEIT:
                     self._publish_pick_place_mode("run")
             else:
@@ -788,7 +760,6 @@ class RosInterface:
             with self._lock:
                 self._status.robot_state = RobotState.RUNNING
                 self._status.controller_active = True
-                self._status.estop_zero_count = 0
             if target_mode == OperatingMode.MOVEIT:
                 self._publish_pick_place_mode("run")
         else:
@@ -893,7 +864,6 @@ class RosInterface:
                 last_joint_time=self._status.last_joint_time,
                 joint_hz=self._status.joint_hz,
                 events=list(self._events),
-                estop_zero_count=self._status.estop_zero_count,
                 topic_rates=topic_rates,
                 camera_jpeg=self._status.camera_jpeg,
                 camera_width=self._status.camera_width,
@@ -1178,7 +1148,6 @@ class RosInterface:
 
     def shutdown(self):
         self._running = False
-        self._safety_stop.set()
         self._save_session_log()
         if self._node is not None:
             self._node.destroy_node()

@@ -89,7 +89,9 @@ public static class HoloAssistSetup
 
         // 7. Wire RadialMenu
         radial.tfVisualizer = tfVis;
-        radial.dataPanel = dataPanel;
+        // radial.dataPanel removed — RobotDataPanel was retired in favor of RobotInfoPanel.
+        // If you want this setup helper to wire RobotInfoPanel too, create one above and set:
+        //   radial.infoPanel = infoPanel;
         radial.binStatusPanel = binPanel;
         radial.coachingPanel = coachPanel;
         radial.passthroughToggle = pt;
