@@ -24,10 +24,19 @@ public class RobotInfoPanel : MonoBehaviour
     [Tooltip("Drag the RobotController to show mode / sub-mode info. Optional.")]
     public RobotController controller;
 
+    [Tooltip("Drag JointTFVisualizer to show TF axes ON/OFF state — mirrors RobotHUD.")]
+    public JointTFVisualizer tfVisualizer;
+
+    [Tooltip("Drag PassthroughToggle to show MR/VR state — mirrors RobotHUD.")]
+    public PassthroughToggle passthroughToggle;
+
     [Header("Layout")]
     public float distanceFromCamera = 1.8f;
     public Vector3 offset = new Vector3(-0.45f, 0.0f, 0f);
     public float followSpeed = 2.5f;
+
+    [Tooltip("If false, the panel stops camera-following but keeps updating text. Flipped by PanelPlacer on grab.")]
+    public bool followCamera = true;
 
     [Header("Panel Dimensions")]
     public float panelWidth = 0.8f;
@@ -106,11 +115,34 @@ public class RobotInfoPanel : MonoBehaviour
         if (!jointSubscribed) TrySubscribeJointStates();
         if (!eePoseSubscribed) TrySubscribeEEPose();
 
+        // Auto-rebind to the wired RobotController if the current ref is stale.
+        // Verbatim from RobotHUD.RebindControllerIfNeeded — scenes with branch-merge
+        // duplicates often have multiple RobotController instances; only the one
+        // with inputActions assigned is "live".
+        RebindControllerIfNeeded();
+
         if (cam == null) cam = FindXRCamera();
 
         RenderText();
 
-        if (cam != null) FollowCamera();
+        if (cam != null && followCamera) FollowCamera();
+    }
+
+    // Verbatim from RobotHUD.RebindControllerIfNeeded + PickBestController.
+    void RebindControllerIfNeeded()
+    {
+        if (controller != null && controller.enabled && controller.gameObject.activeInHierarchy
+            && controller.inputActions != null)
+            return;
+
+        RobotController fallback = null;
+        foreach (var c in FindObjectsOfType<RobotController>(true))
+        {
+            if (!c.enabled || !c.gameObject.activeInHierarchy) continue;
+            if (c.inputActions != null) { controller = c; return; }
+            if (fallback == null) fallback = c;
+        }
+        if (controller == null) controller = fallback;
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -185,14 +217,82 @@ public class RobotInfoPanel : MonoBehaviour
         else status = "Disconnected";
         SetCell("connection", status);
 
-        // Mode row (optional, requires controller)
+        // ── Mode row: combined mode + sub-state, matches RobotHUD.titleLabel text. ──
+        // Logic copied verbatim from RobotHUD.UpdateText().
+        string modeStr = "—";
+        Color modeColor = valueColor;
         if (controller != null)
-            SetCell("mode", controller.CurrentMode.ToString());
+        {
+            if (controller.CurrentMode == RobotController.ControlMode.HandGuide)
+            {
+                bool active = controller.IsHandGuideActive;
+                modeStr = active ? "HAND GUIDE  ●  TRACKING" : "HAND GUIDE  ○  READY";
+                modeColor = active ? new Color(1f, 0.4f, 0.4f) : new Color(0.9f, 0.6f, 0.9f);
+            }
+            else if (controller.CurrentMode == RobotController.ControlMode.DirectJoint)
+            {
+                int idx = controller.SelectedJoint;
+                string jointName = (idx >= 0 && idx < displayJointNames.Length)
+                    ? displayJointNames[idx] : "?";
+                float angle = (idx >= 0 && idx < 6) ? jointAnglesDeg[idx] : 0f;
+                modeStr = $"DIRECT JOINT  |  {jointName}  ({idx + 1}/6)  {angle:F1}°";
+                modeColor = new Color(1f, 0.8f, 0.3f);
+            }
+            else if (controller.CurrentRMRCSubMode == RobotController.RMRCSubMode.Translate)
+            {
+                modeStr = "RMRC  TRANSLATE";
+                modeColor = new Color(0.4f, 0.9f, 0.4f);
+            }
+            else
+            {
+                modeStr = "RMRC  ROTATE";
+                modeColor = new Color(0.5f, 0.7f, 1f);
+            }
+        }
+        SetCell("mode", modeStr);
+        if (cells.TryGetValue("mode", out var modeTmp) && modeTmp != null)
+            modeTmp.color = modeColor;
 
-        // Joint angles
+        // ── Gripper / EE Lock / TF / View rows — verbatim from HUD.gripperLabel. ──
+        if (controller != null)
+        {
+            float g = controller.GripperValue;
+            int pct = Mathf.RoundToInt(g * 100f);
+            SetCell("gripper", $"{pct}%");
+            if (cells.TryGetValue("gripper", out var gripTmp) && gripTmp != null)
+            {
+                Color gripColor = (g < 0.05f) ? new Color(0.5f, 0.8f, 0.5f)
+                               : (g > 0.9f)  ? new Color(1f, 0.4f, 0.3f)
+                                             : new Color(1f, 0.85f, 0.4f);
+                gripTmp.color = controller.IsEELockedDown ? new Color(0.4f, 0.8f, 1f) : gripColor;
+            }
+
+            bool eeLocked = controller.IsEELockedDown;
+            SetCell("ee_lock", eeLocked ? "ON" : "OFF");
+            if (cells.TryGetValue("ee_lock", out var eeLockTmp) && eeLockTmp != null)
+                eeLockTmp.color = eeLocked ? new Color(0.4f, 0.8f, 1f) : valueColor;
+        }
+        else
+        {
+            SetCell("gripper", "—");
+            SetCell("ee_lock", "—");
+        }
+
+        SetCell("tf_axes", (tfVisualizer != null && tfVisualizer.showAxes) ? "ON" : "OFF");
+        SetCell("view", (passthroughToggle != null && passthroughToggle.PassthroughEnabled) ? "MR" : "VR");
+
+        // ── Joint angles, with highlight for selected joint in DirectJoint mode. ──
+        int selIdx = (controller != null) ? controller.SelectedJoint : -1;
+        bool isJointMode = controller != null
+            && controller.CurrentMode == RobotController.ControlMode.DirectJoint;
         for (int i = 0; i < displayJointNames.Length; i++)
         {
             SetCell($"joint_{i}", $"{jointAnglesDeg[i]:F1}°");
+            bool highlight = isJointMode && (i == selIdx);
+            if (cells.TryGetValue($"joint_{i}", out var jvTmp) && jvTmp != null)
+                jvTmp.color = highlight ? new Color(1f, 0.95f, 0.6f, 1f) : valueColor;
+            if (cells.TryGetValue($"joint_{i}_label", out var jlTmp) && jlTmp != null)
+                jlTmp.color = highlight ? new Color(1f, 0.85f, 0.2f, 1f) : labelColor;
         }
 
         // EE pose (ROS frame: X forward, Y left, Z up)
@@ -244,7 +344,9 @@ public class RobotInfoPanel : MonoBehaviour
         }
 
         // Compute panel height: header + connection + (mode?) + joint header + 6 joints + ee header + 2 ee rows + padding.
-        int statusRows = (controller != null) ? 2 : 1;
+        // Status rows: connection + mode + gripper + ee_lock + tf_axes + view = 6
+        // (always created, "—" placeholder when controller/tf/passthrough unwired).
+        const int statusRows = 6;
         int dataRows = statusRows + displayJointNames.Length + 2; // + ee_pos + ee_rot
         float panelHeight = headerHeight + padding * 4f + dataRows * rowHeight + rowHeight * 2f; // headers + spacing
 
@@ -268,10 +370,14 @@ public class RobotInfoPanel : MonoBehaviour
 
         float yPos = topY - headerHeight / 2f - padding;
 
-        // Status section
+        // Status section — all rows always created, "—" when source unwired.
+        // Picker-driven controller rebinds don't require a panel rebuild.
         CreateRow("connection", "Status", "Disconnected", ref yPos);
-        if (controller != null)
-            CreateRow("mode", "Mode", "—", ref yPos);
+        CreateRow("mode", "Mode", "—", ref yPos);
+        CreateRow("gripper", "Gripper", "0%", ref yPos);
+        CreateRow("ee_lock", "EE Lock", "OFF", ref yPos);
+        CreateRow("tf_axes", "TF Axes", "OFF", ref yPos);
+        CreateRow("view", "View", "VR", ref yPos);
         yPos -= padding;
 
         // Joint angles section header
@@ -296,7 +402,7 @@ public class RobotInfoPanel : MonoBehaviour
         CreateRow("ee_pos", "Position", "0, 0, 0", ref yPos);
         CreateRow("ee_rot", "Rotation", "0, 0, 0", ref yPos);
 
-        if (cam != null) FollowCamera();
+        if (cam != null && followCamera) FollowCamera();
         built = true;
 
         if (Application.isPlaying) RenderText();

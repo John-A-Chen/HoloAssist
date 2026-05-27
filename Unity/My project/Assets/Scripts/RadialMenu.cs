@@ -35,8 +35,7 @@ public class RadialMenu : MonoBehaviour
 
     [Header("References")]
     public JointTFVisualizer tfVisualizer;
-    public RobotDataPanel dataPanel;
-    [Tooltip("Replacement for RobotDataPanel that uses RobotHUD's proven subscription pattern. If assigned, gets its own 'Info Panel' radial button.")]
+    [Tooltip("Multi-row data panel — uses RobotHUD's proven subscription pattern.")]
     public RobotInfoPanel infoPanel;
     public BinStatusPanel binStatusPanel;
     public CoachingPanel coachingPanel;
@@ -126,8 +125,6 @@ public class RadialMenu : MonoBehaviour
         yield return null;
         if (robotHUD != null && robotHUD.gameObject.activeSelf)
             robotHUD.gameObject.SetActive(false);
-        if (dataPanel != null && dataPanel.gameObject.activeSelf)
-            dataPanel.gameObject.SetActive(false);
         if (infoPanel != null && infoPanel.gameObject.activeSelf)
             infoPanel.gameObject.SetActive(false);
         if (binStatusPanel != null && binStatusPanel.gameObject.activeSelf)
@@ -164,8 +161,8 @@ public class RadialMenu : MonoBehaviour
             passthroughToggle = FindFirstUsable<PassthroughToggle>("passthroughToggle");
         if (tfVisualizer == null)
             tfVisualizer = FindFirstUsable<JointTFVisualizer>("tfVisualizer");
-        if (dataPanel == null)
-            dataPanel = FindFirstUsable<RobotDataPanel>("dataPanel");
+        if (infoPanel == null)
+            infoPanel = FindFirstUsable<RobotInfoPanel>("infoPanel");
         if (binStatusPanel == null)
             binStatusPanel = FindFirstUsable<BinStatusPanel>("binStatusPanel");
         if (coachingPanel == null)
@@ -217,16 +214,8 @@ public class RadialMenu : MonoBehaviour
             robotHUD.ForceRefresh();
         }
 
-        // Push the same instant refresh to the data panel so its Status section
+        // Push the same instant refresh to the info panel so its Status section
         // reflects the new mode / sub-mode / EE-lock state on the click frame.
-        if (dataPanel == null)
-        {
-            dataPanel = FindFirstUsable<RobotDataPanel>("dataPanel");
-        }
-        if (dataPanel != null && dataPanel.gameObject.activeInHierarchy)
-        {
-            dataPanel.ForceRefresh();
-        }
         if (infoPanel == null)
         {
             infoPanel = FindFirstUsable<RobotInfoPanel>("infoPanel");
@@ -346,12 +335,6 @@ public class RadialMenu : MonoBehaviour
         {
             if (tfVisualizer != null)
                 tfVisualizer.Toggle();
-        });
-
-        AddButton("Data\nPanel", true, () =>
-        {
-            if (dataPanel != null)
-                dataPanel.gameObject.SetActive(!dataPanel.gameObject.activeSelf);
         });
 
         AddButton("Info\nPanel", true, () =>
@@ -751,7 +734,6 @@ public class RadialMenu : MonoBehaviour
     {
         // Sync by label (more robust than fixed indices)
         SyncButtonByLabel("TF Axes", tfVisualizer != null && tfVisualizer.showAxes);
-        SyncButtonByLabel("Data\nPanel", dataPanel != null && dataPanel.gameObject.activeSelf);
         SyncButtonByLabel("Info\nPanel", infoPanel != null && infoPanel.gameObject.activeSelf);
         SyncButtonByLabel("Bin\nStatus", binStatusPanel != null && binStatusPanel.gameObject.activeSelf);
         SyncButtonByLabel("Coach", coachingPanel != null && coachingPanel.gameObject.activeSelf);

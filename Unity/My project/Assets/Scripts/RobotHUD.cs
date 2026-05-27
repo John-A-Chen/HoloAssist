@@ -13,6 +13,9 @@ public class RobotHUD : MonoBehaviour
     public float distanceFromCamera = 1.5f;
     public Vector3 offset = new Vector3(0.3f, -0.12f, 0f);
     public float followSpeed = 2.5f;
+
+    [Tooltip("If false, the HUD stops camera-following but keeps updating text. Flipped by PanelPlacer on grab.")]
+    public bool followCamera = true;
     public float panelWidth = 0.55f;
     public float panelHeight = 0.14f;
     public float headerHeight = 0.035f;
@@ -444,7 +447,7 @@ public class RobotHUD : MonoBehaviour
             lastSeenModeValid = true;
         }
 
-        UpdatePosition(false);
+        if (followCamera) UpdatePosition(false);
         UpdateText();
     }
 
