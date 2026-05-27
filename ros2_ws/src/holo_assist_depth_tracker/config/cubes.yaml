@@ -1,7 +1,7 @@
 holoassist_cube_pose:
   ros__parameters:
     detections_topic: /detections_all
-    workspace_frame: camera_color_optical_frame
+    workspace_frame: base_link
     tag_family: 36h11
     cube_edge_size_m: 0.040
     cube_tag_size_m: 0.032

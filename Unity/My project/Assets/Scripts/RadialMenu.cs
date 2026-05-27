@@ -36,6 +36,8 @@ public class RadialMenu : MonoBehaviour
     [Header("References")]
     public JointTFVisualizer tfVisualizer;
     public RobotDataPanel dataPanel;
+    [Tooltip("Replacement for RobotDataPanel that uses RobotHUD's proven subscription pattern. If assigned, gets its own 'Info Panel' radial button.")]
+    public RobotInfoPanel infoPanel;
     public BinStatusPanel binStatusPanel;
     public CoachingPanel coachingPanel;
     public PassthroughToggle passthroughToggle;
@@ -126,6 +128,8 @@ public class RadialMenu : MonoBehaviour
             robotHUD.gameObject.SetActive(false);
         if (dataPanel != null && dataPanel.gameObject.activeSelf)
             dataPanel.gameObject.SetActive(false);
+        if (infoPanel != null && infoPanel.gameObject.activeSelf)
+            infoPanel.gameObject.SetActive(false);
         if (binStatusPanel != null && binStatusPanel.gameObject.activeSelf)
             binStatusPanel.gameObject.SetActive(false);
         Debug.Log("[RadialMenu] Hidden RobotHUD / DataPanel / BinStatus on startup (toggle from radial menu).");
@@ -222,6 +226,14 @@ public class RadialMenu : MonoBehaviour
         if (dataPanel != null && dataPanel.gameObject.activeInHierarchy)
         {
             dataPanel.ForceRefresh();
+        }
+        if (infoPanel == null)
+        {
+            infoPanel = FindFirstUsable<RobotInfoPanel>("infoPanel");
+        }
+        if (infoPanel != null && infoPanel.gameObject.activeInHierarchy)
+        {
+            infoPanel.ForceRefresh();
         }
     }
 
@@ -340,6 +352,12 @@ public class RadialMenu : MonoBehaviour
         {
             if (dataPanel != null)
                 dataPanel.gameObject.SetActive(!dataPanel.gameObject.activeSelf);
+        });
+
+        AddButton("Info\nPanel", true, () =>
+        {
+            if (infoPanel != null)
+                infoPanel.gameObject.SetActive(!infoPanel.gameObject.activeSelf);
         });
 
         AddButton("Bin\nStatus", true, () =>
@@ -734,6 +752,7 @@ public class RadialMenu : MonoBehaviour
         // Sync by label (more robust than fixed indices)
         SyncButtonByLabel("TF Axes", tfVisualizer != null && tfVisualizer.showAxes);
         SyncButtonByLabel("Data\nPanel", dataPanel != null && dataPanel.gameObject.activeSelf);
+        SyncButtonByLabel("Info\nPanel", infoPanel != null && infoPanel.gameObject.activeSelf);
         SyncButtonByLabel("Bin\nStatus", binStatusPanel != null && binStatusPanel.gameObject.activeSelf);
         SyncButtonByLabel("Coach", coachingPanel != null && coachingPanel.gameObject.activeSelf);
         SyncButtonByLabel("Pass\nthru", passthroughToggle != null && passthroughToggle.PassthroughEnabled);
