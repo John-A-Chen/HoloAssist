@@ -19,6 +19,7 @@ body {
     background: var(--darker);
     color: var(--body);
     line-height: 1.65;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
 }
 ::selection { background: var(--orange); color: #fff; }
@@ -273,14 +274,18 @@ body.has-cursor * { cursor: none !important; }
     .dock { flex-direction: row; border-radius: 1rem; padding: 0.45rem 0.5rem; gap: 0.35rem; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
     .dock::-webkit-scrollbar { display: none; }
     .d-sep { width: 1px; height: 20px; margin: 0 0.05rem; }
-    .di { --sz: 44px; }
-    .di-icon { width: 1.2rem; height: 1.2rem; }
+    .di { --sz: 34px; width: 34px !important; height: 34px !important; flex: 0 0 34px; }
+    .di-icon { width: 1rem; height: 1rem; }
     .di-label { display: none; }
     .di:hover { transform: translateY(-3px) !important; }
     .nav-inner { padding: 0 1.5rem; }
     .section { padding: 3.5rem 1.75rem; }
-    .hero-content { padding: 0 1.75rem 4rem; }
+    .hero-content { width: 100vw; max-width: 100vw; padding: 0 1.75rem 7rem; }
+    .hero-desc { width: min(100%, 34ch); max-width: min(100%, 34ch); overflow-wrap: break-word; }
+    .hero-meta { gap: 1.5rem; }
+    .hero-meta > div { min-width: calc(50% - 1rem); }
     .pipe-grid { grid-template-columns: 1fr; }
+    .data-table { display: block; max-width: 100%; overflow-x: auto; }
     .photo-row { grid-template-columns: 1fr; }
     .doc-footer { padding: 2rem 1.75rem; }
     .doc-footer-in { flex-direction: column; gap: 1.5rem; text-align: center; }

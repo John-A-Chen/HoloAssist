@@ -30,15 +30,15 @@
     <div class="hero-line"></div>
     <h1 class="hero-title">Auto<span class="thin">nom</span><br>ous</h1>
     <p class="hero-desc">
-      MoveIt 2 pick-and-place stack consuming live cube poses from perception,
-      generating <strong>collision-aware trajectories</strong>, and actuating the OnRobot RG2
-      gripper via service call.
+      MoveIt 2 sorting stack for the UR3e + OnRobot RG2. A cube/bin service call
+      consumes live AprilTag poses, runs a <strong>Cartesian-first pick-and-place sequence</strong>,
+      and falls back to OMPL pose planning when straight-line motion is not reachable.
     </p>
     <div class="hero-meta">
-      <div><span class="hero-meta-val">6</span>DOF planning</div>
-      <div><span class="hero-meta-val">RG2</span>gripper</div>
-      <div><span class="hero-meta-val">1</span>service call</div>
+      <div><span class="hero-meta-val">4</span>cubes selectable</div>
       <div><span class="hero-meta-val">4</span>bin targets</div>
+      <div><span class="hero-meta-val">10cm</span>pre-grasp</div>
+      <div><span class="hero-meta-val">5%</span>velocity cap</div>
     </div>
   </div>
 </section>
@@ -49,28 +49,30 @@
     <div class="section-lbl">Overview</div>
     <h2>What this subsystem does</h2>
     <p>
-      The autonomous subsystem exposes a ROS 2 service that accepts a cube ID and a target bin,
-      plans a <strong>collision-aware pick-and-place trajectory</strong> using MoveIt 2, and executes
-      it on the UR3e arm. The OnRobot RG2 gripper opens and closes at the appropriate stages.
+      The autonomous subsystem is Oliver's MoveIt 2 pick-and-place layer. It exposes
+      <code>/holoassist/pick_cube_to_bin</code>, accepts a cube name and destination bin, transforms
+      the selected cube pose into <code>base_link</code>, then queues a full autonomous sequence:
+      home, approach, open, descend, grip, lift, move to bin, place, release, retreat.
     </p>
     <p>
-      Cube poses are consumed live from the perception subsystem's
-      <code>/holoassist/perception/april_cube_N_pose</code>
-      topics. The planner uses the <code>scaled_joint_trajectory_controller</code> for smooth, speed-limited execution.
+      The implementation matches the High Distinction target by supporting repeated cube/bin
+      requests without manual reset, four parameterised bin destinations, a MoveIt planning
+      scene with floor safety and block collision updates, and timestamped JSON status output
+      for sort progress, success/failure, and cycle-time analysis.
     </p>
     <p>
-      <strong>Lead:</strong> Oliver &nbsp;·&nbsp;
+      <strong>Lead:</strong> Oliver Lau &nbsp;·&nbsp;
       <strong>Package:</strong> moveit_robot_control &nbsp;·&nbsp;
-      <strong>Planner:</strong> MoveIt 2 + OMPL
+      <strong>Planner:</strong> MoveIt 2, Cartesian paths, OMPL fallback
     </p>
     <div class="photo-row">
       <div class="photo-slot">
         <!-- <img src="../screenshots/autonomous_demo.jpg" alt=""> -->
-        <div class="photo-slot-ph">Pick-and-place demo photo</div>
+        <div class="photo-slot-ph">UR3e pick-and-place demo</div>
       </div>
       <div class="photo-slot">
         <!-- <img src="../screenshots/moveit_rviz.jpg" alt=""> -->
-        <div class="photo-slot-ph">MoveIt RViz planning scene</div>
+        <div class="photo-slot-ph">MoveIt RViz + trolley scene</div>
       </div>
     </div>
   </div>
@@ -84,26 +86,26 @@
     <div class="pipe-grid">
       <div class="pipe-step">
         <div class="pipe-num">01</div>
-        <h4>Pose Acquisition</h4>
-        <p>Subscribe to perception topic for target cube. Transform pose from camera frame to base_link via TF.</p>
+        <h4>Service Request</h4>
+        <p><code>/holoassist/pick_cube_to_bin</code> accepts <code>april_cube_1</code> to <code>april_cube_4</code> and <code>bin_1</code> to <code>bin_4</code>. Short IDs <code>1</code> to <code>4</code> are normalised.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">02</div>
-        <h4>Pre-grasp Plan</h4>
-        <p>MoveIt plans approach trajectory to pre-grasp waypoint above cube. Collision objects loaded from URDF + scene.</p>
+        <h4>Pose Handoff</h4>
+        <p>Service node reads <code>/holoassist/perception/april_cube_N_pose</code>, transforms <code>workspace_frame</code> to <code>base_link</code>, then publishes JSON on <code>/pick_place/command</code>.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">03</div>
-        <h4>Grasp + Lift</h4>
-        <p>Arm descends to grasp pose. RG2 closes. Arm lifts to carry height. Object attached to end-effector in planning scene.</p>
+        <h4>Plan + Execute</h4>
+        <p><code>coordinate_listener</code> tries Cartesian planning first, then OMPL pose-goal fallback. Hardware execution uses <code>/scaled_joint_trajectory_controller/joint_trajectory</code>.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">04</div>
-        <h4>Place + Retreat</h4>
-        <p>Plan to bin target from bin_poses.json. Descend, open gripper, detach object. Retreat to home pose.</p>
+        <h4>Sequence + Log</h4>
+        <p><code>pick_place_sequencer</code> runs the explicit state machine and publishes timestamped JSON status for each step, completion, and error.</p>
       </div>
     </div>
   </div>
@@ -114,15 +116,17 @@
     <div class="ph-line"></div>
     <div class="section-lbl">Services &amp; Topics</div>
     <h2>ROS interface</h2>
-    <p>The pick-and-place stack is triggered via a service call. Joint state and TF topics are provided by the UR driver.</p>
+    <p>The pick-and-place stack is triggered by a service, then coordinated through JSON command/status topics.</p>
     <table class="data-table">
       <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>/holoassist/pick_and_place</td><td>Service</td><td>Trigger pick-and-place for cube_id → bin</td></tr>
-        <tr><td>/joint_states</td><td>JointState</td><td>Live arm joint positions from UR driver</td></tr>
-        <tr><td>/scaled_joint_trajectory_controller/follow_joint_trajectory</td><td>Action</td><td>Trajectory execution action server</td></tr>
-        <tr><td>/holoassist/gripper/command</td><td>Float64</td><td>Gripper open width (mm) command</td></tr>
-        <tr><td>/move_group/status</td><td>GoalStatusArray</td><td>MoveIt planning + execution status</td></tr>
+        <tr><td>/holoassist/pick_cube_to_bin</td><td>PickCubeToBin service</td><td>Queues cube-to-bin sorting request</td></tr>
+        <tr><td>/pick_place/command</td><td>String JSON</td><td>Sequencer command with block pose and destination bin</td></tr>
+        <tr><td>/pick_place/mode</td><td>String</td><td><code>run</code>, <code>stop</code>, or <code>pause</code> state control</td></tr>
+        <tr><td>/pick_place/status</td><td>String JSON</td><td>Block, bin, current step, state, timestamp, and error details</td></tr>
+        <tr><td>/moveit_robot_control/target_pose</td><td>Pose</td><td>Full pose goals from the sequencer to MoveIt</td></tr>
+        <tr><td>/moveit_robot_control/state</td><td>String</td><td><code>QUEUED → PLANNING → EXECUTING → COMPLETE/FAILED</code></td></tr>
+        <tr><td>/finger_width_trajectory_controller/joint_trajectory</td><td>JointTrajectory</td><td>RG2 open/close width trajectory</td></tr>
       </tbody>
     </table>
   </div>
@@ -133,14 +137,17 @@
     <div class="ph-line"></div>
     <div class="section-lbl">Configuration</div>
     <h2>Key parameters</h2>
-    <p>Bin targets loaded from <code>config/bin_poses.json</code>. MoveIt config in <code>config/moveit/</code>.</p>
+    <p>Current values are from <code>ros2_ws/src/moveit_robot_control</code> in the up-to-date HoloAssist tree.</p>
     <div class="cfg-table">
-      <div class="cfg-row"><div>approach_height_m</div><div><!-- fill --></div><div>Height above cube for pre-grasp approach</div></div>
-      <div class="cfg-row"><div>carry_height_m</div><div><!-- fill --></div><div>Lift height after grasp before moving to bin</div></div>
-      <div class="cfg-row"><div>gripper_open_mm</div><div><!-- fill --></div><div>Gripper width for open position</div></div>
-      <div class="cfg-row"><div>gripper_close_mm</div><div><!-- fill --></div><div>Gripper width for closed/grasp position</div></div>
-      <div class="cfg-row"><div>planning_timeout_s</div><div><!-- fill --></div><div>MoveIt planning timeout before failure</div></div>
-      <div class="cfg-row"><div>velocity_scaling</div><div><!-- fill --></div><div>Joint velocity scale factor (0–1)</div></div>
+      <div class="cfg-row"><div>cube_pose_topic_prefix</div><div>/holoassist/perception</div><div>Real cube pose source for the pick service</div></div>
+      <div class="cfg-row"><div>bin_poses.json</div><div>bin_1..bin_4</div><div>Four parameterised drop targets in <code>base_link</code></div></div>
+      <div class="cfg-row"><div>pregrasp_z_offset</div><div>0.10 m</div><div>Approach height above detected cube centre</div></div>
+      <div class="cfg-row"><div>grasp_z_absolute</div><div>0.05 m</div><div>Hardware pick descent height; use <code>-1.0</code> for relative mode</div></div>
+      <div class="cfg-row"><div>place_above_z_offset</div><div>0.15 m</div><div>Safe height above bin before release descent</div></div>
+      <div class="cfg-row"><div>place_z_offset</div><div>0.05 m</div><div>Release height above bin pose</div></div>
+      <div class="cfg-row"><div>open_width / close_width</div><div>0.08 / 0.0 m</div><div>RG2 open and closed finger-width commands</div></div>
+      <div class="cfg-row"><div>velocity_scale</div><div>0.05</div><div>Hardware trajectory speed cap for demo-safe motion</div></div>
+      <div class="cfg-row"><div>pose_goal_planning_time</div><div>5.0 s</div><div>OMPL fallback planning timeout</div></div>
     </div>
   </div>
 </section>
@@ -152,20 +159,24 @@
     <h2>Troubleshooting</h2>
     <ul class="issues">
       <li>
-        <div class="issue-ttl">Planning fails immediately</div>
-        <div class="issue-body">Ensure hand-eye calibration is loaded so the TF <code>camera_color_optical_frame → base_link</code> exists. Without it, the cube pose transform fails and MoveIt has no valid goal.</div>
+        <div class="issue-ttl">Service returns false: no cube pose</div>
+        <div class="issue-body">The pick service has not received <code>/holoassist/perception/april_cube_N_pose</code>. Start perception, show the cube to the camera, and confirm the workspace TF is available.</div>
       </li>
       <li>
-        <div class="issue-ttl">Arm doesn't move after plan succeeds</div>
-        <div class="issue-body">With URSim, External Control must be playing in Polyscope before execution. The driver logs "Robot connected" when ready.</div>
+        <div class="issue-ttl">Queued request succeeds but the pick later fails</div>
+        <div class="issue-body"><code>/holoassist/pick_cube_to_bin</code> queues the request; watch <code>/pick_place/status</code> for the real step-by-step result, failure reason, and timestamped metrics.</div>
       </li>
       <li>
-        <div class="issue-ttl">Gripper doesn't actuate (URSim)</div>
-        <div class="issue-body">URSim does not expose the OnRobot Modbus port. Launch with <code>--fake-gripper</code> flag when using URSim.</div>
+        <div class="issue-ttl">Plan succeeds but the arm does not move</div>
+        <div class="issue-body">Switch the dashboard to <code>MOVEIT</code> mode so <code>scaled_joint_trajectory_controller</code> and <code>finger_width_trajectory_controller</code> are active. On URSim or hardware, External Control must also be running.</div>
       </li>
       <li>
-        <div class="issue-ttl">Place position inaccurate</div>
-        <div class="issue-body">Check bin_poses.json XY values against measured bin positions in base_link frame. Recalibrate if drift exceeds ~2 cm.</div>
+        <div class="issue-ttl">External Control speed limit or protective stop</div>
+        <div class="issue-body">Keep <code>velocity_scale:=0.05</code>. If Cartesian descents are still too aggressive, set <code>cartesian_retime_velocity_scale:=0.03</code> for slower straight-line paths.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Pick or place height is off</div>
+        <div class="issue-body">Tune <code>grasp_z_absolute</code>, <code>pregrasp_z_offset</code>, and <code>place_z_offset</code>. If XY is also wrong, re-check the <code>workspace_frame → base_link</code> calibration and <code>bin_poses.json</code>.</div>
       </li>
     </ul>
   </div>
@@ -175,7 +186,7 @@
   <div class="doc-footer-in">
     <div>
       <h3>Autonomous</h3>
-      <p>Oliver &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
+      <p>Oliver Lau &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
     </div>
     <a href="../index.html" class="doc-footer-back">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
