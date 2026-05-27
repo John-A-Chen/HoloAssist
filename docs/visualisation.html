@@ -3,9 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visualisation — HoloAssist</title>
+<title>XR Visualisation — HoloAssist</title>
 <link rel="icon" href="../screenshots/logo.png">
 <link rel="stylesheet" href="../shared.css">
+<style>
+/* ── Visualisation page — local overrides and unique components ── */
+
+.hero-title { font-size: clamp(2.4rem, 5.5vw, 5rem); letter-spacing: -2px; }
+.hero-sub { font-size: 1rem; color: var(--blue-light); margin-bottom: 1.2rem; font-weight: 500; letter-spacing: .3px; }
+.hero-stamp { margin-top: 1.4rem; display: inline-flex; align-items: center; gap: .55rem; padding: .35rem .8rem; border: 1px solid rgba(110,231,160,.35); border-radius: 4px; background: rgba(110,231,160,.06); font-family: 'SFMono-Regular', Consolas, monospace; font-size: .7rem; color: #6ee7a0; letter-spacing: 1px; }
+.hero-stamp::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #6ee7a0; box-shadow: 0 0 8px rgba(110,231,160,.6); flex-shrink: 0; }
+
+.nav-meta { margin-left: auto; font-size: .7rem; color: rgba(204,204,204,.4); font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: .5px; }
+
+span.verify { display: inline-block; padding: 1px 7px; border-radius: 3px; background: rgba(251,191,36,.14); color: #fbbf24; font-size: .65rem; font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid rgba(251,191,36,.3); margin-left: .3rem; vertical-align: middle; }
+span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; background: rgba(110,231,160,.1); color: #6ee7a0; font-size: .65rem; font-family: 'SFMono-Regular', Consolas, monospace; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid rgba(110,231,160,.25); margin-left: .3rem; vertical-align: middle; }
+
+.data-table td.wrap-first:first-child { white-space: normal; }
+
+.diagram { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .82rem; background: rgba(0,0,0,.4); border: 1px solid rgba(255,102,0,.13); border-radius: 4px; padding: 1.5rem; color: var(--body); line-height: 1.65; white-space: pre; overflow-x: auto; margin: 1.2rem 0; }
+.diagram .dn { color: var(--light); font-weight: 600; }
+.diagram .da { color: var(--orange); }
+.diagram .dg { color: #6ee7a0; }
+
+.test-card { border: 1px solid rgba(255,102,0,.15); border-radius: 4px; padding: 1.4rem 1.6rem; margin-bottom: 1.4rem; background: rgba(0,0,0,.28); }
+.test-card h4 { margin: 0 0 1rem 0; font-size: 1rem; font-weight: 700; color: var(--light); padding-bottom: .6rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+.test-card .test-grid { display: grid; grid-template-columns: 150px 1fr; gap: .55rem 1.1rem; font-size: .85rem; align-items: start; }
+.test-card .test-grid > div:nth-child(odd) { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--orange); font-size: .68rem; letter-spacing: 1.3px; text-transform: uppercase; padding-top: 4px; white-space: nowrap; }
+.test-card .test-grid > div:nth-child(even) { color: var(--body); line-height: 1.6; overflow-wrap: anywhere; min-width: 0; }
+.test-card .test-grid code { background: rgba(51,187,255,.09); padding: 1px 5px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .76rem; color: var(--blue-light); }
+
+.evidence-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+.evidence-slot { aspect-ratio: 16/9; overflow: hidden; border-radius: 4px; border: 1px dashed rgba(255,102,0,.18); background: rgba(255,102,0,.04); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; padding: 1rem; position: relative; }
+.evidence-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.evidence-slot .ph-label { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,102,0,.55); }
+.evidence-slot .ph-cap { font-size: .76rem; color: rgba(204,204,204,.45); text-align: center; }
+
+.limitation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.4rem; }
+.limitation-card { border: 1px solid rgba(255,255,255,.06); border-radius: 4px; padding: 1.25rem 1.4rem; background: rgba(0,0,0,.2); min-width: 0; overflow-wrap: anywhere; }
+.limitation-card h4 { font-size: .95rem; font-weight: 700; letter-spacing: .2px; margin-bottom: .8rem; }
+.limitation-card.confirmed h4 { color: #6ee7a0; }
+.limitation-card.assumption h4 { color: var(--blue-light); }
+.limitation-card.verify h4 { color: #fbbf24; }
+.limitation-card.future h4 { color: var(--orange); }
+.limitation-card ul { margin: 0 0 0 1.1rem; font-size: .85rem; line-height: 1.65; color: var(--body); }
+.limitation-card ul li { margin-bottom: .45rem; }
+.limitation-card ul li code { word-break: break-all; font-family: 'SFMono-Regular', Consolas, monospace; font-size: .76rem; color: var(--blue-light); background: rgba(51,187,255,.09); padding: 1px 5px; border-radius: 3px; }
+</style>
 </head>
 <body>
 
@@ -16,155 +60,420 @@
       Back
     </a>
     <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
+    <span class="nav-meta">Subsystem 4 · XR Scene &amp; Visualisation · 2026-05-27</span>
   </div>
 </nav>
 
-<section class="hero">
+<!-- ── HERO ── -->
+<section class="hero" id="home">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div class="hero-overlay"></div>
-  <!-- <img class="hero-photo" src="../screenshots/visualisation.png" alt=""> -->
+  <img class="hero-photo" src="../screenshots/visualisation.png" alt="">
   <div class="hero-content">
     <div class="hero-num">04 / 04</div>
     <div class="hero-eyebrow">HoloAssist — Subsystem</div>
     <div class="hero-line"></div>
-    <h1 class="hero-title">Visua<span class="thin">lisa</span><br>tion</h1>
+    <h1 class="hero-title">XR Scene <span class="thin">&amp;</span><br>Visua&shy;lisation</h1>
+    <p class="hero-sub">Subsystem owner: <strong style="color:var(--light)">Sebastian Baudille</strong> &nbsp;·&nbsp; Unity XR</p>
     <p class="hero-desc">
-      Unity AR overlays on the <strong>Meta Quest 3</strong> rendering the robot arm, trolley scene,
-      and live cube positions as spatial holographics anchored to the physical workspace.
+      The headset-side XR scene that runs HoloAssist on the <strong>Meta Quest 3</strong>. Renders
+      the AR workspace around the operator, hosts the in-headset UI for monitoring and driving the
+      robot, and bridges the Unity client into the wider HoloAssist <strong>ROS</strong> stack.
     </p>
     <div class="hero-meta">
-      <div><span class="hero-meta-val">Quest</span>3 AR</div>
-      <div><span class="hero-meta-val">Unity</span>runtime</div>
-      <div><span class="hero-meta-val">Live</span>ROS TF</div>
-      <div><span class="hero-meta-val">AR</span>Foundation</div>
+      <div><span class="hero-meta-val">Quest&nbsp;3</span>headset</div>
+      <div><span class="hero-meta-val">6000.3</span>Unity 6 LTS</div>
+      <div><span class="hero-meta-val">85.0.0</span>Meta XR SDK</div>
+      <div><span class="hero-meta-val">:10000</span>ROS-TCP</div>
+    </div>
+    <div class="hero-stamp">Handover document &nbsp;·&nbsp; 2026-05-27</div>
+  </div>
+</section>
+
+<!-- ── QUICK START ── -->
+<section class="section" id="quickstart">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">01 — Quick Start</div>
+    <h2>Get the XR scene running</h2>
+
+    <h3>Required hardware</h3>
+    <ul>
+      <li>Meta Quest 3 headset, paired controllers, charged. Developer mode enabled.</li>
+      <li>USB-C cable for the Quest (build and run from Editor).</li>
+      <li>Linux laptop running Ubuntu 22.04 with ROS 2 Humble installed.</li>
+      <li>Logitech Brio 4K (or any UVC webcam / Intel RealSense) for AprilTag cube perception.</li>
+      <li>Printed 36h11 AprilTags on 40 mm cubes (tag IDs 10–33, four cubes). See the perception docs.</li>
+      <li>UR3e + OnRobot RG2 on the robot router (<code>192.168.0.194</code>) or URSim in Docker (<code>192.168.56.101</code>).</li>
+    </ul>
+
+    <h3>Required software</h3>
+    <ul>
+      <li><strong>Unity 6.3 LTS (6000.3.9f1)</strong> with Android Build Support (OpenJDK + SDK + NDK).</li>
+      <li><strong>Meta XR SDK 85.0.0</strong> and all packages listed in <a href="#stack" style="color:var(--blue-light)">Software stack</a> — installed via Unity Package Manager on first open.</li>
+      <li>ROS 2 Humble + the project's <code>ros2_ws</code> built (<code>colcon build --symlink-install</code>).</li>
+    </ul>
+
+    <h3>Step 1 — Clone &amp; open the Unity project</h3>
+    <div class="code-block">git clone git@github.com:John-A-Chen/HoloAssist.git
+cd HoloAssist &amp;&amp; git checkout demo</div>
+    <p>Open <code>Unity/My project/</code> in Unity Hub. The first import takes several minutes.</p>
+
+    <h3>Step 2 — Open the demo scene</h3>
+    <p>In the Project window navigate to <code>Assets/Scenes/SampleScene.unity</code> and open it. This is the only scene used for the demo.</p>
+
+    <h3>Step 3 — Start the ROS side</h3>
+    <div class="code-block"><span class="cm"># Fake hardware + perception + dashboard</span>
+./launch.sh --perception --dashboard
+
+<span class="cm"># OR — URSim + full stack</span>
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</div>
+    <p>Note the <strong>WiFi IP</strong> printed by the launcher — this is what Unity needs.</p>
+
+    <h3>Step 4 — Connect Unity to ROS</h3>
+    <p>In Unity Editor open <strong>Robotics → ROS Settings</strong>. Set <strong>ROS IP Address</strong> to the laptop WiFi IP from Step 3, and <strong>ROS Port</strong> to <code>10000</code>.</p>
+    <p>On the robot router subnet (<code>192.168.0.x</code>) the in-scene <code>ROSAutoConnect</code> component will discover the host automatically. On other networks, disable it and enter the IP manually.</p>
+
+    <h3>Step 5 — Deploy to Quest 3</h3>
+    <ol>
+      <li>Connect the Quest to the laptop via USB-C, accept "Allow USB debugging" inside the headset.</li>
+      <li>Unity → <strong>File → Build Profiles</strong> — ensure Android is the active platform.</li>
+      <li>Click <strong>Build And Run</strong>. The APK installs to the Quest and launches.</li>
+    </ol>
+
+    <h3>What success looks like</h3>
+    <ul>
+      <li>Quest passthrough shows the physical room with a UR3e holographic twin anchored at the trolley.</li>
+      <li>Cube holograms appear within 1–2 seconds of pointing the Brio at a printed cube face.</li>
+      <li>The <strong>RobotHUD</strong> floats in front of the operator showing mode, joint angles, and EE pose.</li>
+      <li>Holding the left primary button (<code>X</code>) opens the radial menu for mode switching.</li>
+      <li>Right stick moves the arm; right trigger drives the gripper.</li>
+    </ul>
+    <div class="evidence-row">
+      <figure class="evidence-slot">
+        <img src="../screenshots/visualisation.png" alt="Unity Editor with digital twin">
+      </figure>
+      <figure class="evidence-slot">
+        <div class="ph-label">Quest capture</div>
+        <div class="ph-cap">Quest passthrough with HUD, cube holograms, and trolley overlay</div>
+      </figure>
     </div>
   </div>
 </section>
 
-<section class="section" id="overview">
+<!-- ── PURPOSE ── -->
+<section class="section alt" id="purpose">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Overview</div>
-    <h2>What this subsystem does</h2>
+    <div class="section-lbl">02 — Purpose &amp; Role</div>
+    <h2>What this subsystem owns</h2>
     <p>
-      The visualisation subsystem renders a live <strong>holographic twin</strong> of the robot workspace
-      in the Quest 3 AR passthrough view. The UR3e arm, trolley, and detected cubes are displayed
-      as 3D overlays anchored to the physical scene.
+      Subsystem 4 is the <strong>operator's window</strong> into HoloAssist. The Quest 3 scene is rendered here.
+      S4 is responsible for everything in that scene <em>except</em> the digital twin and manual control core —
+      those are owned by Subsystem 3 (Nic). S4 anchors S3's twin in the workspace and wraps it with cube and bin
+      holograms, floating panels, a radial menu, the task/sorting UI, environment themes, and the passthrough toggle.
     </p>
-    <p>
-      Joint states and cube poses flow from ROS via the ROS-TCP-Endpoint bridge. The Unity app
-      subscribes to these topics and updates the rendered models in real time. The trolley scene
-      is loaded at startup with the correct <strong>180° orientation</strong> matching the physical layout.
-    </p>
-    <p>
-      <strong>Lead:</strong> Sebastian &nbsp;·&nbsp;
-      <strong>Runtime:</strong> Unity + AR Foundation &nbsp;·&nbsp;
-      <strong>Headset:</strong> Meta Quest 3
-    </p>
-    <div class="photo-row">
-      <div class="photo-slot">
-        <!-- <img src="../screenshots/ar_overlay.jpg" alt=""> -->
-        <div class="photo-slot-ph">AR overlay demo photo</div>
-      </div>
-      <div class="photo-slot">
-        <!-- <img src="../screenshots/unity_scene.jpg" alt=""> -->
-        <div class="photo-slot-ph">Unity scene setup</div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="section alt" id="pipeline">
-  <div class="section-in">
-    <div class="ph-line"></div>
-    <div class="section-lbl">Pipeline</div>
-    <h2>From ROS to holographic overlay</h2>
-    <div class="pipe-grid">
-      <div class="pipe-step">
-        <div class="pipe-num">01</div>
-        <h4>ROS Data</h4>
-        <p>Joint states, TF tree, and cube poses published by the UR driver and perception node over ROS-TCP port 10000.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">02</div>
-        <h4>Unity Subscribers</h4>
-        <p>C# ROS subscribers update shared data objects each frame. TF transforms converted to Unity coordinate space.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">03</div>
-        <h4>Scene Update</h4>
-        <p>Arm URDF model joints updated per joint state. Cube GameObjects positioned from PoseStamped topics. Trolley static.</p>
-        <div class="pipe-arrow">&rsaquo;</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">04</div>
-        <h4>AR Passthrough</h4>
-        <p>Quest 3 renders virtual objects composited over the passthrough camera. Spatial anchors keep holograms stable as user moves.</p>
-      </div>
-    </div>
-  </div>
-</section>
+    <h3>What the operator sees</h3>
+    <ul>
+      <li>A live <strong>UR3e digital twin</strong> + ArticulationBody joint mirroring <span class="verify">Subsystem 3 (Nic)</span></li>
+      <li><strong>AR cube holograms</strong> at positions detected by perception (relayed on <code>/holoassist/unity/cube_N_pose</code>).</li>
+      <li>A floating <strong>RobotHUD</strong> with mode, joint angles, EE pose, EE lock, and gripper state.</li>
+      <li>A grab-and-place <strong>RobotInfoPanel</strong> with full diagnostic readout.</li>
+      <li>A <strong>RadialMenu</strong> on the left primary button: mode switching, passthrough toggle, environment cycling, task control, confetti, etc.</li>
+      <li><strong>BinDetector</strong> trigger zones + <strong>BinStatusPanel</strong> counter; <strong>TaskTracker</strong> scores correct vs wrong sorts.</li>
+      <li><strong>PassthroughToggle</strong> swaps between MR passthrough and full VR skybox.</li>
+      <li><strong>EnvironmentCycler</strong> swaps decorative theme roots (Portal Chamber, grass, open room).</li>
+    </ul>
 
-<section class="section" id="topics">
-  <div class="section-in">
-    <div class="ph-line"></div>
-    <div class="section-lbl">Topics</div>
-    <h2>Subscribed topics</h2>
-    <p>Unity subscribes to these ROS topics via the ROS-TCP-Connector package. Direction: ROS → Quest.</p>
+    <h3>Visualisation-only vs ROS-connected parts</h3>
     <table class="data-table">
-      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <thead><tr><th>Component</th><th>Type</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td>/joint_states</td><td>JointState</td><td>Live UR3e joint angles — drives arm URDF render</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Cube N centre position — drives cube hologram</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_marker</td><td>Marker</td><td>Cube RViz marker (also rendered in Unity)</td></tr>
-        <tr><td>/tf</td><td>TFMessage</td><td>Full TF tree for coordinate frame transforms</td></tr>
-        <tr><td>/robot_description</td><td>String</td><td>URDF model for arm rendering (loaded at startup)</td></tr>
+        <tr><td>Digital twin (URDF arm)</td><td>ROS-connected</td><td>ArticulationBody joints driven from <code>/joint_states</code>. <strong>Owned by S3 (Nic).</strong> S4 only anchors and renders it.</td></tr>
+        <tr><td>Cube holograms</td><td>ROS-connected</td><td>PoseStamped from perception relay</td></tr>
+        <tr><td>EE pose readout</td><td>ROS-connected</td><td><code>/tcp_pose_broadcaster/pose</code> (real/URSim only)</td></tr>
+        <tr><td>Velocity teleop</td><td>ROS-connected (publish)</td><td>RobotController publishes on <code>/forward_velocity_controller/commands</code></td></tr>
+        <tr><td>Gripper teleop</td><td>ROS-connected (publish)</td><td>RobotController publishes width on <code>/finger_width_controller/commands</code></td></tr>
+        <tr><td>Trolley mesh / floor / skybox</td><td>Visualisation only</td><td>Static scene geometry</td></tr>
+        <tr><td>BinDetector trigger zones</td><td>Visualisation only</td><td>Unity physics triggers — does not feed back to ROS</td></tr>
+        <tr><td>Task counters / banners / confetti</td><td>Visualisation only</td><td>In-headset feedback, computed entirely in Unity</td></tr>
+        <tr><td>Radial menu / mode UX</td><td>Visualisation + input</td><td>Drives RobotController mode state which then publishes velocity</td></tr>
+        <tr><td>Passthrough / Environment cycler</td><td>Visualisation only</td><td>No ROS effect</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How S4 supports the other subsystems</h3>
+    <ul>
+      <li><strong>Perception (S1, John)</strong> — S4 visualises cube poses from S1. Cube hologram smoothing, jitter rejection, and <code>persistOnTagLoss</code> are owned here so perception jitter doesn't ruin the AR experience.</li>
+      <li><strong>Autonomous (S2, Oliver)</strong> — The <strong>TaskConfigPanel</strong> is the operator entry point. Task mode drives how completion is scored; <code>ObjectClass</code> tags on perception-spawned cubes flow into <code>TaskTracker</code>.</li>
+      <li><strong>Digital Twin + Manual Control (S3, Nic)</strong> — Nic owns the URDF, ArticulationBody hierarchy, <code>JointStateSubscriber</code>, <code>RobotBasePlacer</code>, and <code>RobotController</code>. S4's radial menu, EE lock, sub-mode toggle, and gripper trigger are the UI layer that calls into Nic's controller.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── STACK ── -->
+<section class="section" id="stack">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">03 — Software Stack</div>
+    <h2>Dependencies and versions</h2>
+    <p>All versions read from the project's package manifest. Verify with <code>cat "Unity/My project/Packages/manifest.json"</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Component</th><th>Version</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Unity Editor</td><td>6000.3.9f1 (Unity 6.3 LTS)</td><td>Required — opening with a different version forces a re-import.</td></tr>
+        <tr><td>Meta XR SDK (All)</td><td>85.0.0</td><td>Primary XR runtime for Quest 3. Passthrough, controllers, camera rig.</td></tr>
+        <tr><td>ROS-TCP-Connector</td><td>v0.7.0 (vendored)</td><td>Unity-side TCP bridge. Pairs with <code>ros_tcp_endpoint</code> v0.7.0 on ROS.</td></tr>
+        <tr><td>URDF-Importer</td><td>v0.5.2 (vendored)</td><td>Used to import UR3e + OnRobot URDF as ArticulationBody hierarchy.</td></tr>
+        <tr><td>XR Interaction Toolkit</td><td>3.3.1</td><td>Drives <code>XRGrabInteractable</code> on panels via PanelPlacer.</td></tr>
+        <tr><td>OpenXR Plugin</td><td>1.16.1</td><td>Underlying runtime for Meta OpenXR.</td></tr>
+        <tr><td>Meta OpenXR</td><td>2.3.0</td><td>Quest-specific OpenXR features.</td></tr>
+        <tr><td>XR Hands</td><td>1.7.3</td><td>Hand-tracking samples present; current teleop uses controllers.</td></tr>
+        <tr><td>AR Foundation</td><td>6.3.2</td><td>Installed alongside Meta XR; active loader is Meta OpenXR.</td></tr>
+        <tr><td>Universal Render Pipeline</td><td>17.3.0</td><td>All materials must be URP-compatible.</td></tr>
+        <tr><td>Input System</td><td>1.18.0</td><td>Binding asset at <code>Assets/Scripts/RobotControlActions.inputactions</code>.</td></tr>
+        <tr><td>Build target</td><td>Android / Quest 3 (ARM64)</td><td>IL2CPP scripting backend. Scripting define <code>ROS2</code> required.</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
-<section class="section alt" id="config">
+<!-- ── REPO MAP ── -->
+<section class="section alt" id="repo">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Configuration</div>
-    <h2>Unity scene settings</h2>
-    <p>Configured via Unity Inspector. ROS connection set at runtime in the Quest app's ROS Settings panel.</p>
-    <div class="cfg-table">
-      <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>Enter WiFi IP printed by launcher — or use TCP scanning auto-discovery</div></div>
-      <div class="cfg-row"><div>ROS Port</div><div>10000</div><div>ROS-TCP-Endpoint listen port</div></div>
-      <div class="cfg-row"><div>Trolley Rotation</div><div>180°</div><div>Y-axis rotation to match physical trolley orientation</div></div>
-      <div class="cfg-row"><div>Cube Render Scale</div><div><!-- fill --></div><div>Hologram scale multiplier relative to real cube size</div></div>
-      <div class="cfg-row"><div>AR Passthrough Mode</div><div>colour</div><div>Quest 3 passthrough type — colour or mono</div></div>
-      <div class="cfg-row"><div>Anchor Strategy</div><div><!-- fill --></div><div>Spatial anchor method for hologram stability</div></div>
+    <div class="section-lbl">04 — Code &amp; Repo Structure</div>
+    <h2>Scripts and file structure</h2>
+    <p>Only paths owned or maintained by S4 are listed. Scripts authored by S3 (teleop) are noted where S4 references them.</p>
+    <table class="data-table">
+      <thead><tr><th>File / folder</th><th>Purpose</th><th>Main class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="wrap-first">Assets/Scenes/SampleScene.unity</td><td>The single demo scene</td><td>—</td><td>Open this for every Editor and Quest build.</td></tr>
+        <tr><td class="wrap-first">Assets/Resources/ROSConnectionPrefab.prefab</td><td>ROS IP / port settings</td><td><code>ROSConnection</code></td><td>Loaded via <code>ROSConnection.GetOrCreateInstance()</code>; do not delete.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/CubePoseSubscriber.cs</td><td>Cube hologram spawn, smoothing, persistence, object tagging</td><td><code>CubePoseSubscriber</code></td><td>Owns <code>persistOnTagLoss</code> and averaging logic.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotHUD.cs</td><td>Floating HUD — mode, joints, EE, gripper</td><td><code>RobotHUD</code></td><td>Subscribes to <code>/joint_states</code>. Has <code>followCamera</code> flag for PanelPlacer.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RobotInfoPanel.cs</td><td>Full multi-row diagnostic panel</td><td><code>RobotInfoPanel</code></td><td>Subscribes to <code>/joint_states</code> + <code>/tcp_pose_broadcaster/pose</code>.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/RadialMenu.cs</td><td>Multi-page radial UI for mode &amp; feature switching</td><td><code>RadialMenu</code></td><td>Wires references to every other UI subsystem.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/PanelPlacer.cs</td><td>XR Grab Interactable wrapper for panels</td><td><code>PanelPlacer</code></td><td>Flips each panel's <code>followCamera</code> flag on grab.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/PassthroughToggle.cs</td><td>MR ↔ VR toggle</td><td><code>PassthroughToggle</code></td><td>Toggles renderers / skybox / virtual environment.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/EnvironmentCycler.cs</td><td>Cycle decorative environment themes</td><td><code>EnvironmentCycler</code></td><td>Themes are child GameObjects under an "Environments" root.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/BinDetector.cs</td><td>Per-bin trigger zone + container colliders</td><td><code>BinDetector</code></td><td>Auto-builds wall colliders so cubes don't escape rotated bins.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/BinStatusPanel.cs</td><td>Per-bin sort counter UI</td><td><code>BinStatusPanel</code></td><td>Auto-discovers all BinDetectors via FindObjectsByType.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TaskTracker.cs</td><td>Task state, completion mode, scoring</td><td><code>TaskTracker</code></td><td>Singleton. Modes: FixedTarget / OneOfEach / OneOfEachClass.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/TaskConfigPanel.cs</td><td>In-headset task setup UI</td><td><code>TaskConfigPanel</code></td><td>followCamera-aware (PanelPlacer-safe).</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/HeadsetStreamPublisher.cs</td><td>Quest scene capture publisher</td><td><code>HeadsetStreamPublisher</code></td><td>Publishes JPEG to <code>/headset/image_compressed</code>. Disable if bridge buffer overflows.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/ObjectClass.cs</td><td>Per-cube class + goodness tag</td><td><code>ObjectClass</code></td><td>Added by CubePoseSubscriber when <code>tagSpawnedCubes = true</code>.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/JointTFVisualizer.cs</td><td>TF axis overlays on robot links</td><td><code>JointTFVisualizer</code></td><td>Toggled from the radial menu.</td></tr>
+        <tr><td class="wrap-first">Assets/Scripts/Editor/HoloAssistSetup.cs</td><td>One-click scene setup</td><td><code>HoloAssistSetup</code></td><td>Menu: <code>Tools → HoloAssist → Setup All UI Features</code>. Creates panels, radial menu, virtual environment, wires references.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── SCENE ── -->
+<section class="section" id="scene">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">05 — Scene Structure</div>
+    <h2>Scene hierarchy and GameObjects</h2>
+    <p>Main scene: <code>Assets/Scenes/SampleScene.unity</code>. Exact hierarchy paths can shift between builds — confirm in the Hierarchy window.</p>
+
+    <h3>Required GameObjects</h3>
+    <table class="data-table">
+      <thead><tr><th>Object</th><th>Component(s)</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>XR Origin / Camera Rig</td><td>Meta XR Camera Rig</td><td>Quest 3 head + controller tracking. Drives Camera.main.</td></tr>
+        <tr><td>ROSConnection</td><td><code>ROSConnection</code> (auto-loaded from Resources)</td><td>TCP link to <code>ros_tcp_endpoint</code>. Singleton.</td></tr>
+        <tr><td>ROSAutoConnect</td><td><code>ROSAutoConnect</code></td><td>Scans <code>192.168.0.101–110</code> on port 10000. Disable on non-robot-router networks.</td></tr>
+        <tr><td>UR3e robot root</td><td>ArticulationBody hierarchy (URDF-Importer)</td><td>Digital twin — <strong>owned by S3 (Nic)</strong>. S4 references via <code>CubePoseSubscriber.robotBase</code>.</td></tr>
+        <tr><td>Trolley</td><td>Mesh renderer + <code>TrolleySurfaceCollider</code></td><td>Static workspace surface. Yaw 180° to match physical mount.</td></tr>
+        <tr><td>VirtualEnvironment</td><td>Created by HoloAssistSetup</td><td>Shown in VR mode, hidden in passthrough.</td></tr>
+        <tr><td>RadialMenu</td><td><code>RadialMenu</code></td><td>Multi-page wheel UI. References every other UI subsystem.</td></tr>
+        <tr><td>PassthroughToggle</td><td><code>PassthroughToggle</code></td><td>MR ↔ VR mode switch.</td></tr>
+        <tr><td>RobotHUD</td><td><code>RobotHUD</code> + <code>PanelPlacer</code></td><td>Floating heads-up readout. <code>followCamera = true</code> by default.</td></tr>
+        <tr><td>RobotInfoPanel</td><td><code>RobotInfoPanel</code> + <code>PanelPlacer</code></td><td>Full diagnostic panel. Grabbable.</td></tr>
+        <tr><td>TaskConfigPanel</td><td><code>TaskConfigPanel</code> + <code>PanelPlacer</code></td><td>Task mode + target count setup.</td></tr>
+        <tr><td>BinStatusPanel</td><td><code>BinStatusPanel</code> + <code>PanelPlacer</code></td><td>Per-bin sort counters.</td></tr>
+        <tr><td>Bin_1, Bin_2, ...</td><td><code>BinDetector</code> + colliders</td><td>One per physical bin. Auto-builds container walls.</td></tr>
+        <tr><td>CubePoseSubscriber host</td><td><code>CubePoseSubscriber</code></td><td>Spawns cube holograms. <code>robotBase</code> must reference the UR3e base_link transform.</td></tr>
+        <tr><td>TaskTracker</td><td><code>TaskTracker</code></td><td>Singleton — listens to BinDetector events.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Active / inactive states at scene start</h3>
+    <ul>
+      <li>VirtualEnvironment: <strong>active</strong> (PassthroughToggle re-toggles renderers at runtime).</li>
+      <li>CoachingPanel: <strong>inactive</strong> at start. The radial menu shows it on demand.</li>
+      <li>Every other UI panel: <strong>active</strong>. Each has <code>followCamera = true</code> by default; flip on grab.</li>
+      <li>RadialMenu: <strong>active</strong>; canvas hidden until the left primary button is held.</li>
+    </ul>
+    <p>
+      <strong>Editor helper:</strong> from a stripped scene, run
+      <code>Tools → HoloAssist → Setup All UI Features</code> to regenerate every panel, the radial menu,
+      the virtual environment, and the TF visualizer in one click.
+    </p>
+  </div>
+</section>
+
+<!-- ── SCRIPTS ── -->
+<section class="section alt" id="scripts">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">06 — Main Scripts</div>
+    <h2>Key script reference</h2>
+    <p>Key fields, failure modes, and wiring notes for the most critical scripts.</p>
+
+    <div class="test-card">
+      <h4>CubePoseSubscriber</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/CubePoseSubscriber.cs</code></div>
+        <div>Attached</div><div>Dedicated GameObject (named CubePoseSubscriber)</div>
+        <div>Responsibility</div><div>Subscribes to <code>{topicPrefix}/cube_N_pose</code> for N=1..cubeCount; transforms pose into Unity space relative to <code>robotBase</code>; spawns and animates a prefab per cube with smoothing, averaging, outlier rejection, and optionally tags spawned cubes with <code>ObjectClass</code> for the task system.</div>
+        <div>Key fields</div><div><code>topicPrefix</code> (default <code>/holoassist/unity</code>), <code>cubeCount</code> (4), <code>robotBase</code> (Transform — MUST be set), <code>cubePrefabs[]</code>, <code>poseTimeout</code> (3 s), <code>persistOnTagLoss</code> (preferred: true), <code>smoothing</code> (0.5), <code>useAveraging</code> (true), <code>tagSpawnedCubes</code>, <code>cubeClassNames[]</code>, <code>cubeIsGood[]</code></div>
+        <div>Breaks if</div><div><code>robotBase</code> unset — cubes spawn at world origin. Wrong <code>topicPrefix</code> — no messages received. Missing <code>topic_tools</code> relay on ROS side — no messages on <code>/holoassist/unity/cube_N_pose</code>.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RobotHUD</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RobotHUD.cs</code></div>
+        <div>Attached</div><div>"RobotHUD" GameObject</div>
+        <div>Responsibility</div><div>Floating gaze-following HUD. Subscribes to <code>/joint_states</code> directly as a self-heal; builds a TextMeshPro panel showing mode / sub-mode / joint angles / EE pose / EE lock / gripper / passthrough / TF state.</div>
+        <div>Key fields</div><div><code>controller</code> (RobotController ref), <code>distanceFromCamera</code> (1.5 m), <code>offset</code> ((0.3, −0.12, 0)), <code>followSpeed</code> (2.5), <code>followCamera</code> (true), <code>tfVisualizer</code>, <code>passthroughToggle</code></div>
+        <div>Breaks if</div><div>PanelPlacer disables the script (legacy bug — fixed by flipping <code>followCamera</code> instead). Duplicate JointStateSubscriber components — picker may bind to stale one.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RobotInfoPanel</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RobotInfoPanel.cs</code></div>
+        <div>Attached</div><div>"RobotInfoPanel" GameObject + PanelPlacer for grab</div>
+        <div>Responsibility</div><div>Full multi-row diagnostic panel. Subscribes directly to <code>/joint_states</code> and <code>/tcp_pose_broadcaster/pose</code>. Renders rows for connection / mode / gripper / EE lock / TF axes / view + per-joint angle + EE position &amp; rotation.</div>
+        <div>Key fields</div><div><code>controller</code>, <code>tfVisualizer</code>, <code>passthroughToggle</code>, <code>followCamera</code> (true), <code>distanceFromCamera</code> (1.8 m), <code>offset</code> ((−0.45, 0, 0)), <code>panelWidth</code> (0.8), <code>rowHeight</code> (0.045)</div>
+        <div>Breaks if</div><div>Real robot / URSim not running — <code>/tcp_pose_broadcaster/pose</code> never publishes and EE rows stay zero. <code>controller</code> field unset — mode / sub-mode rows show "—".</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>RadialMenu</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/RadialMenu.cs</code></div>
+        <div>Attached</div><div>"RadialMenu" GameObject</div>
+        <div>Responsibility</div><div>Multi-page radial wheel UI summoned by holding the left primary button. Wires every other UI subsystem via Inspector fields (HUD, infoPanel, binStatusPanel, coachingPanel, passthroughToggle, robotController, confettiBlaster, eventBanner, environmentCycler, trolleySurface, taskConfigPanel, tfVisualizer).</div>
+        <div>Key fields</div><div><code>toggleAction</code> (InputAction), <code>menuRadius</code> (0.1), <code>buttonRadius</code> (0.032), <code>hoverHeight</code> (0.12), colour palette, font sizes, plus all subsystem references.</div>
+        <div>Inputs</div><div>Left primary button hold; left controller pointing.</div>
+        <div>Outputs</div><div>Mode switches on RobotController, panel show/hide calls, environment cycle, passthrough toggle.</div>
+        <div>Breaks if</div><div>Any subsystem reference left null in Inspector — calls to that subsystem silently fail. Re-run HoloAssistSetup if panels go missing.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>PassthroughToggle</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/PassthroughToggle.cs</code></div>
+        <div>Attached</div><div>"PassthroughToggle" GameObject</div>
+        <div>Responsibility</div><div>Toggles between MR passthrough and full VR by enabling/disabling the virtual environment root, swapping the skybox material, and controlling the Meta XR passthrough layer.</div>
+        <div>Key fields</div><div><code>passthroughLayer</code> (Meta XR OVRPassthroughLayer), <code>virtualEnvironment</code> (root GameObject), <code>skyboxMaterial</code></div>
+        <div>Breaks if</div><div><code>virtualEnvironment</code> field unset — VR mode shows nothing. <code>passthroughLayer</code> unset — passthrough does not activate on Quest.</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>TaskTracker</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/TaskTracker.cs</code></div>
+        <div>Attached</div><div>"TaskTracker" GameObject</div>
+        <div>Responsibility</div><div>Singleton. Scores cube sorts in three modes: FixedTarget (N cubes into any bin), OneOfEach (one cube per bin), OneOfEachClass (one correct class per bin). Listens to BinDetector events; fires EventBanner and ConfettiBlaster on task completion.</div>
+        <div>Key fields</div><div><code>taskMode</code>, <code>targetCount</code>, <code>completionThreshold</code> (fraction), <code>eventBanner</code>, <code>confettiBlaster</code></div>
+        <div>Breaks if</div><div><code>ObjectClass</code> tag missing on spawned cubes (requires <code>CubePoseSubscriber.tagSpawnedCubes = true</code>) when using OneOfEachClass mode — all cubes score as class "default".</div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h4>HeadsetStreamPublisher</h4>
+      <div class="test-grid">
+        <div>Path</div><div><code>Assets/Scripts/HeadsetStreamPublisher.cs</code></div>
+        <div>Attached</div><div>Any active GameObject in the scene</div>
+        <div>Responsibility</div><div>Captures the Quest scene view as a JPEG at 15 FPS and publishes on <code>/headset/image_compressed</code> for the laptop dashboard headset tab.</div>
+        <div>Key fields</div><div><code>captureWidth</code> (640), <code>captureHeight</code> (480), <code>publishRate</code> (15), <code>imageQuality</code> (75)</div>
+        <div>Breaks if</div><div>ROS connection drops — silent. If the ros_tcp_endpoint buffer fills, disable this script to reduce bridge load. Re-enable when the bridge is stable.</div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="issues">
+<!-- ── TOPICS ── -->
+<section class="section" id="topics">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Known Issues</div>
+    <div class="section-lbl">07 — ROS Topics</div>
+    <h2>ROS interface</h2>
+    <p>All topics bridged over ROS-TCP-Endpoint at port 10000.</p>
+    <h3>Published (Quest → ROS)</h3>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/forward_velocity_controller/commands</td><td>Float64MultiArray</td><td>6 joint velocities (rad/s) for RMRC, Direct Joint, and Hand Guide modes at 50 Hz</td></tr>
+        <tr><td>/finger_width_controller/commands</td><td>Float64MultiArray</td><td>Gripper width in metres (0 = closed, 0.11 = open)</td></tr>
+        <tr><td>/session/status</td><td>String (JSON)</td><td>Live session telemetry at 2 Hz — mode, durations, switch count</td></tr>
+        <tr><td>/session/events</td><td>String (JSON)</td><td>Discrete events — mode switches, e-stops, start/stop</td></tr>
+        <tr><td>/headset/image_compressed</td><td>CompressedImage</td><td>JPEG scene capture at 15 FPS for dashboard headset tab</td></tr>
+      </tbody>
+    </table>
+    <h3>Subscribed (ROS → Quest)</h3>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/joint_states</td><td>JointState</td><td>Live joint positions for digital twin ArticulationBody mirroring</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Cube hologram positions from perception relay (N = 1–4)</td></tr>
+        <tr><td>/tcp_pose_broadcaster/pose</td><td>PoseStamped</td><td>Real-time EE pose for RobotInfoPanel (real robot / URSim only)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── KNOWN ISSUES ── -->
+<section class="section alt" id="issues">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">08 — Known Issues</div>
     <h2>Troubleshooting</h2>
     <ul class="issues">
       <li>
-        <div class="issue-ttl">Arm hologram doesn't move</div>
-        <div class="issue-body">Check that <code>/joint_states</code> is being published. The UR driver must be active. With URSim, External Control must be playing in Polyscope.</div>
+        <div class="issue-ttl">Quest can't connect to ROS</div>
+        <div class="issue-body">Both Quest and laptop must be on the robot's dedicated router (<code>192.168.0.x</code> subnet). <code>ROSAutoConnect</code> scans IPs 101–110 on port 10000. If auto-discovery fails, manually set the laptop WiFi IP in Unity → Robotics → ROS Settings.</div>
       </li>
       <li>
-        <div class="issue-ttl">Cubes not visible in AR</div>
-        <div class="issue-body">Cubes only appear in the headset after first detection by the perception node. Point the Brio at a cube face until RViz shows the marker — it then publishes to Quest.</div>
+        <div class="issue-ttl">Cube holograms not appearing</div>
+        <div class="issue-body">Confirm <code>cube_pose_relay.py</code> is running on the ROS side: <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Also verify <code>CubePoseSubscriber.robotBase</code> is set in the Inspector — unset causes cubes to spawn at world origin, which may be outside the view.</div>
       </li>
       <li>
-        <div class="issue-ttl">Holograms drift from physical objects</div>
-        <div class="issue-body">Hand-eye calibration must be run and loaded. A stale or missing calibration causes the camera-to-base TF to be incorrect, offsetting all cube positions.</div>
+        <div class="issue-ttl">ros_tcp_endpoint crashes on reconnect</div>
+        <div class="issue-body">Known race condition in v0.7.0 (<code>InvalidHandle</code> exception). Restart the endpoint after every Unity Play/Stop cycle: <code>ros2 run ros_tcp_endpoint default_server_endpoint</code>.</div>
       </li>
       <li>
-        <div class="issue-ttl">Quest can't connect</div>
-        <div class="issue-body">Ensure Quest and laptop are on the same WiFi. The launcher prints the correct IP at startup. Enter it manually in ROS Settings if TCP auto-discovery doesn't connect.</div>
+        <div class="issue-ttl">Digital twin not responding to joint states</div>
+        <div class="issue-body">Both <code>forward_velocity_controller</code> and <code>finger_width_controller</code> must be active. Run <code>ros2 control list_controllers</code>. With URSim, External Control must be playing on the teach pendant.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">EE pose rows always zero in RobotInfoPanel</div>
+        <div class="issue-body"><code>/tcp_pose_broadcaster/pose</code> is only available when the real robot or URSim is connected and running. With <code>--fake</code> hardware, the EE rows will remain at zero — this is expected.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Radial menu items missing after scene rebuild</div>
+        <div class="issue-body">RadialMenu Inspector references were cleared when the scene was rebuilt. Re-run <code>Tools → HoloAssist → Setup All UI Features</code> to rewire all subsystem references automatically.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Bridge buffer overflow / lag with headset stream</div>
+        <div class="issue-body">HeadsetStreamPublisher adds significant bandwidth. Disable the component on the Quest side if the ROS bridge becomes unstable. The dashboard will lose the headset tab view but all other features remain working.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Task scoring incorrect in OneOfEachClass mode</div>
+        <div class="issue-body"><code>CubePoseSubscriber.tagSpawnedCubes</code> must be <code>true</code> and <code>cubeClassNames[]</code> / <code>cubeIsGood[]</code> must be populated. Without this, all cubes score as class "default" and the OneOfEachClass logic cannot distinguish correct from incorrect sorts.</div>
       </li>
     </ul>
   </div>
@@ -173,8 +482,8 @@
 <footer class="doc-footer">
   <div class="doc-footer-in">
     <div>
-      <h3>Visualisation</h3>
-      <p>Sebastian &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
+      <h3>XR Visualisation</h3>
+      <p>Sebastian Baudille &nbsp;·&nbsp; UTS Robotics Studio 2, 2026</p>
     </div>
     <a href="../index.html" class="doc-footer-back">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -186,12 +495,15 @@
 <script src="../shared.js"></script>
 <script>
 buildDock([
-  { label:'Home',     href:'../index.html', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
-  { label:'Overview', href:'#overview', id:'overview', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
-  { label:'Pipeline', href:'#pipeline', id:'pipeline', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { label:'Topics',   href:'#topics',   id:'topics',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-  { label:'Config',   href:'#config',   id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
-  { label:'Issues',   href:'#issues',   id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { label:'Home',        href:'../index.html', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+  { label:'Quick Start', href:'#quickstart', id:'quickstart', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
+  { label:'Purpose',     href:'#purpose',    id:'purpose',    svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
+  { label:'Stack',       href:'#stack',      id:'stack',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+  { label:'Repo',        href:'#repo',       id:'repo',       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
+  { label:'Scene',       href:'#scene',      id:'scene',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/></svg>' },
+  { label:'Scripts',     href:'#scripts',    id:'scripts',    svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>' },
+  { label:'Topics',      href:'#topics',     id:'topics',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { label:'Issues',      href:'#issues',     id:'issues',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>
 

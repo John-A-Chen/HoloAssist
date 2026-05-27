@@ -23,7 +23,7 @@
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div class="hero-overlay"></div>
-  <!-- Add hero photo here when ready: <img class="hero-photo" src="../screenshots/perception.png" alt=""> -->
+  <img class="hero-photo" src="../screenshots/perception.png" alt="">
   <div class="hero-content">
     <div class="hero-num">01 / 04</div>
     <div class="hero-eyebrow">HoloAssist — Subsystem</div>
@@ -31,14 +31,14 @@
     <h1 class="hero-title">Per<span class="thin">cep</span><br>tion</h1>
     <p class="hero-desc">
       AprilTag-based cube detection running at <strong>20 Hz</strong> with single-tag support,
-      multi-face consensus fusion, and position freezing on tag loss.
-      Camera-agnostic: RealSense, Brio 4K, or any USB webcam.
+      multi-face consensus fusion, and position freezing on tag loss. Resolves cube positions
+      into the robot <strong>base_link</strong> frame via a saved easy_handeye2 calibration.
     </p>
     <div class="hero-meta">
-      <div><span class="hero-meta-val">20</span>Hz detection</div>
+      <div><span class="hero-meta-val">20</span>Hz timer</div>
       <div><span class="hero-meta-val">4</span>cubes tracked</div>
       <div><span class="hero-meta-val">6</span>tags per cube</div>
-      <div><span class="hero-meta-val">8cm</span>bin margin</div>
+      <div><span class="hero-meta-val">8 cm</span>bin margin</div>
     </div>
   </div>
 </section>
@@ -50,8 +50,8 @@
     <h2>What this subsystem does</h2>
     <p>
       The perception subsystem tracks up to <strong>4 physical 40 mm cubes</strong> using AprilTag
-      stickers (36h11 family, 32 mm printed size). Each cube has 6 tags — one per face — grouped
-      into a cube ID. A cube is detected as soon as any single face is visible.
+      stickers (36h11 family, 32 mm printed size). Each cube has 6 tags — one per face — with IDs
+      grouped into four physical cubes (IDs 10–33). A cube is detected as soon as any single face is visible.
     </p>
     <p>
       When multiple faces are visible, a <strong>consensus filter</strong> averages candidate centres
@@ -59,26 +59,57 @@
       the last known position is frozen in RViz even after tags leave the camera frame.
     </p>
     <p>
+      Cube poses are resolved into the robot <strong>base_link</strong> frame using the saved
+      easy_handeye2 calibration (base_link → camera_link transform). Poses are also relayed to Unity
+      so the Quest 3 XR scene can display cube holograms at the correct physical locations.
+    </p>
+    <p>
       <strong>Lead:</strong> John Chen &nbsp;·&nbsp;
       <strong>Package:</strong> holo_assist_depth_tracker &nbsp;·&nbsp;
-      <strong>Camera:</strong> Brio 4K (auto-detected)
+      <strong>Camera:</strong> Logitech Brio 4K / Intel RealSense D435i
     </p>
-
-    <!-- Photos — drop src values when ready -->
     <div class="photo-row">
       <div class="photo-slot">
-        <!-- <img src="../screenshots/perception_demo.jpg" alt="Perception demo"> -->
-        <div class="photo-slot-ph">Perception demo photo</div>
+        <img src="../screenshots/apriltagdebug.png" alt="AprilTag detection debug view">
       </div>
       <div class="photo-slot">
-        <!-- <img src="../screenshots/apriltag_setup.jpg" alt="AprilTag setup"> -->
-        <div class="photo-slot-ph">AprilTag cube setup</div>
+        <img src="../screenshots/multicubetracking.png" alt="Multi-cube tracking in RViz">
       </div>
     </div>
   </div>
 </section>
 
-<section class="section alt" id="pipeline">
+<section class="section alt" id="dataflow">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Data Flow</div>
+    <h2>From camera to cube poses</h2>
+    <p>The full pipeline from raw camera frames to Unity cube holograms and MoveIt grasp targets.</p>
+    <div class="code-block"><span class="cv">Brio / RealSense D435i</span>  <span class="cm">30 fps colour stream</span>
+  │  /camera/color/image_raw
+  ▼
+<span class="cv">apriltag_ros</span>  <span class="cm">[36h11 family · tag size 0.032 m]</span>
+  │  /detections
+  ▼
+<span class="cv">holoassist_cube_pose_node</span>  <span class="cm">[20 Hz timer — TF-safe]</span>
+  │  /holoassist/perception/april_cube_N_pose    <span class="cm">← base_link frame</span>
+  │  /holoassist/perception/april_cube_N_marker  <span class="cm">← RViz colour-coded marker</span>
+  │  /holoassist/perception/april_cube_N_status
+  │  /holoassist/perception/april_cube_N_bin_check
+  ▼
+<span class="cv">cube_pose_relay.py</span>
+  │  /holoassist/unity/cube_N_pose  <span class="cm">← Unity-friendly relay</span>
+  ▼
+<span class="cv">MoveIt pick-and-place</span>  ·  <span class="cv">Quest 3 Unity (CubePoseSubscriber.cs)</span></div>
+    <p>
+      The static <code>base_link → camera_link</code> transform is published from the saved
+      easy_handeye2 calibration file, giving the full TF chain:
+      <code>world → base_link → camera_link → camera_color_optical_frame → tag36h11:XX</code>.
+    </p>
+  </div>
+</section>
+
+<section class="section" id="pipeline">
   <div class="section-in">
     <div class="ph-line"></div>
     <div class="section-lbl">Pipeline</div>
@@ -87,50 +118,153 @@
       <div class="pipe-step">
         <div class="pipe-num">01</div>
         <h4>Camera Capture</h4>
-        <p>Brio 4K at 848×480 / 30 fps. RealSense or generic webcam as fallback. Publishes <code>/camera/color/image_raw</code>.</p>
+        <p>Brio 4K at 848×480 / 30 fps via <code>camera_only.launch.py</code>. RealSense D435i or USB webcam as fallback. Publishes <code>/camera/color/image_raw</code>.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">02</div>
         <h4>AprilTag Detection</h4>
-        <p>apriltag_ros detects 36h11 tags, publishes <code>/detections_all</code> with 3D pose in camera frame.</p>
+        <p>apriltag_ros detects 36h11 tags, publishes <code>/detections</code> with 3D pose in camera frame. Tag IDs 10–33 across four physical cubes (six faces each).</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">03</div>
         <h4>Cube Pose Fusion</h4>
-        <p>20 Hz timer groups tags by cube ID. Consensus filter averages multi-face estimates. 3 mm deadzone suppresses jitter.</p>
+        <p>20 Hz timer groups tags by cube ID. Face-to-centre offset (20 mm) applied. Consensus filter averages multi-face estimates within 5 cm. 3 mm deadzone suppresses jitter.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
         <div class="pipe-num">04</div>
         <h4>Bin Verification</h4>
-        <p>Transforms cube XY into base_link frame, checks against bin_poses.json with configurable margin.</p>
+        <p>Transforms cube XY into base_link frame, checks against bin_poses.json with configurable XY margin. Publishes <code>sorted=true/false</code> on each cube's bin_check topic.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="topics">
+<section class="section alt" id="setup">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">Topics</div>
-    <h2>Published topics</h2>
-    <p>All topics published at 20 Hz. Replace <code>N</code> with cube number (1–4).</p>
+    <div class="section-lbl">Setup &amp; Calibration</div>
+    <h2>Printing cubes and calibrating the camera</h2>
+    <p>
+      Perception requires a saved camera-to-robot calibration before poses can be resolved into
+      the robot base frame. Recalibrate whenever the camera or robot base moves.
+    </p>
+    <h3>Tag cube requirements</h3>
     <table class="data-table">
-      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Cube centre in camera_color_optical_frame</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_marker</td><td>Marker</td><td>RViz cube marker (freezes on tag loss)</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_status</td><td>String</td><td>Detection state, visible tags, method, age</td></tr>
-        <tr><td>/holoassist/perception/april_cube_N_bin_check</td><td>String</td><td>Bin verification result — sorted=true/false</td></tr>
-        <tr><td>/holoassist/perception/april_cube_pose</td><td>PoseStamped</td><td>Legacy: cube 1 pose (nearest detected)</td></tr>
+        <tr><td>Tag family</td><td>36h11</td><td>Must match <code>config/apriltag_all.yaml</code></td></tr>
+        <tr><td>Printed tag size</td><td>32 mm edge</td><td>Measure the black border — any mismatch causes proportional metric drift</td></tr>
+        <tr><td>Cube edge length</td><td>40 mm</td><td>Sets face-to-centre offset at 20 mm in <code>cubes.yaml</code></td></tr>
+        <tr><td>Tag IDs</td><td>10–33 (4 cubes × 6 faces)</td><td>Grouped per cube in <code>config/cubes.yaml</code></td></tr>
+        <tr><td>Calibration tag</td><td>ID 0, 36h11, 32 mm</td><td>Attached ~5 cm from gripper base at <code>tool0</code> during calibration only</td></tr>
+      </tbody>
+    </table>
+    <h3>Calibration steps</h3>
+    <div class="code-block"><span class="cm"># 1. Build the ROS 2 workspace</span>
+cd ~/git/RS2-HoloAssist/main/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+
+<span class="cm"># 2. Attach calibration tag (ID 0) to the gripper, then start</span>
+cd ~/git/RS2-HoloAssist/main
+./calibrate.sh --robot-ip 192.168.0.192
+
+<span class="cm"># 3. Use the easy_handeye2 GUI
+#    - Start External Control on the teach pendant
+#    - Move robot through 15–25 varied positions and wrist angles
+#    - Click "Take Sample" at each pose
+#    - Set solver to OpenCV Park (second OpenCV option)
+#    - Click Compute, then Save
+
+# 4. Verify the saved transform</span>
+ros2 run tf2_ros tf2_echo base_link camera_link</div>
+    <div class="callout callout-note">
+      <strong>Solver:</strong> Use <strong>OpenCV Park</strong> in the easy_handeye2 GUI.
+      The default solver produces less accurate results for this camera-on-base configuration.
+    </div>
+    <div class="photo-row">
+      <div class="photo-slot">
+        <img src="../screenshots/printingaprilcubes.png" alt="Printing AprilTag cubes">
+      </div>
+      <div class="photo-slot">
+        <img src="../screenshots/calibrationtesting.png" alt="Hand-eye calibration in progress">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="howto">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">How to Run</div>
+    <h2>Start perception with one command</h2>
+    <p>
+      Perception is integrated with the main launcher. Pass <code>--perception</code> to start
+      the camera, AprilTag detector, cube pose node, and Unity relay in a single launch.
+    </p>
+    <div class="code-block"><span class="cm"># Confirm calibration file exists first</span>
+ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
+
+<span class="cm"># Real robot + camera + perception + Unity relay</span>
+./launch.sh --robot-ip 192.168.0.192 --perception
+
+<span class="cm"># Fake hardware + perception only (no real robot required)</span>
+./launch.sh --perception</div>
+    <p>
+      After launch: start External Control on the teach pendant, hit Play in Unity,
+      then place AprilTag cubes (IDs 10–33) in camera view. Cube holograms appear
+      in the Quest 3 scene within 1–2 seconds relative to the <code>ur3e_rg2</code> robot base.
+    </p>
+    <h3>Quick health checks</h3>
+    <table class="data-table">
+      <thead><tr><th>Check</th><th>Command</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>AprilTag detections</td><td><code>ros2 topic echo /detections --once</code></td><td>Detection array when cube face is visible</td></tr>
+        <tr><td>Cube 1 pose (base frame)</td><td><code>ros2 topic echo /holoassist/perception/april_cube_1_pose --once</code></td><td>PoseStamped in base_link frame</td></tr>
+        <tr><td>Cube 1 Unity relay</td><td><code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code></td><td>Relayed pose for Unity</td></tr>
+        <tr><td>Calibration TF</td><td><code>ros2 run tf2_ros tf2_echo base_link camera_link</code></td><td>Static transform from saved calibration</td></tr>
+        <tr><td>Full TF chain</td><td><code>ros2 run tf2_ros tf2_echo base_link tag36h11:10</code></td><td>Live transform when tag 10 is visible</td></tr>
+        <tr><td>Publish rate</td><td><code>ros2 topic hz /holoassist/perception/april_cube_1_pose</code></td><td>~20 Hz while cube 1 is visible</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
-<section class="section alt" id="config">
+<section class="section alt" id="topics">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Topics</div>
+    <h2>ROS interface</h2>
+    <h3>Published topics</h3>
+    <p>All topics published at 20 Hz. Replace <code>N</code> with cube number (1–4).</p>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Cube centre resolved in robot base_link frame</td></tr>
+        <tr><td>/holoassist/perception/april_cube_N_marker</td><td>Marker</td><td>RViz colour-coded cube marker (freezes on tag loss)</td></tr>
+        <tr><td>/holoassist/perception/april_cube_N_status</td><td>String</td><td>Detection state, visible tags, method, and age</td></tr>
+        <tr><td>/holoassist/perception/april_cube_N_bin_check</td><td>String</td><td>Bin verification result — sorted=true/false</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Relayed cube pose for Unity CubePoseSubscriber.cs</td></tr>
+      </tbody>
+    </table>
+    <h3>Subscribed topics</h3>
+    <table class="data-table">
+      <thead><tr><th>Topic</th><th>Type</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>/detections</td><td>AprilTagDetectionArray</td><td>Raw AprilTag detections from apriltag_ros</td></tr>
+        <tr><td>/camera/camera/color/camera_info</td><td>CameraInfo</td><td>Camera intrinsics for metric tag pose estimation</td></tr>
+        <tr><td>/tf</td><td>TFMessage</td><td>Live transforms from camera and detected tags</td></tr>
+        <tr><td>/tf_static</td><td>TFMessage</td><td>Static base_link → camera_link calibration transform</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="config">
   <div class="section-in">
     <div class="ph-line"></div>
     <div class="section-lbl">Configuration</div>
@@ -138,37 +272,54 @@
     <p>File at <code>ros2_ws/src/holo_assist_depth_tracker/config/cubes.yaml</code></p>
     <div class="cfg-table">
       <div class="cfg-row"><div>cube_edge_size_m</div><div>0.040</div><div>Physical cube side length (m)</div></div>
-      <div class="cfg-row"><div>cube_tag_size_m</div><div>0.032</div><div>Printed AprilTag side length (m)</div></div>
-      <div class="cfg-row"><div>detections_timeout_s</div><div>0.5</div><div>Age after which a detection is stale</div></div>
-      <div class="cfg-row"><div>candidate_consensus_threshold_m</div><div>0.05</div><div>Max spread between face estimates to agree</div></div>
-      <div class="cfg-row"><div>bin_xy_margin_m</div><div>0.08</div><div>XY tolerance for bin match — increase if calibration drifts</div></div>
+      <div class="cfg-row"><div>cube_tag_size_m</div><div>0.032</div><div>Printed AprilTag edge length (m) — must match physical tag exactly</div></div>
+      <div class="cfg-row"><div>face_offset_m</div><div>0.020</div><div>Face-to-cube-centre offset (half of cube_edge_size_m)</div></div>
+      <div class="cfg-row"><div>detections_timeout_s</div><div>0.5</div><div>Age after which a detection is considered stale</div></div>
+      <div class="cfg-row"><div>candidate_consensus_threshold_m</div><div>0.05</div><div>Max spread between face estimates to form consensus</div></div>
+      <div class="cfg-row"><div>bin_xy_margin_m</div><div>0.08</div><div>XY tolerance for bin match — increase to 0.10 if calibration drifts</div></div>
       <div class="cfg-row"><div>timer_hz</div><div>20.0</div><div>Publishing rate (Hz)</div></div>
-      <div class="cfg-row"><div>bin_check_frame</div><div>base_link</div><div>TF frame for bin comparison</div></div>
+      <div class="cfg-row"><div>bin_check_frame</div><div>base_link</div><div>TF frame used for bin comparison</div></div>
     </div>
   </div>
 </section>
 
-<section class="section" id="issues">
+<section class="section alt" id="issues">
   <div class="section-in">
     <div class="ph-line"></div>
     <div class="section-lbl">Known Issues</div>
     <h2>Troubleshooting</h2>
     <ul class="issues">
       <li>
-        <div class="issue-ttl">Cubes not visible in RViz</div>
-        <div class="issue-body">Cubes only appear after first detection. Point the Brio at a cube face until the marker appears — then it persists even if occluded.</div>
+        <div class="issue-ttl">No AprilTag detections</div>
+        <div class="issue-body">Camera cannot see tags, lighting is poor, or tag size/family is wrong. Check camera angle, lighting, and focus. Confirm tag family is 36h11 and printed size matches 32 mm. Echo <code>/detections --once</code> to verify.</div>
       </li>
       <li>
-        <div class="issue-ttl">First detection silently dropped</div>
-        <div class="issue-body">Fixed: node runs on a 20 Hz timer rather than the detection callback, avoiding the TF race condition that caused the first frame to fail.</div>
+        <div class="issue-ttl">Detections but no cube poses</div>
+        <div class="issue-body"><code>holoassist_cube_pose_node</code> is not running or tag IDs do not match <code>config/cubes.yaml</code>. Run <code>ros2 node list | grep cube</code> and confirm face IDs 10–33 appear in <code>/detections</code>. The node only merges tags that match known cube ID groups.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Cube poses published but not visible in Unity</div>
+        <div class="issue-body">The relay is not running or Unity is not connected. Check <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Unity reads the relayed topics — perception working does not guarantee Unity is receiving them.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">TF tree disconnected / calibration missing</div>
+        <div class="issue-body">Run <code>ros2 run tf2_ros tf2_echo base_link camera_link</code>. If it hangs, re-run calibration or confirm the calibration file exists at <code>~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib</code>. Without this transform, cube poses cannot be resolved into base_link.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Cubes not visible in RViz after launch</div>
+        <div class="issue-body">Cubes only appear after first detection. Point the Brio at a cube face until the RViz marker appears — then it persists even if occluded. This is the intended freeze-on-loss behaviour.</div>
+      </li>
+      <li>
+        <div class="issue-ttl">Cube pose offset or scaled wrong</div>
+        <div class="issue-body">The printed AprilTag size does not match <code>cube_tag_size_m: 0.032</code>. Measure the black tag border and update the config. AprilTag pose estimation uses the declared tag size as metric scale — any mismatch causes proportional error in all axes.</div>
       </li>
       <li>
         <div class="issue-ttl">Bin check false negatives</div>
-        <div class="issue-body">If <code>sorted=false</code> when the cube is visually in the bin, increase <code>bin_xy_margin_m</code> to 0.10 in cubes.yaml. Requires calibration to be loaded.</div>
+        <div class="issue-body">If <code>sorted=false</code> when the cube is visually inside the bin, increase <code>bin_xy_margin_m</code> to 0.10 in cubes.yaml. Hand-eye calibration must be loaded — the bin check uses base_link for comparison.</div>
       </li>
       <li>
-        <div class="issue-ttl">No bin check output</div>
-        <div class="issue-body">Hand-eye calibration must be loaded so the TF <code>camera_color_optical_frame → base_link</code> exists. Without it the node logs a warning and skips silently.</div>
+        <div class="issue-ttl">Only some cube faces work</div>
+        <div class="issue-body">Physical tag IDs are misplaced or do not match <code>config/cubes.yaml</code>. Echo <code>/detections</code> and check which IDs appear. Each cube face must belong to the correct ID group in the config.</div>
       </li>
     </ul>
   </div>
@@ -190,12 +341,15 @@
 <script src="../shared.js"></script>
 <script>
 buildDock([
-  { label:'Home',     href:'../index.html', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
-  { label:'Overview', href:'#overview', id:'overview', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
-  { label:'Pipeline', href:'#pipeline', id:'pipeline', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { label:'Topics',   href:'#topics',   id:'topics',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-  { label:'Config',   href:'#config',   id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
-  { label:'Issues',   href:'#issues',   id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { label:'Home',       href:'../index.html', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+  { label:'Overview',   href:'#overview',   id:'overview',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
+  { label:'Data Flow',  href:'#dataflow',   id:'dataflow',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { label:'Pipeline',   href:'#pipeline',   id:'pipeline',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { label:'Setup',      href:'#setup',      id:'setup',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' },
+  { label:'How to Run', href:'#howto',      id:'howto',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
+  { label:'Topics',     href:'#topics',     id:'topics',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { label:'Config',     href:'#config',     id:'config',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { label:'Issues',     href:'#issues',     id:'issues',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>
 

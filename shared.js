@@ -47,7 +47,13 @@ function buildDock(items, opts) {
     }
 
     function setW(el, n) { el.style.setProperty('--sz', n + 'px'); }
-    function reset() { [].slice.call(nav.querySelectorAll('.di')).forEach(function(l) { setW(l, BASE); }); }
+    function reset() {
+        var mobile = window.innerWidth <= 768;
+        [].slice.call(nav.querySelectorAll('.di')).forEach(function(l) {
+            if (mobile) l.style.removeProperty('--sz');
+            else setW(l, BASE);
+        });
+    }
 
     nav.addEventListener('pointermove', function(e) {
         if (window.innerWidth <= 768) return;
