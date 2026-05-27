@@ -225,7 +225,7 @@
             <div><h3>Autonomous Pick-and-Place</h3><p>MoveIt + OnRobot RG2 on UR3e</p></div>
         </a>
         <a href="#visualisation" class="hs-item">
-            <div><h3>XR Visualisation</h3><p>Quest 3 AR overlay + hand-gesture teleop</p></div>
+            <div><h3>XR Visualisation</h3><p>Quest 3 AR overlay + XR controller teleop</p></div>
         </a>
     </div>
 </section>
@@ -247,8 +247,8 @@
             <div class="feat-item"><span class="feat-name">Trolley Scene in RViz</span><span class="badge b-ok">Working</span></div>
             <div class="feat-item"><span class="feat-name">MoveIt Pick-and-Place Stack</span><span class="badge b-ok">Working</span></div>
             <div class="feat-item"><span class="feat-name">E-Stop Dashboard</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">UDP IP Beacon Auto-Discovery</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Quest 3 &harr; ROS Bridge (:10000)</span><span class="badge b-test">Testing</span></div>
+            <div class="feat-item"><span class="feat-name">TCP Scanning Auto-Discovery</span><span class="badge b-ok">Working</span></div>
+            <div class="feat-item"><span class="feat-name">Quest 3 &harr; ROS Bridge (:10000)</span><span class="badge b-ok">Working</span></div>
         </div>
     </div>
 </section>
@@ -337,14 +337,14 @@
         <div class="slide-mid">
             <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg></div>
             <h2 class="slide-title">Teleop&shy;eration</h2>
-            <p class="slide-tag">Quest 3 hand-gesture control &middot; ROS-TCP bridge &middot; UDP auto-discovery</p>
-            <p class="slide-desc">Hand-gesture control of the UR3e via Meta Quest 3 hand tracking. Unity C# classifies pinch and grip gestures, publishes commands over ROS-TCP-Endpoint on port 10000. UDP beacon handles IP auto-discovery so the headset connects without manual configuration.</p>
+            <p class="slide-tag">Quest 3 XR controller input &middot; ROS-TCP bridge &middot; TCP scanning auto-connect</p>
+            <p class="slide-desc">XR controller teleoperation of the UR3e via Meta Quest 3. Three control modes (RMRC, Direct Joint, Hand Guide) selectable from a radial menu, with analog gripper on the right trigger. TCP scanning auto-discovers the ROS bridge on port 10000 — no manual IP entry required.</p>
         </div>
         <div class="slide-bottom">
             <div class="slide-specs">
-                <div class="slide-spec"><span>Quest</span>3 input</div>
-                <div class="slide-spec"><span>:10k</span>TCP port</div>
-                <div class="slide-spec"><span>UDP</span>discovery</div>
+                <div class="slide-spec"><span>3</span>control modes</div>
+                <div class="slide-spec"><span>50 Hz</span>cmd rate</div>
+                <div class="slide-spec"><span>6 DOF</span>XR input</div>
             </div>
             <div class="slide-right">
                 <a href="docs/teleoperation.html" class="slide-docs">Read Docs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
@@ -446,7 +446,7 @@
             <div class="gal-item"><!-- <img src="screenshots/rviz_cubes.png" alt="RViz"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>rviz_cubes.png</span></div><div class="gal-lbl">RViz — 4 cubes detected</div></div>
             <div class="gal-item"><!-- <img src="screenshots/quest_ar_overlay.png" alt="Quest AR"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>quest_ar_overlay.png</span></div><div class="gal-lbl">Quest 3 AR overlay</div></div>
             <div class="gal-item"><!-- <img src="screenshots/robot_pick_place.png" alt="Pick place"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>robot_pick_place.png</span></div><div class="gal-lbl">UR3e pick-and-place</div></div>
-            <div class="gal-item"><!-- <img src="screenshots/dashboard.png" alt="Dashboard"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>dashboard.png</span></div><div class="gal-lbl">E-stop dashboard</div></div>
+            <div class="gal-item"><img src="screenshots/dashboard.png" alt="Dashboard"><div class="gal-lbl">E-stop dashboard</div></div>
             <div class="gal-item"><!-- <img src="screenshots/calibration.png" alt="Calibration"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>calibration.png</span></div><div class="gal-lbl">Hand-eye calibration</div></div>
             <div class="gal-item"><!-- <img src="screenshots/april_tag_detection.gif" alt="AprilTag GIF"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>april_tag_detection.gif</span></div><div class="gal-lbl">AprilTag single-tag detection</div></div>
         </div>

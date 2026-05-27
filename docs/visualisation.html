@@ -134,7 +134,7 @@
     <h2>Unity scene settings</h2>
     <p>Configured via Unity Inspector. ROS connection set at runtime in the Quest app's ROS Settings panel.</p>
     <div class="cfg-table">
-      <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>Enter WiFi IP printed by launcher — or use UDP auto-discovery</div></div>
+      <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>Enter WiFi IP printed by launcher — or use TCP scanning auto-discovery</div></div>
       <div class="cfg-row"><div>ROS Port</div><div>10000</div><div>ROS-TCP-Endpoint listen port</div></div>
       <div class="cfg-row"><div>Trolley Rotation</div><div>180°</div><div>Y-axis rotation to match physical trolley orientation</div></div>
       <div class="cfg-row"><div>Cube Render Scale</div><div><!-- fill --></div><div>Hologram scale multiplier relative to real cube size</div></div>
@@ -164,7 +164,7 @@
       </li>
       <li>
         <div class="issue-ttl">Quest can't connect</div>
-        <div class="issue-body">Ensure Quest and laptop are on the same WiFi. The launcher prints the correct IP at startup. Enter it manually in ROS Settings if UDP auto-discovery doesn't work.</div>
+        <div class="issue-body">Ensure Quest and laptop are on the same WiFi. The launcher prints the correct IP at startup. Enter it manually in ROS Settings if TCP auto-discovery doesn't connect.</div>
       </li>
     </ul>
   </div>
