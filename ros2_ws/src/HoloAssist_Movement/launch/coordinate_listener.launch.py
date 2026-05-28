@@ -33,22 +33,22 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "pose_topic",
-                default_value="/moveit_robot_control/target_pose",
+                default_value="/holoassist/movement/target_pose",
                 description="Topic for geometry_msgs/msg/Pose goals.",
             ),
             DeclareLaunchArgument(
                 "coordinate_topic",
-                default_value="/moveit_robot_control/target",
-                description="Topic for moveit_robot_control_msgs/msg/TargetRPY goals.",
+                default_value="/holoassist/movement/target",
+                description="Topic for holoassist_movement/msg/TargetRPY goals.",
             ),
             DeclareLaunchArgument(
                 "point_topic",
-                default_value="/moveit_robot_control/target_point",
+                default_value="/holoassist/movement/target_point",
                 description="Topic for legacy geometry_msgs/msg/Point goals.",
             ),
             DeclareLaunchArgument(
                 "joint_state_topic",
-                default_value="/moveit_robot_control/target_joint_state",
+                default_value="/holoassist/movement/target_joint_state",
                 description="Topic for sensor_msgs/msg/JointState joint goals.",
             ),
             DeclareLaunchArgument(
@@ -221,9 +221,9 @@ def generate_launch_description():
                 ),
             ),
             Node(
-                package="moveit_robot_control",
+                package="holoassist_movement",
                 executable="coordinate_listener",
-                name="moveit_robot_control",
+                name="holoassist_movement",
                 output="screen",
                 emulate_tty=True,
                 parameters=[

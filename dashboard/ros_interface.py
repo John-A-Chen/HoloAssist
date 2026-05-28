@@ -32,7 +32,7 @@ except ImportError:
     ROS_AVAILABLE = False
 
 try:
-    from holo_assist_depth_tracker_sim_interfaces.srv import PickCubeToBin
+    from holoassist_perception.srv import PickCubeToBin
     PICK_CUBE_SERVICE_AVAILABLE = True
 except ImportError:
     PICK_CUBE_SERVICE_AVAILABLE = False
@@ -150,11 +150,11 @@ class DashboardStatus:
 
 # All topic names matching John's defaults
 TOPIC_DEFAULTS = {
-    "debug_image": "/holo_assist_depth_tracker/debug_image",
+    "debug_image": "/holoassist/perception/debug_image",
     "headset_image": "/headset/image_compressed",
-    "bbox": "/holo_assist_depth_tracker/bbox",
-    "pointcloud": "/holo_assist_depth_tracker/pointcloud",
-    "obstacle": "/holo_assist_depth_tracker/obstacle_marker",
+    "bbox": "/holoassist/perception/bbox",
+    "pointcloud": "/holoassist/perception/pointcloud",
+    "obstacle": "/holoassist/perception/obstacle_marker",
     "joint_states": "/joint_states",
     "target_pose": "/servo_target_pose",
     "twist_cmd": "/servo_node/delta_twist_cmds",
@@ -1365,6 +1365,8 @@ class RosInterface:
     def shutdown(self):
         self._running = False
         self._safety_stop.set()
+        if self._spin_thread is not None:
+            self._spin_thread.join(timeout=2.0)
         self._save_session_log()
         if self._node is not None:
             self._node.destroy_node()

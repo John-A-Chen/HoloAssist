@@ -17,22 +17,22 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description() -> LaunchDescription:
     """MoveIt-only launch — robot driver + perception provided by launch.sh --perception."""
-    moveit_robot_control_pkg = FindPackageShare("moveit_robot_control")
+    holoassist_movement_pkg = FindPackageShare("holoassist_movement")
     moveit_pkg = FindPackageShare("ur_onrobot_moveit_config")
     robot_description_pkg = FindPackageShare("ur_onrobot_description")
 
     hw_config_default = PathJoinSubstitution(
-        [moveit_robot_control_pkg, "config", "full_holoassist_hw.yaml"]
+        [holoassist_movement_pkg, "config", "full_holoassist_hw.yaml"]
     )
     rviz_default = PathJoinSubstitution(
-        [moveit_robot_control_pkg, "rviz", "holoassist_hw.rviz"]
+        [holoassist_movement_pkg, "rviz", "holoassist_hw.rviz"]
     )
 
     moveit_launch = PathJoinSubstitution(
         [moveit_pkg, "launch", LaunchConfiguration("moveit_launch_file")]
     )
     coordinate_listener_launch = PathJoinSubstitution(
-        [moveit_robot_control_pkg, "launch", "coordinate_listener.launch.py"]
+        [holoassist_movement_pkg, "launch", "coordinate_listener.launch.py"]
     )
     robot_xacro = PathJoinSubstitution(
         [robot_description_pkg, "urdf", "ur_onrobot.urdf.xacro"]
@@ -121,15 +121,6 @@ def generate_launch_description() -> LaunchDescription:
         description="Prefix for april_cube_N_pose topics used by the pick-place service.",
     )
 
-    use_calibrated_workspace_arg = DeclareLaunchArgument(
-        "use_calibrated_workspace",
-        default_value="true",
-    )
-    calibration_yaml_arg = DeclareLaunchArgument(
-        "calibration_yaml",
-        default_value=os.path.expanduser("~/.holoassist/calibration/calibration_latest.yaml"),
-    )
-
     use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="true")
     rviz_config_arg = DeclareLaunchArgument("rviz_config", default_value=rviz_default)
 
@@ -194,19 +185,9 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
     )
 
-    # ── workspace_frame static TF broadcaster (calibrated mode only) ──────────
-    workspace_frame_tf = Node(
-        package="moveit_robot_control",
-        executable="workspace_frame_tf",
-        name="workspace_frame_tf",
-        output="screen",
-        parameters=[LaunchConfiguration("calibration_yaml")],
-        condition=IfCondition(LaunchConfiguration("use_calibrated_workspace")),
-    )
-
     # ── Workspace collision scene (trolley mesh visual) ───────────────────────
     workspace_scene = Node(
-        package="moveit_robot_control",
+        package="holoassist_movement",
         executable="workspace_scene_manager",
         name="workspace_scene_manager",
         output="screen",
@@ -237,7 +218,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # ── Pick-and-place sequencer ──────────────────────────────────────────────
     pick_place_sequencer = Node(
-        package="moveit_robot_control",
+        package="holoassist_movement",
         executable="pick_place_sequencer",
         name="pick_place_sequencer",
         output="screen",
@@ -260,7 +241,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # ── Pick-cube-to-bin service ──────────────────────────────────────────────
     pick_place_service = Node(
-        package="holo_assist_depth_tracker_sim",
+        package="holoassist_perception",
         executable="pick_place_service_node",
         name="holoassist_pick_place_service",
         output="screen",
@@ -270,7 +251,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # ── Selected-cube → MoveIt target adapter ────────────────────────────────
     selected_cube_adapter = Node(
-        package="holo_assist_depth_tracker_sim",
+        package="holoassist_perception",
         executable="selected_cube_to_moveit_target_node",
         name="holoassist_selected_cube_to_moveit_target",
         output="screen",
@@ -278,8 +259,8 @@ def generate_launch_description() -> LaunchDescription:
             LaunchConfiguration("hw_config"),
             {
                 "target_frame": LaunchConfiguration("frame"),
-                "output_point_topic": "/moveit_robot_control/target_point",
-                "output_pose_topic": "/moveit_robot_control/target_pose",
+                "output_point_topic": "/holoassist/movement/target_point",
+                "output_pose_topic": "/holoassist/movement/target_pose",
             },
         ],
     )
@@ -300,8 +281,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # Startup sequencing (robot driver + perception already running via launch.sh):
     #  t=0s   moveit_stack   — move_group waits for controller_manager + joint_states
-    #  t=0s   workspace_frame_tf
-    #  t=5s   workspace_scene — needs TF to be up
+    #  t=5s   workspace_scene
     #  t=8s   coordinate_listener + pick_place_sequencer
     #  t=10s  pick_place_service + selected_cube_adapter
     #  t=12s  RViz
@@ -327,12 +307,9 @@ def generate_launch_description() -> LaunchDescription:
             start_pick_place_arg,
             grasp_z_absolute_arg,
             cube_pose_topic_prefix_arg,
-            use_calibrated_workspace_arg,
-            calibration_yaml_arg,
             use_rviz_arg,
             rviz_config_arg,
             moveit_stack,
-            workspace_frame_tf,
             TimerAction(period=5.0, actions=[workspace_scene]),
             TimerAction(period=8.0, actions=[coordinate_listener, pick_place_sequencer]),
             TimerAction(period=10.0, actions=[pick_place_service, selected_cube_adapter]),

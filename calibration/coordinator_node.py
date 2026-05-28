@@ -21,9 +21,9 @@ from easy_handeye2_msgs import srv as eh_srv
 
 COMMAND_TOPIC = "/holoassist/calibration/command"
 STATUS_TOPIC = "/holoassist/calibration/status"
-MOVE_STATE_TOPIC = "/moveit_robot_control/state"
-MOVE_STOP_TOPIC = "/moveit_robot_control/stop"
-JOINT_TARGET_TOPIC = "/moveit_robot_control/target_joint_state"
+MOVE_STATE_TOPIC = "/holoassist/movement/state"
+MOVE_STOP_TOPIC = "/holoassist/movement/stop"
+JOINT_TARGET_TOPIC = "/holoassist/movement/target_joint_state"
 
 
 class CalibrationCoordinator(Node):

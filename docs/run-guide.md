@@ -14,12 +14,12 @@
 Run **once** after mounting the camera, or any time the camera or robot base moves.
 
 ```bash
-./calibrate.sh --robot-ip 192.168.0.194
+./scripts/calibrate.sh --robot-ip 192.168.0.194
 ```
 
 **What it starts:**
 1. `ur_onrobot_control start_robot.launch.py` — UR3e driver (real hardware)
-2. `holo_assist_depth_tracker camera_only.launch.py` — RealSense color + depth streams
+2. `holoassist_perception camera_only.launch.py` — RealSense color + depth streams
 3. `apriltag_ros apriltag_node` — detects tag family `36h11`, size `0.032 m`, publishes TF
 4. `easy_handeye2 calibrate.launch.py` — calibration GUI (`eye_on_base`, tracking `camera_link`)
 
@@ -47,7 +47,7 @@ ros2 run tf2_ros tf2_echo base_link camera_link
 
 ---
 
-## 2. Main Launcher (`launch.sh`)
+## 2. Main Launcher (`scripts/launch.sh`)
 
 The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launch.py`.
 
@@ -55,19 +55,19 @@ The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launc
 
 #### Fake hardware (no robot)
 ```bash
-./launch.sh
+./scripts/launch.sh
 ```
 
 #### Real robot, teleop only
 ```bash
-./launch.sh --robot-ip 192.168.0.194
+./scripts/launch.sh --robot-ip 192.168.0.194
 ```
 - Switches to `forward_velocity_controller` + `finger_width_controller` for velocity teleop
 - On teach pendant: load and run **External Control**
 
 #### Real robot + perception
 ```bash
-./launch.sh --robot-ip 192.168.0.194 --perception
+./scripts/launch.sh --robot-ip 192.168.0.194 --perception
 ```
 - Camera auto-detected: RealSense → Logitech Brio → generic webcam → sim fallback
 - Reads `~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib` and publishes static TF
@@ -76,7 +76,7 @@ The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launc
 
 #### Real robot + perception + MoveIt autonomous sorting
 ```bash
-./launch.sh --robot-ip 192.168.0.194 --perception --moveit
+./scripts/launch.sh --robot-ip 192.168.0.194 --perception --moveit
 ```
 - Keeps `scaled_joint_trajectory_controller` active (MoveIt's default)
 - Starts `full_holoassist_hardware.launch.py` with staggered timer:
@@ -88,9 +88,9 @@ The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launc
 
 #### Fake hardware + perception (sim fallback)
 ```bash
-./launch.sh --perception
+./scripts/launch.sh --perception
 ```
-- No camera found → starts `holo_assist_depth_tracker_sim sim_april_cube_perception.launch.py`
+- No camera found → starts `holoassist_perception sim_april_cube_perception.launch.py`
 
 ### Flags Reference
 
@@ -110,7 +110,7 @@ The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launc
 | Process | Command |
 |---|---|
 | UR + OnRobot Driver | `ur_onrobot_control start_robot.launch.py ur_type:=ur3e onrobot_type:=rg2` |
-| Trolley Scene Publisher | `holo_assist_depth_tracker holoassist_trolley_scene_publisher` |
+| Trolley Scene Publisher | `holoassist_perception holoassist_trolley_scene_publisher` |
 | ROS-TCP Endpoint | `ros_tcp_endpoint default_server_endpoint` on port 10000 |
 | IP Beacon | `beacon.py` — UDP multicast so Quest auto-discovers the ROS endpoint |
 
@@ -118,20 +118,20 @@ The launcher sources ROS Humble + `ros2_ws/install/setup.bash`, then runs `launc
 
 ---
 
-## 3. Dashboard (`dashboard.sh`)
+## 3. Dashboard (`scripts/dashboard.sh`)
 
 PyQt5 E-stop and monitoring dashboard. Designed for 1280×800 (Steam Deck).
 
 ```bash
-./dashboard.sh
-./dashboard.sh --fullscreen
+./scripts/dashboard.sh
+./scripts/dashboard.sh --fullscreen
 ```
 
 In normal mode, also starts `dashboard/bridge_server.py` on port **9090** (WebSocket) so a Steam Deck or other client can connect remotely:
 
 ```bash
 # On Steam Deck / remote machine:
-./dashboard.sh --bridge ws://192.168.0.xxx:9090
+./scripts/dashboard.sh --bridge ws://192.168.0.xxx:9090
 ```
 
 **Dashboard tabs:** Status · Headset · Graph · Stats · Latency · Session
@@ -142,7 +142,7 @@ In normal mode, also starts `dashboard/bridge_server.py` on port **9090** (WebSo
 
 ## 4. Unity Cube Relay (topic_tools)
 
-After `launch.sh --perception`, perception publishes to `/holoassist/perception/april_cube_N_pose`. Unity reads `/holoassist/unity/cube_N_pose`. Run this relay to bridge them:
+After `scripts/launch.sh --perception`, perception publishes to `/holoassist/perception/april_cube_N_pose`. Unity reads `/holoassist/unity/cube_N_pose`. Run this relay to bridge them:
 
 ```bash
 for n in 1 2 3 4; do
@@ -152,7 +152,7 @@ for n in 1 2 3 4; do
 done
 ```
 
-> **Note:** This relay is only needed if you are not using `--moveit` mode (which starts the full `holo_assist_depth_tracker_sim` stack that already includes the adapter). For standalone perception + Unity visualisation without MoveIt, run the relay above.
+> **Note:** This relay is only needed if you are not using `--moveit` mode (which starts the full `holoassist_perception` stack that already includes the adapter). For standalone perception + Unity visualisation without MoveIt, run the relay above.
 
 ---
 
@@ -162,7 +162,7 @@ Once `--moveit` is running, trigger a pick with:
 
 ```bash
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 ```
 
@@ -177,7 +177,7 @@ ros2 service call /holoassist/pick_cube_to_bin \
 
 **Monitor state:**
 ```bash
-ros2 topic echo /moveit_robot_control/state
+ros2 topic echo /holoassist/movement/state
 # QUEUED → PLANNING → PLANNED → EXECUTING → COMPLETE
 ros2 topic echo /pick_place/status
 ```
@@ -186,7 +186,7 @@ ros2 topic echo /pick_place/status
 
 ## 6. Expected Startup Checklist
 
-After `./launch.sh --robot-ip 192.168.0.194 --perception`:
+After `./scripts/launch.sh --robot-ip 192.168.0.194 --perception`:
 
 - [ ] UR driver active: `ros2 control list_controllers` shows `joint_state_broadcaster [active]`
 - [ ] Controller switched: `forward_velocity_controller [active]`
@@ -214,6 +214,6 @@ ros2 topic pub --rate 50 /forward_velocity_controller/commands \
   std_msgs/Float64MultiArray '{data: [0.0, 0.0, 0.1, 0.0, 0.0, 0.0]}'
 
 # Manually send robot to XYZ (MoveIt must be running)
-ros2 topic pub --once /moveit_robot_control/target_point geometry_msgs/msg/Point \
+ros2 topic pub --once /holoassist/movement/target_point geometry_msgs/msg/Point \
   "{x: 0.20, y: -0.30, z: 0.15}"
 ```

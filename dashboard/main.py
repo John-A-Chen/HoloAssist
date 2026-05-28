@@ -1996,6 +1996,7 @@ def main():
     # Allow Ctrl+C in terminal to close the app. PyQt5 blocks Python signals
     # while in the event loop, so a short timer wakes the interpreter regularly.
     signal.signal(signal.SIGINT, lambda *_: app.quit())
+    signal.signal(signal.SIGTERM, lambda *_: app.quit())
     sigint_timer = QTimer()
     sigint_timer.timeout.connect(lambda: None)
     sigint_timer.start(200)

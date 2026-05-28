@@ -214,11 +214,26 @@ class BridgeServer:
         return d
 
     async def run(self):
+        import signal as _signal
+        loop = asyncio.get_running_loop()
+        stop = asyncio.Event()
+        for sig in (_signal.SIGTERM, _signal.SIGINT):
+            try:
+                loop.add_signal_handler(sig, stop.set)
+            except (ValueError, OSError):
+                pass
+
         try:
             async with serve(self._handler, self.host, self.port,
                              max_size=10 * 1024 * 1024):
                 print(f"[bridge] listening on ws://{self.host}:{self.port}", flush=True)
-                await self._push_loop()
+                push_task = asyncio.create_task(self._push_loop())
+                await stop.wait()
+                push_task.cancel()
+                try:
+                    await push_task
+                except asyncio.CancelledError:
+                    pass
         except OSError as e:
             if e.errno == 98:
                 print(f"[bridge] ERROR: port {self.port} already in use — "

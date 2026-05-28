@@ -13,11 +13,8 @@ These are fully custom — no upstream to track:
 
 | Package | Path |
 |---|---|
-| `holo_assist_depth_tracker` | `ros2_ws/src/holo_assist_depth_tracker/` |
-| `holo_assist_depth_tracker_sim` | `ros2_ws/src/holo_assist_depth_tracker_sim/` |
-| `holo_assist_depth_tracker_sim_interfaces` | `ros2_ws/src/holo_assist_depth_tracker_sim_interfaces/` |
-| `moveit_robot_control` | `ros2_ws/src/moveit_robot_control/` |
-| `moveit_robot_control_msgs` | `ros2_ws/src/moveit_robot_control_msgs/` |
+| `holoassist_perception` | `ros2_ws/src/HoloAssist_Perception/` |
+| `holoassist_movement` | `ros2_ws/src/HoloAssist_Movement/` |
 | `holoassist_unity_bridge` | `ros2_ws/src/holoassist_unity_bridge/` |
 
 ### Packages installed via apt (no vendoring needed)
@@ -177,13 +174,13 @@ all tag IDs `[0..3, 10..33]` that the detector should publish TF for.
 ### MoveIt 2 (apt, not vendored)
 
 We use `ros-humble-moveit` as-is. Our custom packages are:
-- `moveit_robot_control` — wraps `MoveGroupInterface` with our Cartesian-first/pose-goal-fallback
-  pattern, manages the workspace collision scene, and runs the pick/place state machine
-- `moveit_robot_control_msgs` — typed command/status messages for our control loop
+- `holoassist_movement` — wraps `MoveGroupInterface` with our Cartesian-first/pose-goal-fallback
+  pattern, manages the workspace collision scene, runs the pick/place state machine, and defines
+  the typed command/status messages for our control loop
 - `ur_onrobot_moveit_config` — SRDF and MoveIt config for the UR3e+RG2 arm group
 
 We don't patch MoveIt itself. If a future MoveIt Humble update breaks the `MoveGroupInterface`
-API, only `moveit_robot_control/moveit_robot_control.py` needs updating.
+API, only `HoloAssist_Movement/holoassist_movement_nodes/holoassist_movement.py` needs updating.
 
 ### ROS-TCP-Endpoint (fork)
 

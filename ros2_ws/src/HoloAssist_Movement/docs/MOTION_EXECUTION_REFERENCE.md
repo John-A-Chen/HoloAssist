@@ -1,4 +1,4 @@
-# Motion Execution Reference (`moveit_robot_control`)
+# Motion Execution Reference (`holoassist_movement`)
 
 This document covers the motion execution side of the `j0hn` branch: the coordinate listener, pick-place sequencer, pick-place service, and workspace management nodes.
 
@@ -7,16 +7,16 @@ This document covers the motion execution side of the `j0hn` branch: the coordin
 ## 1. `coordinate_listener` (MoveItCoordinateTopicControl)
 
 **Executable:** `coordinate_listener`
-**File:** `moveit_robot_control_node/moveit_robot_control.py`
+**File:** `holoassist_movement_nodes/holoassist_movement.py`
 **Class:** `MoveItCoordinateTopicControl`
 
 ### Goal input topics
 
 | Topic | Type | Behaviour |
 |---|---|---|
-| `/moveit_robot_control/target_pose` | `geometry_msgs/msg/Pose` | Explicit position + orientation |
-| `/moveit_robot_control/target_point` | `geometry_msgs/msg/Point` | Position only; orientation from policy |
-| `/moveit_robot_control/target` | `moveit_robot_control_msgs/msg/TargetRPY` | Legacy format |
+| `/holoassist/movement/target_pose` | `geometry_msgs/msg/Pose` | Explicit position + orientation |
+| `/holoassist/movement/target_point` | `geometry_msgs/msg/Point` | Position only; orientation from policy |
+| `/holoassist/movement/target` | `holoassist_movement/msg/TargetRPY` | Legacy format |
 
 Goals are validated and queued in a deque; processed one-at-a-time.
 
@@ -60,16 +60,16 @@ Before execution:
 
 | Topic | Type | Contents |
 |---|---|---|
-| `/moveit_robot_control/state` | String, transient local | `QUEUED → PLANNING → PLANNED → EXECUTING → COMPLETE/FAILED/INVALID` |
-| `/moveit_robot_control/status` | String | Human-readable current action |
-| `/moveit_robot_control/debug` | String | JSON: plan stats, trajectory length, failure reason |
-| `/moveit_robot_control/complete` | String | Completion marker per goal |
+| `/holoassist/movement/state` | String, transient local | `QUEUED → PLANNING → PLANNED → EXECUTING → COMPLETE/FAILED/INVALID` |
+| `/holoassist/movement/status` | String | Human-readable current action |
+| `/holoassist/movement/debug` | String | JSON: plan stats, trajectory length, failure reason |
+| `/holoassist/movement/complete` | String | Completion marker per goal |
 
 ---
 
 ## 2. `pick_place_sequencer`
 
-**File:** `moveit_robot_control_node/pick_place_sequencer.py`
+**File:** `holoassist_movement_nodes/pick_place_sequencer.py`
 
 ### Role
 
@@ -122,8 +122,8 @@ Defined in `config/bin_poses.json`. Four bins: `bin_1` through `bin_4`.
 
 ## 3. `pick_place_service_node` (PickCubeToBin service bridge)
 
-**File:** `holo_assist_depth_tracker_sim/holo_assist_depth_tracker_sim/pick_place_service_node.py`
-**Package:** `holo_assist_depth_tracker_sim`
+**File:** `HoloAssist_Perception/holoassist_perception_nodes/sim/pick_place_service_node.py`
+**Package:** `holoassist_perception`
 
 ### Role
 
@@ -133,7 +133,7 @@ Bridges the `/holoassist/pick_cube_to_bin` service call to the pick_place_sequen
 
 ```
 /holoassist/pick_cube_to_bin
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin
+  holoassist_perception/srv/PickCubeToBin
     string cube_name   # "april_cube_1"–"april_cube_4" or "1"–"4"
     string bin_id      # "bin_1"–"bin_4" or "1"–"4"
     ---
@@ -157,7 +157,7 @@ The sim launch (`full_holoassist_moveit_sim.launch.py`) explicitly sets `cube_po
 ```bash
 source install/setup.bash
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 ```
 
@@ -165,7 +165,7 @@ ros2 service call /holoassist/pick_cube_to_bin \
 
 ## 4. `workspace_scene_manager`
 
-**File:** `moveit_robot_control_node/workspace_scene_manager.py`
+**File:** `holoassist_movement_nodes/workspace_scene_manager.py`
 
 ### Role
 
@@ -181,7 +181,7 @@ workspace_scene_manager:
     frame_id: base_link
     publish_table_mesh: true
     apply_table_collision: false
-    table_mesh_resource: package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae
+    table_mesh_resource: package://holoassist_movement/meshes/UR3eTrolley_decimated.dae
     table_mesh_xyz: [0.031, -0.210, -1.05]   # mesh origin in base_link
     table_mesh_rpy_deg: [0.0, 0.0, 0.0]
     table_mesh_scale: [1.0, 1.0, 1.0]
@@ -191,7 +191,7 @@ workspace_scene_manager:
 
 ## 5. `workspace_frame_tf`
 
-**File:** `moveit_robot_control_node/workspace_frame_tf.py`
+**File:** `holoassist_movement_nodes/workspace_frame_tf.py`
 
 **Sim only.** Broadcasts a static `base_link → workspace_frame` TF. On hardware, `workspace_frame` is published dynamically by `workspace_board_node`.
 
@@ -216,7 +216,7 @@ holoassist_workspace_frame_tf:
 ### Simulation
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py
+ros2 launch holoassist_movement full_holoassist_moveit_sim.launch.py
 ```
 
 Key sim-specific settings passed to coordinate_listener:
@@ -229,7 +229,7 @@ trajectory_topic: /joint_trajectory_controller/joint_trajectory
 ### Hardware
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_hardware.launch.py robot_ip:=<ip>
+ros2 launch holoassist_movement full_holoassist_hardware.launch.py robot_ip:=<ip>
 ```
 
 Key hardware settings:
@@ -251,7 +251,7 @@ t=15s  RViz
 ### Coordinate listener only
 
 ```bash
-ros2 launch moveit_robot_control coordinate_listener.launch.py
+ros2 launch holoassist_movement coordinate_listener.launch.py
 ```
 
 All parameters can be overridden as launch arguments.
@@ -262,23 +262,23 @@ All parameters can be overridden as launch arguments.
 
 ```bash
 # State and status
-ros2 topic echo /moveit_robot_control/state --once
-ros2 topic echo /moveit_robot_control/status --once
-ros2 topic echo /moveit_robot_control/debug --once
+ros2 topic echo /holoassist/movement/state --once
+ros2 topic echo /holoassist/movement/status --once
+ros2 topic echo /holoassist/movement/debug --once
 
 # Send a manual point goal
-ros2 topic pub --once /moveit_robot_control/target_point \
+ros2 topic pub --once /holoassist/movement/target_point \
   geometry_msgs/msg/Point "{x: 0.30, y: 0.00, z: 0.20}"
 
 # Send a manual pose goal
-ros2 topic pub --once /moveit_robot_control/target_pose \
+ros2 topic pub --once /holoassist/movement/target_pose \
   geometry_msgs/msg/Pose \
   "{position: {x: 0.30, y: 0.00, z: 0.20}, orientation: {x: 1.0, y: 0.0, z: 0.0, w: 0.0}}"
 
 # Trigger a pick via service
 source install/setup.bash
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 
 # Workspace scene markers visible?

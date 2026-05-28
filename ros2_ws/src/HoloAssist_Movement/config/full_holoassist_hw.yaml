@@ -3,7 +3,7 @@ workspace_scene_manager:
     frame_id: base_link
     publish_table_mesh: true
     apply_table_collision: false
-    table_mesh_resource: package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae
+    table_mesh_resource: package://holoassist_movement/meshes/UR3eTrolley_decimated.dae
     # Trolley mesh placement — same offsets as sim (calibrated against physical trolley).
     table_mesh_xyz: [0.031, -0.210, -1.05]
     table_mesh_rpy_deg: [0.0, 0.0, 0.0]

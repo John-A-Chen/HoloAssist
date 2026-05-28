@@ -1,6 +1,6 @@
-# moveit_robot_control
+# holoassist_movement
 
-`moveit_robot_control` is the HoloAssist motion-control package. It brings together the UR3e + OnRobot MoveIt stack, the workspace/trolley scene, fake-hardware simulation, and the pick-and-place sequencer.
+`holoassist_movement` is the HoloAssist motion-control package. It brings together the UR3e + OnRobot MoveIt stack, the workspace/trolley scene, fake-hardware simulation, and the pick-and-place sequencer.
 
 Use this README for day-to-day running and debugging. Deeper implementation notes live in:
 
@@ -38,7 +38,7 @@ pkill -f "rviz2"
 This is the normal development command. It uses fake hardware and does not need a robot IP.
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_moveit_sim.launch.py \
+ros2 launch holoassist_movement full_holoassist_moveit_sim.launch.py \
   use_rviz:=true \
   start_pick_place:=true
 ```
@@ -68,7 +68,7 @@ With the fake sim running, open a second terminal, source the workspace, then ca
 
 ```bash
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 ```
 
@@ -132,7 +132,7 @@ ros2 run ur_client_library start_ursim.sh -m ur3e
 the robot IP is normally `192.168.56.101`:
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+ros2 launch holoassist_movement full_holoassist_hardware.launch.py \
   robot_ip:=192.168.56.101 \
   start_camera:=false
 ```
@@ -140,7 +140,7 @@ ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
 For the real robot, replace the IP and normally leave the camera enabled:
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+ros2 launch holoassist_movement full_holoassist_hardware.launch.py \
   robot_ip:=<robot_ip>
 ```
 
@@ -160,10 +160,10 @@ start_pick_place:=true
 For URSim testing without the real camera stack:
 
 ```bash
-ros2 launch moveit_robot_control full_holoassist_hardware.launch.py \
+ros2 launch holoassist_movement full_holoassist_hardware.launch.py \
   robot_ip:=192.168.56.101 \
   robot_base_yaw_rad:=0.0 \
-  hw_config:=/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/moveit_robot_control/config/full_holoassist_ursim.yaml \
+  hw_config:=/home/ollie/git/RS2/main/HoloAssist/ros2_ws/src/HoloAssist_Movement/config/full_holoassist_ursim.yaml \
   start_camera:=false \
   start_tracker:=false \
   start_overlay:=false \
@@ -179,14 +179,14 @@ Build this package after editing launch files, Python nodes, configs, or RViz fi
 ```bash
 cd /home/ollie/git/RS2/main/HoloAssist/ros2_ws
 source /opt/ros/humble/setup.bash
-colcon build --packages-select moveit_robot_control --symlink-install
+colcon build --packages-select holoassist_movement --symlink-install
 source install/setup.bash
 ```
 
-If you edit the sim bridge in `holo_assist_depth_tracker_sim`, build that package too:
+If you edit the sim bridge in `holoassist_perception`, build that package too:
 
 ```bash
-colcon build --packages-select holo_assist_depth_tracker_sim --symlink-install
+colcon build --packages-select holoassist_perception --symlink-install
 source install/setup.bash
 ```
 
@@ -228,22 +228,22 @@ coordinate_listener
 Node name:
 
 ```text
-moveit_robot_control
+holoassist_movement
 ```
 
 Inputs:
 
-- `/moveit_robot_control/target_point` - `geometry_msgs/msg/Point`
-- `/moveit_robot_control/target_pose` - `geometry_msgs/msg/Pose`
-- `/moveit_robot_control/target` - `moveit_robot_control_msgs/msg/TargetRPY`
-- `/moveit_robot_control/target_joint_state` - `sensor_msgs/msg/JointState`
+- `/holoassist/movement/target_point` - `geometry_msgs/msg/Point`
+- `/holoassist/movement/target_pose` - `geometry_msgs/msg/Pose`
+- `/holoassist/movement/target` - `holoassist_movement/msg/TargetRPY`
+- `/holoassist/movement/target_joint_state` - `sensor_msgs/msg/JointState`
 
 Outputs:
 
-- `/moveit_robot_control/status`
-- `/moveit_robot_control/state`
-- `/moveit_robot_control/debug`
-- `/moveit_robot_control/complete`
+- `/holoassist/movement/status`
+- `/holoassist/movement/state`
+- `/holoassist/movement/debug`
+- `/holoassist/movement/complete`
 
 Important parameters:
 
@@ -275,9 +275,9 @@ Inputs:
 Outputs:
 
 - `/pick_place/status`
-- `/moveit_robot_control/target_point`
-- `/moveit_robot_control/target_pose`
-- `/moveit_robot_control/target_joint_state`
+- `/holoassist/movement/target_point`
+- `/holoassist/movement/target_pose`
+- `/holoassist/movement/target_joint_state`
 - `/finger_width_trajectory_controller/joint_trajectory`
 - `/workspace_scene/command`
 
@@ -340,7 +340,7 @@ Bin poses are in [config/bin_poses.json](./config/bin_poses.json):
 To use another bin file:
 
 ```bash
-ros2 launch moveit_robot_control pick_place.launch.py \
+ros2 launch holoassist_movement pick_place.launch.py \
   bin_config_path:=/full/path/to/bin_poses.json
 ```
 
@@ -349,14 +349,14 @@ ros2 launch moveit_robot_control pick_place.launch.py \
 Move to one XYZ point:
 
 ```bash
-ros2 topic pub --once /moveit_robot_control/target_point \
+ros2 topic pub --once /holoassist/movement/target_point \
   geometry_msgs/msg/Point "{x: 0.20, y: 0.30, z: 0.10}"
 ```
 
 Move to a full pose:
 
 ```bash
-ros2 topic pub --once /moveit_robot_control/target_pose \
+ros2 topic pub --once /holoassist/movement/target_pose \
   geometry_msgs/msg/Pose \
   "{position: {x: 0.20, y: 0.30, z: 0.10}, orientation: {x: 0.0, y: 1.0, z: 0.0, w: 0.0}}"
 ```
@@ -364,7 +364,7 @@ ros2 topic pub --once /moveit_robot_control/target_pose \
 Move to the pick/place home joint pose:
 
 ```bash
-ros2 topic pub --once /moveit_robot_control/target_joint_state \
+ros2 topic pub --once /holoassist/movement/target_joint_state \
   sensor_msgs/msg/JointState \
   "{name: ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'], position: [-1.308997, -1.570796, -0.872665, -2.094395, 1.570796, 0.0]}"
 ```
@@ -427,9 +427,9 @@ ros2 topic echo /pick_place/status
 Check MoveIt state:
 
 ```bash
-ros2 topic echo /moveit_robot_control/state
-ros2 topic echo /moveit_robot_control/status
-ros2 topic echo /moveit_robot_control/debug
+ros2 topic echo /holoassist/movement/state
+ros2 topic echo /holoassist/movement/status
+ros2 topic echo /holoassist/movement/debug
 ```
 
 Common issues:
@@ -441,10 +441,10 @@ Common issues:
   Check `/joint_states` and `ros2 control list_controllers`. This usually means another UR driver stack is still running and clashing with `/controller_manager`.
 
 - The launch says `use_rviz=false` even though you passed `true`:
-  Rebuild `moveit_robot_control`; launch files run from `install/`.
+  Rebuild `holoassist_movement`; launch files run from `install/`.
 
 - A cube collision blocks the lift after grasp:
-  Restart after rebuilding `holo_assist_depth_tracker_sim`. The sim bridge suppresses the carried cube when the sequencer removes it from the planning scene.
+  Restart after rebuilding `holoassist_perception`. The sim bridge suppresses the carried cube when the sequencer removes it from the planning scene.
 
 - The robot faces the wrong way:
   For fake sim, leave `robot_base_yaw_rad` at its default `0.0`. For hardware/URSim, the hardware launch defaults to `3.14159`. This changes the URDF mounting frame, not the real joint values.

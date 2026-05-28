@@ -356,7 +356,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /holo_assist_depth_tracker/debug_image
+        Value: /holoassist/perception/debug_image
       Value: true
   Enabled: true
   Global Options:

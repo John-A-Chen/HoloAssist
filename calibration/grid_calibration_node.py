@@ -47,9 +47,9 @@ except ImportError:
 
 COMMAND_TOPIC       = "/holoassist/calibration/command"
 STATUS_TOPIC        = "/holoassist/calibration/status"
-MOVE_STATE_TOPIC    = "/moveit_robot_control/state"
-TARGET_POSE_TOPIC   = "/moveit_robot_control/target_pose"
-TARGET_JOINT_TOPIC  = "/moveit_robot_control/target_joint_state"
+MOVE_STATE_TOPIC    = "/holoassist/movement/state"
+TARGET_POSE_TOPIC   = "/holoassist/movement/target_pose"
+TARGET_JOINT_TOPIC  = "/holoassist/movement/target_joint_state"
 MARKERS_TOPIC       = "/holoassist/calibration/grid_markers"
 
 _ARM_JOINTS = [

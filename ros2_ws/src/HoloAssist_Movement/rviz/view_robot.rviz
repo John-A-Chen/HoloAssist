@@ -314,8 +314,6 @@ Visualization Manager:
           Value: true
         upper_arm_link:
           Value: true
-        workspace_frame:
-          Value: true
         world:
           Value: true
         wrist_1_link:
@@ -369,8 +367,6 @@ Visualization Manager:
             camera_link:
               camera_color_optical_frame:
                 {}
-            workspace_frame:
-              {}
       Update Interval: 0
       Value: true
     - Acceleration_Scaling_Factor: 0.1
@@ -707,7 +703,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /holo_assist_depth_tracker/debug_image
+        Value: /holoassist/perception/debug_image
       Value: true
   Enabled: true
   Global Options:

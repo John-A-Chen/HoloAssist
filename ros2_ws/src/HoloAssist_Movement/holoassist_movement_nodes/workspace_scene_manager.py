@@ -29,7 +29,7 @@ DEFAULT_BLOCK_POSE_TOPIC = "/workspace_scene/spawn_block_pose"
 DEFAULT_STATUS_TOPIC = "/workspace_scene/status"
 DEFAULT_APPLY_PLANNING_SCENE_SERVICE = "/apply_planning_scene"
 DEFAULT_TABLE_MESH_RESOURCE = (
-    "package://moveit_robot_control/meshes/UR3eTrolley_decimated.dae"
+    "package://holoassist_movement/meshes/UR3eTrolley_decimated.dae"
 )
 TABLE_MARKER_NS = "workspace_table"
 BLOCK_MARKER_NS = "workspace_blocks"

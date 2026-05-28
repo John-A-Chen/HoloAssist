@@ -19,7 +19,7 @@ from geometry_msgs.msg import Point
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Quaternion
 try:
-    from moveit_robot_control_msgs.msg import TargetRPY
+    from holoassist_movement.msg import TargetRPY
     HAVE_TARGET_RPY = True
 except ImportError:
     TargetRPY = None
@@ -57,7 +57,7 @@ from ur_dashboard_msgs.msg import SafetyMode
 
 JOINT_STATES_TOPIC = "/joint_states"
 TRAJECTORY_TOPIC = "/scaled_joint_trajectory_controller/joint_trajectory"
-STOP_TOPIC = "/moveit_robot_control/stop"
+STOP_TOPIC = "/holoassist/movement/stop"
 MOVEIT_PLANNING_SERVICE = "/plan_kinematic_path"
 MOVEIT_CARTESIAN_PATH_SERVICE = "/compute_cartesian_path"
 STATE_VALIDITY_SERVICE = "/check_state_validity"
@@ -146,7 +146,7 @@ UR_JOINT_ORDER = [
 def default_moveit_launch_file() -> str:
     try:
         package_launch = (
-            Path(get_package_share_directory("moveit_robot_control"))
+            Path(get_package_share_directory("holoassist_movement"))
             / "old_files"
             / "launch"
             / "ur_moveit.launch.py"
@@ -716,7 +716,7 @@ def quaternion_debug_dict(quaternion: Quaternion) -> dict[str, float]:
 
 class MoveItRobotControl(Node):
     def __init__(self) -> None:
-        super().__init__("moveit_robot_control")
+        super().__init__("holoassist_movement")
         self.declare_parameter("move_group_name", MOVE_GROUP_NAME)
         self.declare_parameter("trajectory_topic", TRAJECTORY_TOPIC)
         self.declare_parameter("require_robot_status", True)
@@ -2020,16 +2020,16 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
     def __init__(self) -> None:
         super().__init__()
 
-        self.declare_parameter("coordinate_topic", "/moveit_robot_control/target")
-        self.declare_parameter("point_topic", "/moveit_robot_control/target_point")
-        self.declare_parameter("pose_topic", "/moveit_robot_control/target_pose")
+        self.declare_parameter("coordinate_topic", "/holoassist/movement/target")
+        self.declare_parameter("point_topic", "/holoassist/movement/target_point")
+        self.declare_parameter("pose_topic", "/holoassist/movement/target_pose")
         self.declare_parameter(
-            "joint_state_topic", "/moveit_robot_control/target_joint_state"
+            "joint_state_topic", "/holoassist/movement/target_joint_state"
         )
-        self.declare_parameter("complete_topic", "/moveit_robot_control/complete")
-        self.declare_parameter("status_topic", "/moveit_robot_control/status")
-        self.declare_parameter("state_topic", "/moveit_robot_control/state")
-        self.declare_parameter("debug_topic", "/moveit_robot_control/debug")
+        self.declare_parameter("complete_topic", "/holoassist/movement/complete")
+        self.declare_parameter("status_topic", "/holoassist/movement/status")
+        self.declare_parameter("state_topic", "/holoassist/movement/state")
+        self.declare_parameter("debug_topic", "/holoassist/movement/debug")
         self.declare_parameter("stop_topic", STOP_TOPIC)
         self.declare_parameter("stop_hold_sec", 0.1)
         self.declare_parameter("complete_message", "complete")
@@ -2239,11 +2239,11 @@ class MoveItCoordinateTopicControl(MoveItRobotControl):
         if HAVE_TARGET_RPY:
             self.create_subscription(TargetRPY, coordinate_topic, self.target_rpy_cb, 10)
             accepted_goal_inputs.append(
-                f"moveit_robot_control_msgs/msg/TargetRPY goals to {coordinate_topic}"
+                f"holoassist_movement/msg/TargetRPY goals to {coordinate_topic}"
             )
         else:
             self.get_logger().warning(
-                "moveit_robot_control_msgs not found, disabling "
+                "holoassist_movement not found, disabling "
                 f"{coordinate_topic} TargetRPY input"
             )
         accepted_goal_inputs.append(f"geometry_msgs/msg/Point goals to {point_topic}")

@@ -5,7 +5,7 @@ Two RViz configs are used depending on launch mode.
 ---
 
 ## 1. Perception RViz
-**File:** `ros2_ws/src/holo_assist_depth_tracker/config/depth_tracker_visualization.rviz`  
+**File:** `ros2_ws/src/holoassist/perception/config/depth_tracker_visualization.rviz`  
 **Used when:** `--perception` flag (no `--moveit`)
 
 **Fixed frame:** `base`
@@ -18,7 +18,7 @@ Two RViz configs are used depending on launch mode.
 | April Cube 3 Marker | `/holoassist/perception/april_cube_3_marker` | Blue |
 | April Cube 4 Marker | `/holoassist/perception/april_cube_4_marker` | Yellow |
 | TF | all frames | Robot + camera + detected tags |
-| Tracker RGB Overlay | `/holo_assist_depth_tracker/debug_image` | Camera image with tag detections drawn |
+| Tracker RGB Overlay | `/holoassist/perception/debug_image` | Camera image with tag detections drawn |
 | Camera Color Raw | `/camera/camera/color/image_raw` | Disabled by default |
 
 **TF tree shown:**
@@ -66,7 +66,7 @@ Only one RViz window opens regardless of flags.
 source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash
 
 # Perception view
-rviz2 -d ros2_ws/src/holo_assist_depth_tracker/config/depth_tracker_visualization.rviz
+rviz2 -d ros2_ws/src/holoassist/perception/config/depth_tracker_visualization.rviz
 
 # Robot/MoveIt view
 rviz2 -d ros2_ws/install/ur_onrobot_description/share/ur_onrobot_description/rviz/view_robot.rviz

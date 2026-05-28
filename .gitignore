@@ -1,117 +1,219 @@
-# Node / frontend build artifacts
+# =========================
+# Node / frontend
+# =========================
 node_modules/
 dist/
+.next/
+.cache/
 
-# External packages — clone manually per SETUP.md
-ROS-TCP-Connector/
-URDF-Importer/
-ros2_ws/src/ROS-TCP-Endpoint/
-ros2_ws/src/Universal_Robots_ROS2_Driver/
 
+# =========================
+# External packages
+# =========================
+# Proper Git submodules are not ignored.
+# Unity-side submodules live in ThirdParty/.
+# ROS-side submodules live in ros2_ws/src/.
+#
+# Do NOT ignore:
+# ThirdParty/URDF-Importer/
+# ThirdParty/ROS-TCP-Connector/
+# ros2_ws/src/ROS-TCP-Endpoint/
+# ros2_ws/src/Universal_Robots_ROS2_Driver/
+
+
+# =========================
 # Unity generated files
+# =========================
 Unity/My project/Library/
 Unity/My project/Temp/
 Unity/My project/Logs/
+Unity/My project/Obj/
 Unity/My project/obj/
+Unity/My project/Build/
 Unity/My project/Builds/
 Unity/My project/UserSettings/
 Unity/My project/.utmp/
-Unity/My project/*.sln
-Unity/My project/*.csproj
 
-# colcon / ROS
+# Unity generated project / IDE files
+Unity/My project/*.sln
+Unity/My project/*.slnx
+Unity/My project/*.csproj
+Unity/My project/*.pidb
+Unity/My project/*.booproj
+Unity/My project/.vscode/
+
+# Unity generated metadata / cache
+Unity/My project/MemoryCaptures/
+Unity/My project/Recordings/
+
+# Unity Burst debug info
+Unity/My project/*_BurstDebugInformation_DoNotShip/
+
+# Unity IL2CPP backup output
+Unity/My project/*_BackUpThisFolder_ButDontShipItWithYourGame/
+**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+# Unity XR temp files
+Unity/My project/Assets/XR/Temp/
+
+# Unity scene auto-recovery files
+Unity/My project/Assets/_Recovery/
+
+# Unity build outputs
+Unity/My project/*.apk
+Unity/My project/*.aab
+*.apk
+*.aab
+
+
+# =========================
+# Stray root-level Unity dirs
+# These happen if Unity is opened from the wrong folder
+# =========================
+/Library/
+/Logs/
+/Temp/
+/Obj/
+/Build/
+/Builds/
+/UserSettings/
+
+# Usually do NOT ignore these if this repo root becomes a Unity project root.
+# In this repo they are treated as stray root-level folders.
+/Packages/
+/ProjectSettings/
+
+
+# =========================
+# ROS 2 / colcon
+# =========================
 build/
 install/
 log/
 
-#anywhere else
 **/build/
 **/install/
 **/log/
 
-# docker workspaces / bind mounts
+# Compiled objects and binaries
+*.o
+*.so
+*.dll
+*.exe
+*.a
+*.lib
+
+
+# =========================
+# Docker workspaces / bind mounts
+# =========================
 docker/**/ws/
 docker/**/build/
 docker/**/install/
 docker/**/log/
 
+
+# =========================
 # ROS tooling caches
+# =========================
 .ros/
 .rosinstall
 .rosinstall.bak
 .rosinstall.catkin
 *.repos.bak
 
-# VS Code (keep settings, ignore caches)
+
+# =========================
+# Data captures / bags / pointclouds
+# =========================
+*.db3
+*.mcap
+*.bag
+*.ply
+*.pcd
+bags/
+guyshots/*.ply
+
+
+# =========================
+# Large media / demo artefacts
+# =========================
+screenshots/*.gif
+*.mp4
+*.mov
+*.avi
+
+
+# =========================
+# Archives / exported packages
+# =========================
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+*.unitypackage
+
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+
+# =========================
+# VS Code
+# Keep useful shared config, ignore caches
+# =========================
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/tasks.json
 !.vscode/c_cpp_properties.json
+
 .vscode/*.db
 .vscode/*.db-shm
 .vscode/*.db-wal
+.vscode/*.db-*
+.vscode/ipch/
 
+
+# =========================
 # JetBrains
+# =========================
 .idea/
 
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
 
-# Bags
-*.db3
-*.mcap
-bags/
+# =========================
+# Large sim artefacts
+# =========================
+.gazebo/
+.ignition/
 
+
+# =========================
 # OS / editor junk
+# =========================
 .DS_Store
 Thumbs.db
 *~
 *.swp
 *.swo
 
-# Large sim artefacts (optional, if they appear)
-.gazebo/
-.ignition/
 
-# VSCode C/C++ IntelliSense DB (bloat)
-.vscode/*.db
-.vscode/*.db-*
-.vscode/ipch/
-
-# VSCode bloat
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-# Burst debug info (regenerated each build)
-Unity/My project/My project_BurstDebugInformation_DoNotShip/
-
-# XR Temp (Unity recreates each build)
-Unity/My project/Assets/XR/Temp/
-
-# Build APKs in project root
-Unity/My project/*.apk
-
-# Unity scene auto-recovery files
-Unity/My project/Assets/_Recovery/
-
-# Nested IDE configs (user-specific, separate from root .vscode/)
-Unity/My project/.vscode/
-
-# Stray root-level Unity dirs (created when Unity is opened from the wrong folder)
-/Library/
-/Logs/
-/Packages/
-/ProjectSettings/
-/UserSettings/
-
-# IDE-generated solution files (regenerated by Unity / Rider / VS)
+# =========================
+# Root-level IDE solution files
+# =========================
 /HoloAssist_Main.sln
 /Unity/Unity.sln
 /Unity/My project/My project.slnx
