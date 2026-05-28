@@ -14,7 +14,7 @@ The system enables intuitive human–robot collaboration by combining:
 The project explores how immersive spatial interfaces can improve safety, flexibility, and usability in human–robot interaction (HRI).
 
 ---
-
+ 
 ## Project Overview
 
 HoloAssist integrates a Meta Quest 2/3 headset with a collaborative robot system to enable:
