@@ -70,10 +70,13 @@
     </p>
     <div class="photo-row">
       <div class="photo-slot">
-        <img src="../screenshots/apriltagdebug.png" alt="AprilTag detection debug view">
+        <img src="../screenshots/apriltest.png" alt="AprilTag detection debug view">
       </div>
       <div class="photo-slot">
         <img src="../screenshots/multicubetracking.png" alt="Multi-cube tracking in RViz">
+      </div>
+      <div class="photo-slot">
+        <img src="../screenshots/aprilcube2docs.png" alt="AprilTag cube construction and labelling">
       </div>
     </div>
   </div>
@@ -191,9 +194,37 @@ ros2 run tf2_ros tf2_echo base_link camera_link</div>
         <img src="../screenshots/printingaprilcubes.png" alt="Printing AprilTag cubes">
       </div>
       <div class="photo-slot">
-        <img src="../screenshots/calibrationtesting.png" alt="Hand-eye calibration in progress">
+        <img src="../screenshots/calibration.png" alt="Hand-eye calibration in progress">
+      </div>
+      <div class="photo-slot">
+        <img src="../screenshots/cubebintracking.png" alt="Cube and bin tracking in RViz">
       </div>
     </div>
+  </div>
+</section>
+
+<section class="section alt" id="files">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Code Structure</div>
+    <h2>Key files and nodes</h2>
+    <p>Package: <code>holo_assist_depth_tracker</code> · Workspace: <code>ros2_ws/src/</code></p>
+    <table class="data-table">
+      <thead><tr><th>File / Node</th><th>Path</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>launch.py</td><td>main/</td><td>Integrated launcher for robot, teleoperation, perception, and Unity relay</td></tr>
+        <tr><td>launch.sh</td><td>main/</td><td>Shell wrapper that sources ROS and runs launch.py</td></tr>
+        <tr><td>calibrate.py</td><td>main/</td><td>Starts robot driver, RealSense, apriltag_ros, and easy_handeye2 calibration GUI</td></tr>
+        <tr><td>camera_only.launch.py</td><td>main/ros2_ws/src/holo_assist_depth_tracker/launch/</td><td>Starts RealSense colour and depth streams</td></tr>
+        <tr><td>holoassist_cube_pose_node</td><td>main/ros2_ws/src/holo_assist_depth_tracker/</td><td>Merges visible face tags into one centre pose per cube at 20 Hz</td></tr>
+        <tr><td>cube_pose_relay.py</td><td>main/ros2_ws/</td><td>Relays perception cube poses to Unity-friendly topics</td></tr>
+        <tr><td>CubePoseSubscriber.cs</td><td>main/Unity/MyProject/Assets/Scripts/</td><td>Unity-side subscriber that displays detected cubes in XR</td></tr>
+        <tr><td>ROSAutoConnect.cs</td><td>main/Unity/MyProject/Assets/Scripts/</td><td>Auto-discovers the ROS endpoint for Unity</td></tr>
+        <tr><td>config/apriltag_all.yaml</td><td>main/ros2_ws/src/holo_assist_depth_tracker/config/</td><td>Defines AprilTag family (36h11) and physical tag size (32 mm)</td></tr>
+        <tr><td>config/cubes.yaml</td><td>main/ros2_ws/src/holo_assist_depth_tracker/config/</td><td>Defines cube tag ID groups (10–33) and face-to-centre offsets</td></tr>
+        <tr><td>holoassist_calibration.calib</td><td>~/.ros2/easy_handeye2/calibrations/</td><td>Saved camera-to-robot calibration result (base_link → camera_link)</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
@@ -325,6 +356,39 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
   </div>
 </section>
 
+<section class="section" id="limitations">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Limitations</div>
+    <h2>Assumptions &amp; known limitations</h2>
+    <h3>Assumptions</h3>
+    <ul>
+      <li>AprilTags are printed at exactly 32 mm edge size</li>
+      <li>Each physical cube is 40 mm wide with a 20 mm face-to-centre offset</li>
+      <li>The camera is rigidly mounted during operation — any movement requires recalibration</li>
+      <li>The saved easy_handeye2 calibration correctly publishes <code>base_link → camera_link</code></li>
+      <li>Cube face IDs match configured groups: Cube 1 (10–15), Cube 2 (16–21), Cube 3 (22–27), Cube 4 (28–33)</li>
+      <li>Cube face tags are mounted in the expected axis order: +X, −X, +Y, −Y, +Z, −Z</li>
+    </ul>
+    <h3>Known limitations</h3>
+    <ul>
+      <li>If the camera or robot base moves, calibration must be repeated before cube poses are valid</li>
+      <li>A cube with zero visible face tags is reported as not detected — no depth-based fallback</li>
+      <li>Pose accuracy depends on printed tag size accuracy, camera intrinsic calibration, and easy_handeye2 calibration quality</li>
+      <li>The system tracks cubes by AprilTag ID only — no object classification or shape-based fallback</li>
+      <li>Unity visualisation depends on both the ROS endpoint and the cube pose relay running correctly</li>
+    </ul>
+    <h3>Future work</h3>
+    <ul>
+      <li>Automatic calibration quality check before launch — warn if transform looks wrong</li>
+      <li>Confidence scoring based on number of visible cube faces</li>
+      <li>Fuse RealSense depth information with AprilTag pose estimates for improved robustness</li>
+      <li>Extend ID groups in cubes.yaml to support more than four cubes</li>
+      <li>Clearer Unity-side diagnostics when ROS connection or pose relay fails</li>
+    </ul>
+  </div>
+</section>
+
 <footer class="doc-footer">
   <div class="doc-footer-in">
     <div>
@@ -349,7 +413,9 @@ buildDock([
   { label:'How to Run', href:'#howto',      id:'howto',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
   { label:'Topics',     href:'#topics',     id:'topics',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
   { label:'Config',     href:'#config',     id:'config',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { label:'Files',      href:'#files',      id:'files',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
   { label:'Issues',     href:'#issues',     id:'issues',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { label:'Limits',     href:'#limitations', id:'limitations', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>
 

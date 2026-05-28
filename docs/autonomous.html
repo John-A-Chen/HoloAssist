@@ -36,7 +36,7 @@
     </p>
     <div class="hero-meta">
       <div><span class="hero-meta-val">4</span>cubes selectable</div>
-      <div><span class="hero-meta-val">4</span>bin targets</div>
+      <div><span class="hero-meta-val">2</span>bin targets</div>
       <div><span class="hero-meta-val">10cm</span>pre-grasp</div>
       <div><span class="hero-meta-val">5%</span>velocity cap</div>
     </div>
@@ -49,7 +49,7 @@
     <div class="section-lbl">Overview</div>
     <h2>What this subsystem does</h2>
     <p>
-      The autonomous subsystem is Oliver's MoveIt 2 pick-and-place layer. It exposes
+      The autonomous subsystem is a MoveIt 2 pick-and-place layer. It exposes
       <code>/holoassist/pick_cube_to_bin</code>, accepts a cube name and destination bin, transforms
       the selected cube pose into <code>base_link</code>, then queues a full autonomous sequence:
       home, approach, open, descend, grip, lift, move to bin, place, release, retreat.
@@ -67,12 +67,10 @@
     </p>
     <div class="photo-row">
       <div class="photo-slot">
-        <!-- <img src="../screenshots/autonomous_demo.jpg" alt=""> -->
-        <div class="photo-slot-ph">UR3e pick-and-place demo</div>
+        <img src="../screenshots/dash_ollie.png" alt="Autonomous sorting dashboard">
       </div>
       <div class="photo-slot">
-        <!-- <img src="../screenshots/moveit_rviz.jpg" alt=""> -->
-        <div class="photo-slot-ph">MoveIt RViz + trolley scene</div>
+        <img src="../screenshots/rvis_Ollie.png" alt="MoveIt RViz planning scene">
       </div>
     </div>
   </div>
@@ -152,7 +150,34 @@
   </div>
 </section>
 
-<section class="section" id="issues">
+<section class="section" id="criteria">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Autonomous Criteria</div>
+    <h2>Assessment target and evidence</h2>
+    <p>
+      Oliver's autonomous subsystem evidence is mapped against the criteria, with the HD target
+      focused on perception-driven multi-object sorting, collision-aware MoveIt execution, and
+      timestamped status metrics from repeated cube/bin runs.
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Level</th><th>Criteria focus</th><th>Autonomous evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Pass</td><td>MoveIt 2 simulation</td><td>UR3e planning group, RViz planning scene, and basic target execution.</td></tr>
+        <tr><td>Credit</td><td>Collision and gripper control</td><td>Floor/object collision updates with RG2 open/close trajectory commands.</td></tr>
+        <tr><td>Distinction</td><td>Perception-driven pick-and-place</td><td>Live AprilTag cube poses feed the cube-to-bin service and sequenced MoveIt motions.</td></tr>
+        <tr><td>High Distinction</td><td>Repeatable autonomous sorting</td><td>Multiple cube/bin requests run without manual reset, with JSON status, failures, and timing metrics logged.</td></tr>
+      </tbody>
+    </table>
+    <div class="photo-row" style="grid-template-columns:minmax(0, 920px);">
+      <div class="photo-slot" style="aspect-ratio:1723 / 1646; background:rgba(0,0,0,.35);">
+        <img src="../screenshots/ollie_criteria.png" alt="Oliver autonomous subsystem criteria" style="object-fit:contain;">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="issues">
   <div class="section-in">
     <div class="ph-line"></div>
     <div class="section-lbl">Known Issues</div>
@@ -203,6 +228,7 @@ buildDock([
   { label:'Pipeline', href:'#pipeline', id:'pipeline', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
   { label:'Topics',   href:'#topics',   id:'topics',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
   { label:'Config',   href:'#config',   id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { label:'Criteria', href:'#criteria', id:'criteria', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { label:'Issues',   href:'#issues',   id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>

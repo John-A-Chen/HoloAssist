@@ -4,6 +4,7 @@ const _GH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function buildDock(items, opts) {
     opts = opts || {};
     var BASE = opts.base || 64, MAG = opts.mag || 88, DIST = opts.dist || 160;
+    var compactDock = window.matchMedia('(max-width: 900px), (max-aspect-ratio: 4/5), (pointer: coarse)');
 
     var wrap = document.createElement('aside');
     wrap.className = 'dock-wrap';
@@ -48,7 +49,7 @@ function buildDock(items, opts) {
 
     function setW(el, n) { el.style.setProperty('--sz', n + 'px'); }
     function reset() {
-        var mobile = window.innerWidth <= 768;
+        var mobile = compactDock.matches;
         [].slice.call(nav.querySelectorAll('.di')).forEach(function(l) {
             if (mobile) l.style.removeProperty('--sz');
             else setW(l, BASE);
@@ -56,7 +57,7 @@ function buildDock(items, opts) {
     }
 
     nav.addEventListener('pointermove', function(e) {
-        if (window.innerWidth <= 768) return;
+        if (compactDock.matches) return;
         [].slice.call(nav.querySelectorAll('.di')).forEach(function(l) {
             var r = l.getBoundingClientRect(), c = r.top + r.height / 2;
             var inf = Math.max(0, 1 - Math.abs(e.clientY - c) / DIST);
@@ -65,5 +66,6 @@ function buildDock(items, opts) {
     });
     nav.addEventListener('pointerleave', reset);
     window.addEventListener('resize', reset);
+    if (compactDock.addEventListener) compactDock.addEventListener('change', reset);
     reset();
 }

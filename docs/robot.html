@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../screenshots/logo.png">
     <title>Robot Control — HoloAssist</title>
     <link rel="stylesheet" href="../shared.css">
 </head>
@@ -15,7 +16,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Back
         </a>
-        <span class="nav-brand">Holo<span>Assist</span> &mdash; Hardware</span>
+        <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
     </div>
 </nav>
 
@@ -39,8 +40,8 @@
 <!-- SECTION: HARDWARE OVERVIEW -->
 <section class="section" id="hardware">
     <div class="section-in">
-        <p class="section-lbl">Hardware</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Hardware</div>
         <h2>UR3e + OnRobot RG2</h2>
         <p>Package: <code>ur_onrobot_control</code>, <code>moveit_robot_control</code></p>
         <table class="data-table">
@@ -83,8 +84,8 @@
 <!-- SECTION: LAUNCH MODES -->
 <section class="section alt" id="launch">
     <div class="section-in">
-        <p class="section-lbl">Launch Modes</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Launch Modes</div>
         <h2>Starting the System</h2>
         <h3>Real robot</h3>
         <div class="code-block">./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard</div>
@@ -105,8 +106,8 @@ docker run --rm -it \
 <!-- SECTION: EXTERNAL CONTROL -->
 <section class="section" id="external">
     <div class="section-in">
-        <p class="section-lbl">External Control</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">External Control</div>
         <h2>How External Control works</h2>
         <p>The UR driver uses URScript External Control to take over joint control from Polyscope:</p>
         <ol>
@@ -122,8 +123,8 @@ docker run --rm -it \
 <!-- SECTION: MOVEIT -->
 <section class="section alt" id="moveit">
     <div class="section-in">
-        <p class="section-lbl">MoveIt</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">MoveIt</div>
         <h2>Pick-and-place pipeline</h2>
         <p>Enabled with <code>--moveit</code>. Launches <code>full_holoassist_hardware.launch.py</code> which starts MoveIt move_group, trajectory execution, and the planning scene.</p>
         <h3>Cube sorting flow</h3>
@@ -177,8 +178,8 @@ docker run --rm -it \
 <!-- SECTION: SAFETY -->
 <section class="section" id="safety">
     <div class="section-in">
-        <p class="section-lbl">Safety</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Safety</div>
         <h2>Safety features</h2>
         <ul>
             <li>MoveIt collision check on every trajectory</li>

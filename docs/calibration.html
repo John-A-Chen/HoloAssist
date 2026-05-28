@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../screenshots/logo.png">
     <title>Hand-Eye Calibration — HoloAssist</title>
     <link rel="stylesheet" href="../shared.css">
 </head>
@@ -15,7 +16,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Back
         </a>
-        <span class="nav-brand">Holo<span>Assist</span> &mdash; Setup</span>
+        <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
     </div>
 </nav>
 
@@ -24,6 +25,7 @@
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
     <div class="hero-overlay"></div>
+    <img class="hero-photo" src="../screenshots/calibration.png" alt="">
     <div class="hero-content">
         <p class="hero-eyebrow">HoloAssist &mdash; Setup</p>
         <div class="hero-line"></div>
@@ -39,8 +41,8 @@
 <!-- SECTION: OVERVIEW -->
 <section class="section" id="overview">
     <div class="section-in">
-        <p class="section-lbl">Overview</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Overview</div>
         <h2>What calibration does</h2>
         <p>The camera must be calibrated relative to the robot base so cube poses are expressed in robot frame. Calibration is performed once and saved to:</p>
         <div class="code-block">~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib</div>
@@ -51,8 +53,8 @@
 <!-- SECTION: RUNNING CALIBRATION -->
 <section class="section alt" id="running">
     <div class="section-in">
-        <p class="section-lbl">Running</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Running</div>
         <h2>Running calibration</h2>
         <div class="code-block">cd ~/git/RS2-HoloAssist/main
 ./calibrate.sh</div>
@@ -72,14 +74,22 @@
 <span class="cm"># Should show: world &rarr; base_link &rarr; camera_color_optical_frame</span></div>
         <p>Or check the transform directly:</p>
         <div class="code-block">ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame</div>
+        <div class="photo-row">
+  <div class="photo-slot">
+    <img src="../screenshots/calibration.png" alt="Hand-eye calibration process">
+  </div>
+  <div class="photo-slot">
+    <img src="../screenshots/rviz_cubes.png" alt="TF tree after calibration">
+  </div>
+</div>
     </div>
 </section>
 
 <!-- SECTION: FILE FORMAT -->
 <section class="section" id="format">
     <div class="section-in">
-        <p class="section-lbl">File Format</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">File Format</div>
         <h2>Calibration file format</h2>
         <div class="code-block"><span class="cm"># ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib</span>
 transform:
@@ -94,8 +104,8 @@ parameters:
 <!-- SECTION: BIN VERIFICATION IMPACT -->
 <section class="section alt" id="impact">
     <div class="section-in">
-        <p class="section-lbl">Bin Verification</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Bin Verification</div>
         <h2>Impact on bin verification</h2>
         <ul class="issues">
             <li>

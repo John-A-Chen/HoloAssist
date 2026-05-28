@@ -18,8 +18,10 @@
         /* Dock larger on main page */
         .di { --sz: 80px; }
         .di-icon { width: 2rem; height: 2rem; }
-        @media (max-width: 768px) { .di { --sz: 44px; } .di-icon { width: 1.2rem; height: 1.2rem; } }
-        @media (max-width: 480px) { .di { --sz: 38px; } .di-icon { width: 1rem; height: 1rem; } }
+        @media (max-width: 900px), (max-aspect-ratio: 4/5), (pointer: coarse) {
+            .di { --sz: var(--compact-dock-icon); }
+            .di-icon { width: calc(var(--compact-dock-icon) * 0.46); height: calc(var(--compact-dock-icon) * 0.46); }
+        }
 
         /* ── SECTIONS ── */
         .page { scroll-snap-align: start; min-height: 100vh; position: relative; }
@@ -84,8 +86,8 @@
 
         /* ── SUBSYSTEM SLIDES ── */
         .sub-slide { scroll-snap-align: start; min-height: 100vh; position: relative; overflow: hidden; }
-        .sc-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.7s ease; }
-        .sub-slide:hover .sc-bg { transform: scale(1.03); }
+        .sc-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.7s ease, opacity 0.45s ease; }
+        .sub-slide:hover .sc-bg { transform: scale(1.03); opacity: 0; }
         .s-perc .sc-bg { background-color: #0f1826; background-image: url('screenshots/perception.png'); }
         .s-auto .sc-bg { background-color: #0a1910; background-image: url('screenshots/autonomous.png'); }
         .s-tele .sc-bg { background-color: #111118; background-image: url('screenshots/teleoperation.png'); }
@@ -162,7 +164,8 @@
         @media (max-width: 1200px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } .arch-layout { grid-template-columns: 1fr; gap: 2rem; } }
         @media (max-width: 1024px) {
             html { scroll-snap-type: none; font-size: 18px; }
-            .page, .hero, .sub-slide { min-height: auto; }
+            .page, .hero { min-height: auto; }
+            .sub-slide { min-height: 100svh; }
             .pi { padding: 3.5rem 2.5rem 3.5rem 2.5rem; min-height: auto; }
             .hero-content { padding: 0 2.5rem 4rem; }
             .hero-strip { grid-template-columns: 1fr; }
@@ -176,10 +179,21 @@
             .footer-in { grid-template-columns: 1fr 1fr; gap: 2rem; }
         }
         @media (max-width: 768px) {
-            .hero-content { padding: 0 1.5rem 2.75rem; }
-            .slide-body { padding: 1.5rem 1.5rem 5.5rem; }
-            .slide-title { font-size: 2.5rem; }
+            .hero-content { padding: 0 1.5rem calc(6rem + env(safe-area-inset-bottom)); }
+            .hero-cta { flex-wrap: nowrap; gap: 0.65rem; }
+            .hero-cta .btn { flex: 1 1 0; min-width: 0; justify-content: center; padding: 11px 8px; font-size: 0.76rem; white-space: nowrap; }
+            .sub-slide { min-height: auto; overflow: hidden; }
+            .sc-overlay { background: linear-gradient(to bottom, rgba(0,0,0,.68) 0%, rgba(0,0,0,.82) 50%, rgba(0,0,0,.94) 100%); }
+            .slide-body { position: relative; inset: auto; min-height: 100svh; padding: 1.5rem 1.5rem calc(5.5rem + env(safe-area-inset-bottom)); gap: 2.5rem; }
+            .slide-title { font-size: clamp(2.15rem, 11vw, 2.5rem); line-height: 0.98; }
+            .slide-desc { font-size: 0.96rem; line-height: 1.65; }
             .slide-specs { display: none; }
+            .slide-docs { width: 100%; justify-content: center; padding: 11px 18px; }
+            .slide-person { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.85rem 1rem; padding: 1rem; }
+            .sp-photo { width: 54px; height: 54px; }
+            .sp-info { min-width: 0; }
+            .sp-links { grid-column: 1 / -1; flex-direction: row; width: 100%; margin-left: 0; }
+            .sp-link { flex: 1 1 0; padding: 7px 10px; }
             .hs-item { padding: 1.25rem 1.5rem; }
             .hs-item:first-child { padding-left: 1.5rem; }
             .main-footer { padding: 2.5rem 1.5rem 5.5rem; }
@@ -190,6 +204,11 @@
             .pi { padding: 2.5rem 1.5rem 5.5rem; }
         }
         @media (max-width: 480px) {
+            .hero-content img { width: 48px !important; height: 48px !important; margin-bottom: 0.7rem !important; }
+            .hero-eyebrow { font-size: 0.6rem; letter-spacing: 2.4px; margin-bottom: 0.55rem; }
+            .hero-line { margin-bottom: 1rem; }
+            .hero-title { font-size: 2.55rem; margin-bottom: 0.9rem; }
+            .hero-desc { font-size: 0.92rem; line-height: 1.52; margin-bottom: 1.35rem; }
             .gal-grid { grid-template-columns: 1fr; }
             .arch-specs { grid-template-columns: 1fr; }
         }
@@ -444,12 +463,21 @@
     <div class="pi">
         <div class="ph"><div class="ph-line"></div><h2>Gallery</h2><p>Drop images / GIFs into <code style="background:rgba(51,187,255,.14);color:var(--blue-light);padding:2px 7px;border-radius:4px">screenshots/</code> and uncomment the img tags.</p></div>
         <div class="gal-grid">
-            <div class="gal-item"><!-- <img src="screenshots/rviz_cubes.png" alt="RViz"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>rviz_cubes.png</span></div><div class="gal-lbl">RViz — 4 cubes detected</div></div>
-            <div class="gal-item"><!-- <img src="screenshots/quest_ar_overlay.png" alt="Quest AR"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>quest_ar_overlay.png</span></div><div class="gal-lbl">Quest 3 AR overlay</div></div>
-            <div class="gal-item"><!-- <img src="screenshots/robot_pick_place.png" alt="Pick place"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>robot_pick_place.png</span></div><div class="gal-lbl">UR3e pick-and-place</div></div>
+            <div class="gal-item"><img src="screenshots/rviz_cubes.png" alt="RViz — 4 cubes detected"><div class="gal-lbl">RViz — 4 cubes detected</div></div>
+            <div class="gal-item"><img src="screenshots/quest_ar_overlay.png" alt="Quest 3 AR overlay"><div class="gal-lbl">Quest 3 AR overlay</div></div>
+            <div class="gal-item"><img src="screenshots/simtestingold.png" alt="UR3e pick-and-place simulation"><div class="gal-lbl">UR3e pick-and-place</div></div>
             <div class="gal-item"><img src="screenshots/dashboard.png" alt="Dashboard"><div class="gal-lbl">E-stop dashboard</div></div>
-            <div class="gal-item"><!-- <img src="screenshots/calibration.png" alt="Calibration"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>calibration.png</span></div><div class="gal-lbl">Hand-eye calibration</div></div>
-            <div class="gal-item"><!-- <img src="screenshots/april_tag_detection.gif" alt="AprilTag GIF"> --><div class="gal-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>april_tag_detection.gif</span></div><div class="gal-lbl">AprilTag single-tag detection</div></div>
+            <div class="gal-item"><img src="screenshots/calibration.png" alt="Hand-eye calibration"><div class="gal-lbl">Hand-eye calibration</div></div>
+            <div class="gal-item"><img src="screenshots/apriltest.png" alt="AprilTag single-tag detection"><div class="gal-lbl">AprilTag single-tag detection</div></div>
+            <div class="gal-item"><img src="screenshots/multicubetracking.png" alt="Multi-cube tracking"><div class="gal-lbl">Multi-cube tracking</div></div>
+            <div class="gal-item"><img src="screenshots/printingaprilcubes.png" alt="Printing AprilTag cubes"><div class="gal-lbl">Printing AprilTag cubes</div></div>
+            <div class="gal-item"><img src="screenshots/aprilcube2docs.png" alt="AprilTag cube labelling"><div class="gal-lbl">AprilTag cube assembly</div></div>
+            <div class="gal-item"><img src="screenshots/cubebintracking.png" alt="Cube bin tracking"><div class="gal-lbl">Bin tracking verification</div></div>
+            <div class="gal-item"><img src="screenshots/debugtabdashboard.png" alt="Debug tab dashboard"><div class="gal-lbl">E-stop debug tab</div></div>
+            <div class="gal-item"><img src="screenshots/headsetstreamdashboard.png" alt="Headset stream dashboard"><div class="gal-lbl">Headset stream view</div></div>
+            <div class="gal-item"><img src="screenshots/resourcemonitor.png" alt="Resource monitor"><div class="gal-lbl">System resource monitor</div></div>
+            <div class="gal-item"><img src="screenshots/ollieteleop.png" alt="Teleoperation demo"><div class="gal-lbl">XR teleoperation</div></div>
+            <div class="gal-item"><img src="screenshots/session.png" alt="Session logging"><div class="gal-lbl">Session logging</div></div>
         </div>
     </div>
 </section>

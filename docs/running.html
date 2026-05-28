@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../screenshots/logo.png">
     <title>Running the System — HoloAssist</title>
     <link rel="stylesheet" href="../shared.css">
 </head>
@@ -15,7 +16,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Back
         </a>
-        <span class="nav-brand">Holo<span>Assist</span> &mdash; Operations</span>
+        <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
     </div>
 </nav>
 
@@ -24,6 +25,7 @@
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
     <div class="hero-overlay"></div>
+    <img class="hero-photo" src="../screenshots/dashboard.png" alt="">
     <div class="hero-content">
         <p class="hero-eyebrow">HoloAssist &mdash; Operations</p>
         <div class="hero-line"></div>
@@ -39,8 +41,8 @@
 <!-- SECTION: PREREQUISITES -->
 <section class="section" id="prereqs">
     <div class="section-in">
-        <p class="section-lbl">Prerequisites</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Prerequisites</div>
         <h2>Prerequisites</h2>
         <p>Source ROS&nbsp;2 Humble and the workspace before any launch command:</p>
         <div class="code-block">source /opt/ros/humble/setup.bash
@@ -54,8 +56,8 @@ colcon build --symlink-install</div>
 <!-- SECTION: LAUNCH FLAGS -->
 <section class="section alt" id="flags">
     <div class="section-in">
-        <p class="section-lbl">Launch Flags</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Launch Flags</div>
         <h2>All available flags</h2>
         <table class="data-table">
             <thead>
@@ -101,8 +103,8 @@ colcon build --symlink-install</div>
 <!-- SECTION: REAL ROBOT -->
 <section class="section" id="real">
     <div class="section-in">
-        <p class="section-lbl">Option A</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Option A</div>
         <h2>Real Robot</h2>
         <p>Default IP: <code>192.168.0.194</code> (check the robot&rsquo;s touchscreen if different)</p>
         <div class="code-block">cd ~/git/RS2-HoloAssist/demo
@@ -114,8 +116,8 @@ colcon build --symlink-install</div>
 <!-- SECTION: URSIM -->
 <section class="section alt" id="ursim">
     <div class="section-in">
-        <p class="section-lbl">Option B</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Option B</div>
         <h2>URSim (Docker Simulator)</h2>
         <p>Use when the physical robot is not available. URSim runs Polyscope at <code>192.168.56.101</code> over a VirtualBox host-only network.</p>
         <h3>Step 1 &mdash; Start URSim</h3>
@@ -137,8 +139,8 @@ colcon build --symlink-install</div>
 <!-- SECTION: FULLY FAKE -->
 <section class="section" id="fake">
     <div class="section-in">
-        <p class="section-lbl">Option C</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Option C</div>
         <h2>Fully Fake Hardware</h2>
         <p>No robot IP = fully simulated arm. Perception still runs.</p>
         <div class="code-block">cd ~/git/RS2-HoloAssist/demo
@@ -149,8 +151,8 @@ colcon build --symlink-install</div>
 <!-- SECTION: QUEST 3 -->
 <section class="section alt" id="quest">
     <div class="section-in">
-        <p class="section-lbl">Quest 3</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Quest 3</div>
         <h2>Connecting the Quest 3</h2>
         <ol>
             <li>Connect Quest and laptop to the same WiFi network.</li>
@@ -159,14 +161,19 @@ colcon build --symlink-install</div>
             <li>TCP scanning auto-discovers the ROS bridge on the network.</li>
             <li>ROS-TCP-Endpoint listens on port <strong>10000</strong>.</li>
         </ol>
+        <div class="photo-row">
+  <div class="photo-slot">
+    <img src="../screenshots/qr.png" alt="Quest 3 QR connection code">
+  </div>
+</div>
     </div>
 </section>
 
 <!-- SECTION: STOPPING -->
 <section class="section" id="stopping">
     <div class="section-in">
-        <p class="section-lbl">Stopping</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Stopping</div>
         <h2>Stopping the System</h2>
         <p><code>Ctrl+C</code> in the launcher terminal. The launcher sends SIGTERM, waits 2&nbsp;s, then SIGKILLs all child processes.</p>
         <p>If processes remain:</p>
@@ -182,14 +189,22 @@ tail -f /tmp/holoassist_cube_pose.log
 
 <span class="cm"># MoveIt</span>
 tail -f /tmp/holoassist_moveit.log</div>
+        <div class="photo-row">
+  <div class="photo-slot">
+    <img src="../screenshots/resourcemonitor.png" alt="System resource monitor">
+  </div>
+  <div class="photo-slot">
+    <img src="../screenshots/dashboard.png" alt="E-stop dashboard">
+  </div>
+</div>
     </div>
 </section>
 
 <!-- SECTION: KNOWN ISSUES -->
 <section class="section alt" id="issues">
     <div class="section-in">
-        <p class="section-lbl">Known Issues</p>
         <div class="ph-line"></div>
+        <div class="section-lbl">Known Issues</div>
         <h2>Troubleshooting</h2>
         <ul class="issues">
             <li>
