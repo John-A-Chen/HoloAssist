@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    workspace_frame: workspace_frame
+    board_width_m: 0.700
+    board_depth_m: 0.500
+    board_thickness_m: 0.010
+    cube_size_m: 0.040

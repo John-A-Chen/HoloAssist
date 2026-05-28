@@ -1,0 +1,248 @@
+<?xml version="1.0"?>
+<robot name="holoassist_scene" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="enable_cubes" default="true"/>
+  <xacro:arg name="enable_camera" default="true"/>
+  <xacro:arg name="camera_x" default="0.0"/>
+  <xacro:arg name="camera_y" default="-0.600"/>
+  <xacro:arg name="camera_z" default="0.700"/>
+  <xacro:arg name="camera_roll" default="0.0"/>
+  <xacro:arg name="camera_pitch" default="0.0"/>
+  <xacro:arg name="camera_yaw" default="0.0"/>
+
+  <!-- Board geometry in meters -->
+  <xacro:property name="board_width" value="0.700"/>
+  <xacro:property name="board_depth" value="0.500"/>
+  <xacro:property name="board_thickness" value="0.010"/>
+  <xacro:property name="board_top_z" value="${board_thickness / 2.0}"/>
+
+  <!-- 32 mm tag with center 16 mm in from edges if flush -->
+  <xacro:property name="tag_size" value="0.032"/>
+  <xacro:property name="tag_center_edge_offset" value="0.016"/>
+  <xacro:property name="tag_plate_z" value="${board_top_z + 0.001}"/>
+
+  <!-- Board extents relative to workspace_frame origin -->
+  <xacro:property name="x_min" value="${-board_width / 2.0}"/>
+  <xacro:property name="x_max" value="${board_width / 2.0}"/>
+  <xacro:property name="y_min" value="${-board_depth / 2.0}"/>
+  <xacro:property name="y_max" value="${board_depth / 2.0}"/>
+
+  <!-- Tag centres by required layout:
+       tag 0 = front-left, tag 1 = front-right,
+       tag 2 = back-left,  tag 3 = back-right -->
+  <xacro:property name="tag0_x" value="${x_min + tag_center_edge_offset}"/>
+  <xacro:property name="tag0_y" value="${y_min + tag_center_edge_offset}"/>
+  <xacro:property name="tag1_x" value="${x_max - tag_center_edge_offset}"/>
+  <xacro:property name="tag1_y" value="${y_min + tag_center_edge_offset}"/>
+  <xacro:property name="tag2_x" value="${x_min + tag_center_edge_offset}"/>
+  <xacro:property name="tag2_y" value="${y_max - tag_center_edge_offset}"/>
+  <xacro:property name="tag3_x" value="${x_max - tag_center_edge_offset}"/>
+  <xacro:property name="tag3_y" value="${y_max - tag_center_edge_offset}"/>
+
+  <material name="board_black">
+    <color rgba="0.005 0.005 0.005 1.0"/>
+  </material>
+  <material name="camera_black">
+    <color rgba="0.02 0.02 0.02 1.0"/>
+  </material>
+  <material name="robot_orange">
+    <color rgba="1.0 0.55 0.05 0.9"/>
+  </material>
+  <material name="cube_red">
+    <color rgba="1.0 0.0 0.0 0.9"/>
+  </material>
+  <material name="cube_green">
+    <color rgba="0.0 1.0 0.0 0.9"/>
+  </material>
+  <material name="cube_blue">
+    <color rgba="0.1 0.35 1.0 0.9"/>
+  </material>
+  <material name="cube_yellow_orange">
+    <color rgba="1.0 0.7 0.0 0.9"/>
+  </material>
+
+  <xacro:macro name="tag_visual_plate" params="name x y z mesh_file yaw:=0.0">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <!-- Mesh is unit square in XY, scaled to a physical 32 mm tag plate -->
+          <mesh filename="${mesh_file}" scale="${tag_size} ${tag_size} 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+    <joint name="workspace_to_${name}" type="fixed">
+      <parent link="workspace_frame"/>
+      <child link="${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 ${yaw}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="april_cube" params="name x y z rgba_material">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.040 0.040 0.040"/>
+        </geometry>
+        <material name="${rgba_material}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.040 0.040 0.040"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="workspace_to_${name}" type="fixed">
+      <parent link="workspace_frame"/>
+      <child link="${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="world"/>
+  <link name="workspace_frame"/>
+
+  <joint name="world_to_workspace" type="fixed">
+    <parent link="world"/>
+    <child link="workspace_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="board_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${board_width} ${board_depth} ${board_thickness}"/>
+      </geometry>
+      <material name="board_black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${board_width} ${board_depth} ${board_thickness}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="workspace_to_board" type="fixed">
+    <parent link="workspace_frame"/>
+    <child link="board_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:tag_visual_plate
+    name="tag0_visual"
+    x="${tag0_x}" y="${tag0_y}" z="${tag_plate_z}"
+    mesh_file="package://holo_assist_depth_tracker/worlds/meshes/apriltags/tag_0.dae"/>
+
+  <xacro:tag_visual_plate
+    name="tag1_visual"
+    x="${tag1_x}" y="${tag1_y}" z="${tag_plate_z}"
+    mesh_file="package://holo_assist_depth_tracker/worlds/meshes/apriltags/tag_1.dae"/>
+
+  <xacro:tag_visual_plate
+    name="tag2_visual"
+    x="${tag2_x}" y="${tag2_y}" z="${tag_plate_z}"
+    mesh_file="package://holo_assist_depth_tracker/worlds/meshes/apriltags/tag_2.dae"/>
+
+  <xacro:tag_visual_plate
+    name="tag3_visual"
+    x="${tag3_x}" y="${tag3_y}" z="${tag_plate_z}"
+    mesh_file="package://holo_assist_depth_tracker/worlds/meshes/apriltags/tag_3.dae"/>
+
+  <link name="ur3e_base_link0">
+    <visual>
+      <origin xyz="0 0 0.005" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.064" length="0.010"/>
+      </geometry>
+      <material name="robot_orange"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.005" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.064" length="0.010"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Robot base in workspace_frame coords:
+       board left edge=0, right=0.700  → robot at x=0.450 → board-centre x=0.450-0.350=+0.100
+       board front edge=0, back=0.500 → robot at y=0.564 → board-centre y=0.564-0.250=+0.314
+       Robot base joint is 15 mm below board surface (z=-0.015). -->
+  <joint name="workspace_to_ur3e_base" type="fixed">
+    <parent link="workspace_frame"/>
+    <child link="ur3e_base_link0"/>
+    <origin xyz="0.100 0.314 -0.015" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:if value="$(arg enable_camera)">
+    <link name="camera_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <!-- Fake D435i body scale for RViz-only visualisation -->
+          <box size="0.090 0.025 0.025"/>
+        </geometry>
+        <material name="camera_black"/>
+      </visual>
+    </link>
+
+    <joint name="workspace_to_camera" type="fixed">
+      <parent link="workspace_frame"/>
+      <child link="camera_link"/>
+      <origin xyz="$(arg camera_x) $(arg camera_y) $(arg camera_z)"
+              rpy="$(arg camera_roll) $(arg camera_pitch) $(arg camera_yaw)"/>
+    </joint>
+
+    <link name="camera_color_frame"/>
+    <link name="camera_color_optical_frame"/>
+    <link name="camera_depth_frame"/>
+    <link name="camera_depth_optical_frame"/>
+    <link name="camera_imu_frame"/>
+
+    <joint name="camera_link_to_color_frame" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_color_frame"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="camera_color_frame_to_color_optical" type="fixed">
+      <parent link="camera_color_frame"/>
+      <child link="camera_color_optical_frame"/>
+      <!-- ROS optical frame convention:
+           +Z forward, +X right, +Y down -->
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+
+    <joint name="camera_link_to_depth_frame" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_depth_frame"/>
+      <origin xyz="-0.015 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="camera_depth_frame_to_depth_optical" type="fixed">
+      <parent link="camera_depth_frame"/>
+      <child link="camera_depth_optical_frame"/>
+      <!-- ROS optical frame convention:
+           +Z forward, +X right, +Y down -->
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+
+    <joint name="camera_link_to_imu_frame" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_imu_frame"/>
+      <origin xyz="0 0 -0.010" rpy="0 0 0"/>
+    </joint>
+  </xacro:if>
+
+  <xacro:if value="$(arg enable_cubes)">
+    <xacro:april_cube name="april_cube_1" x="-0.150" y="-0.100" z="0.020" rgba_material="cube_red"/>
+    <xacro:april_cube name="april_cube_2" x="0.150" y="-0.100" z="0.020" rgba_material="cube_green"/>
+    <xacro:april_cube name="april_cube_3" x="-0.120" y="0.100" z="0.020" rgba_material="cube_blue"/>
+    <xacro:april_cube name="april_cube_4" x="0.140" y="0.090" z="0.020" rgba_material="cube_yellow_orange"/>
+  </xacro:if>
+
+</robot>

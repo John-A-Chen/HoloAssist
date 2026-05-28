@@ -1,0 +1,22 @@
+/**:
+  ros__parameters:
+    camera_link_frame: camera_link
+    camera_color_frame: camera_color_frame
+    camera_color_optical_frame: camera_color_optical_frame
+    camera_depth_frame: camera_depth_frame
+    camera_depth_optical_frame: camera_depth_optical_frame
+    camera_imu_frame: camera_imu_frame
+    camera_accel_frame: camera_accel_frame
+    camera_gyro_frame: camera_gyro_frame
+    # Default fake D435i pose in workspace_frame (x,y,z,roll,pitch,yaw), meters/radians.
+    # Matches view_holoassist_scene.launch.py camera pose so both launch paths align visually.
+    # Z=0.45 (45cm above board) with pitch=0.68 rad (~39°) aims at the workspace centre.
+    camera_default_xyzrpy: [0.0, -0.55, 0.45, 0.0, 0.68, 1.575]
+    camera_frame: camera_color_optical_frame
+    horizontal_fov_deg: 69.0
+    vertical_fov_deg: 42.0
+    near_clip_m: 0.05
+    far_clip_m: 1.2
+    max_range_m: 1.2
+    frustum_color_rgba: [0.0, 1.0, 1.0, 0.95]
+    frustum_line_width: 0.006

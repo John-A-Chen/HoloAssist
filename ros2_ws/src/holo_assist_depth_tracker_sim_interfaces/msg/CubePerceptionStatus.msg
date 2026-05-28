@@ -1,0 +1,11 @@
+std_msgs/Header header
+string cube_name
+bool visible_now
+bool last_seen_available
+bool within_fov
+bool within_range
+bool in_front
+builtin_interfaces/Duration last_seen_age
+geometry_msgs/PoseStamped truth_pose
+geometry_msgs/PoseStamped perceived_pose
+geometry_msgs/Point position_in_camera

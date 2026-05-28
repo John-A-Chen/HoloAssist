@@ -1,0 +1,15 @@
+$(var ns):
+  controller_manager:
+    ros__parameters:
+      update_rate: 50
+
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+
+      finger_width_controller:
+        type: position_controllers/JointGroupPositionController
+
+  finger_width_controller:
+    ros__parameters:
+      joints:
+        - $(var prefix)finger_width

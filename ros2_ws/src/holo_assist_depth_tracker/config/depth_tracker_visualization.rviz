@@ -1,0 +1,336 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 70
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+      Splitter Ratio: 0.5
+    Tree Height: 435
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Expanded: ~
+    Name: Tool Properties
+    Splitter Ratio: 0.5
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.4000000059604645
+      Cell Size: 0.10000000149011612
+      Class: rviz_default_plugins/Grid
+      Color: 120; 120; 120
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 1 Marker
+      Namespaces:
+        holoassist_april_cube_1: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_1_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 2 Marker
+      Namespaces:
+        holoassist_april_cube_2: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_2_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 3 Marker
+      Namespaces:
+        holoassist_april_cube_3: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_3_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: April Cube 4 Marker
+      Namespaces:
+        holoassist_april_cube_4: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/perception/april_cube_4_marker
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        apriltag_cube_1:
+          Value: true
+        apriltag_cube_2:
+          Value: true
+        apriltag_cube_3:
+          Value: true
+        apriltag_cube_4:
+          Value: true
+        base:
+          Value: true
+        base_link:
+          Value: true
+        base_link_inertia:
+          Value: true
+        cable_connector_0:
+          Value: true
+        cable_connector_1:
+          Value: true
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
+        finger_width_mock_link:
+          Value: true
+        flange:
+          Value: true
+        forearm_link:
+          Value: true
+        ft_frame:
+          Value: true
+        gripper_tcp:
+          Value: true
+        left_finger_tip:
+          Value: true
+        left_inner_finger:
+          Value: true
+        left_inner_knuckle:
+          Value: true
+        left_outer_knuckle:
+          Value: true
+        onrobot_base_link:
+          Value: true
+        right_finger_tip:
+          Value: true
+        right_inner_finger:
+          Value: true
+        right_inner_knuckle:
+          Value: true
+        right_outer_knuckle:
+          Value: true
+        shoulder_link:
+          Value: true
+        tag36h11:1:
+          Value: true
+        tag36h11:10:
+          Value: true
+        tag36h11:21:
+          Value: true
+        tag36h11:22:
+          Value: true
+        tag36h11:23:
+          Value: true
+        tag36h11:28:
+          Value: true
+        tag36h11:31:
+          Value: true
+        tool0:
+          Value: true
+        tool0_controller:
+          Value: true
+        upper_arm_link:
+          Value: true
+        world:
+          Value: true
+        wrist_1_link:
+          Value: true
+        wrist_2_link:
+          Value: true
+        wrist_3_link:
+          Value: true
+      Marker Scale: 0.11999999731779099
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        world:
+          base_link:
+            base:
+              tool0_controller:
+                {}
+            base_link_inertia:
+              shoulder_link:
+                upper_arm_link:
+                  forearm_link:
+                    wrist_1_link:
+                      wrist_2_link:
+                        wrist_3_link:
+                          flange:
+                            tool0:
+                              onrobot_base_link:
+                                cable_connector_0:
+                                  {}
+                                cable_connector_1:
+                                  {}
+                                finger_width_mock_link:
+                                  {}
+                                gripper_tcp:
+                                  {}
+                                left_inner_knuckle:
+                                  {}
+                                left_outer_knuckle:
+                                  left_inner_finger:
+                                    left_finger_tip:
+                                      {}
+                                right_inner_knuckle:
+                                  {}
+                                right_outer_knuckle:
+                                  right_inner_finger:
+                                    right_finger_tip:
+                                      {}
+                          ft_frame:
+                            {}
+            camera_link:
+              camera_color_frame:
+                camera_color_optical_frame:
+                  apriltag_cube_1:
+                    {}
+                  apriltag_cube_2:
+                    {}
+                  apriltag_cube_3:
+                    {}
+                  apriltag_cube_4:
+                    {}
+                  tag36h11:1:
+                    {}
+                  tag36h11:10:
+                    {}
+                  tag36h11:21:
+                    {}
+                  tag36h11:22:
+                    {}
+                  tag36h11:23:
+                    {}
+                  tag36h11:28:
+                    {}
+                  tag36h11:31:
+                    {}
+      Update Interval: 0
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Tracker RGB Overlay
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holo_assist_depth_tracker/debug_image
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: false
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Camera Color Raw
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /camera/camera/color/image_raw
+      Value: false
+  Enabled: true
+  Global Options:
+    Background Color: 30; 30; 30
+    Fixed Frame: base
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 2.4604530334472656
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0.1618371158838272
+        Y: 0.11709396541118622
+        Z: 0.23696738481521606
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.08479638397693634
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 3.8081936836242676
+    Saved: ~
+Window Geometry:
+  Camera Color Raw:
+    collapsed: false
+  Displays:
+    collapsed: false
+  Height: 1136
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000002fe00000416fc0200000006fb0000002000430061006d00650072006100200043006f006c006f00720020005200610077000000003d000001640000002800fffffffb000000260054007200610063006b0065007200200052004700420020004f007600650072006c00610079010000003d000001da0000002800fffffffb000000100044006900730070006c006100790073010000021d00000236000000c900fffffffb0000001200530065006c0065006300740069006f006e00000003cf000000840000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000003de000000750000005c00fffffffb0000000a005600690065007700730000000381000000d2000000a400ffffff0000047c0000041600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Tracker RGB Overlay:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1920
+  X: 0
+  Y: 27

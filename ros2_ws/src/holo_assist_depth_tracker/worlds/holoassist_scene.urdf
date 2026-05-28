@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+<robot name="holoassist_scene">
+
+  <material name="blue">
+    <color rgba="0.1 0.3 1.0 0.6"/>
+  </material>
+
+  <material name="red">
+    <color rgba="1.0 0.0 0.0 0.9"/>
+  </material>
+
+  <material name="green">
+    <color rgba="0.0 1.0 0.0 0.9"/>
+  </material>
+
+  <material name="black">
+    <color rgba="0.02 0.02 0.02 1.0"/>
+  </material>
+
+  <material name="orange">
+    <color rgba="1.0 0.55 0.05 0.9"/>
+  </material>
+
+  <link name="world"/>
+
+  <link name="board_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.700 0.500 0.010"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.700 0.500 0.010"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="world_to_board" type="fixed">
+    <parent link="world"/>
+    <child link="board_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="ur3e_base_link0">
+    <visual>
+      <origin xyz="0 0 0.005" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.064" length="0.010"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.005" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.064" length="0.010"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="board_to_ur3e_base" type="fixed">
+    <parent link="board_link"/>
+    <child link="ur3e_base_link0"/>
+    <origin xyz="0 0.314 -0.015" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.050 0.030 0.030"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="board_to_camera" type="fixed">
+    <parent link="board_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0 -0.600 0.700" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_color_optical_frame"/>
+
+  <joint name="camera_link_to_color_optical" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_color_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <link name="april_cube_1">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.040 0.040 0.040"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.040 0.040 0.040"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="board_to_april_cube_1" type="fixed">
+    <parent link="board_link"/>
+    <child link="april_cube_1"/>
+    <origin xyz="-0.150 0.000 0.025" rpy="0 0 0"/>
+  </joint>
+
+  <link name="april_cube_2">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.040 0.040 0.040"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.040 0.040 0.040"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="board_to_april_cube_2" type="fixed">
+    <parent link="board_link"/>
+    <child link="april_cube_2"/>
+    <origin xyz="0.150 0.000 0.025" rpy="0 0 0"/>
+  </joint>
+
+</robot>
