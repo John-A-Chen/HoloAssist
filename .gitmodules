@@ -1,3 +1,25 @@
 [submodule "easy_handeye2"]
 	path = ros2_ws/src/easy_handeye2
 	url = https://github.com/marcoesposito1988/easy_handeye2.git
+[submodule "ros2_ws/src/UR_OnRobot_ROS2"]
+	path = ros2_ws/src/UR_OnRobot_ROS2
+	url = https://github.com/tonydle/UR_OnRobot_ROS2.git
+	branch = main
+[submodule "ThirdParty/ROS-TCP-Connector"]
+	path = ThirdParty/ROS-TCP-Connector
+	url = https://github.com/Unity-Technologies/ROS-TCP-Connector.git
+[submodule "ros2_ws/src/ROS-TCP-Endpoint"]
+	path = ros2_ws/src/ROS-TCP-Endpoint
+	url = https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
+	branch = main-ros2
+[submodule "ros2_ws/src/onrobot_description"]
+	path = ros2_ws/src/onrobot_description
+	url = https://github.com/tonydle/OnRobot_ROS2_Description.git
+	branch = main
+[submodule "ros2_ws/src/onrobot_driver"]
+	path = ros2_ws/src/onrobot_driver
+	url = https://github.com/tonydle/OnRobot_ROS2_Driver.git
+	branch = main
+[submodule "ThirdParty/URDF-Importer"]
+	path = ThirdParty/URDF-Importer
+	url = https://github.com/Unity-Technologies/URDF-Importer.git
