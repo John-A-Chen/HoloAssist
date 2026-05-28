@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="../screenshots/logo.png">
-    <title>Running the System — HoloAssist</title>
+    <title>Getting Started — HoloAssist</title>
     <link rel="stylesheet" href="../shared.css">
 </head>
 <body>
@@ -27,15 +27,55 @@
     <div class="hero-overlay"></div>
     <img class="hero-photo" src="../screenshots/dashboard.png" alt="">
     <div class="hero-content">
-        <p class="hero-eyebrow">HoloAssist &mdash; Operations</p>
+        <p class="hero-eyebrow">HoloAssist &mdash; Getting Started</p>
         <div class="hero-line"></div>
-        <h1 class="hero-title">Run<span class="thin">ning</span><br>the System</h1>
-        <p class="hero-desc">Prerequisites, launch options, Quest&nbsp;3 connection, and troubleshooting.</p>
+        <h1 class="hero-title">Get<span class="thin">ting</span><br>Started</h1>
+        <p class="hero-desc">System overview, quick start commands, launch modes, Quest&nbsp;3 connection, and troubleshooting.</p>
         <div class="hero-meta">
-            <div><span class="hero-meta-val">3</span>launch modes</div>
-            <div><span class="hero-meta-val">1</span>command</div>
+          <div><span class="hero-meta-val">4</span>launch modes</div>
+          <div><span class="hero-meta-val">1</span>command</div>
+          <div><span class="hero-meta-val">10000</span>ROS port</div>
+          <div><span class="hero-meta-val">9090</span>dashboard WS</div>
         </div>
     </div>
+</section>
+
+<section class="section" id="overview">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Overview</div>
+    <h2>System overview</h2>
+    <p>HoloAssist integrates a Meta Quest 3 headset with a UR3e collaborative robot for real-time teleoperation, autonomous pick-and-place, and spatial AR visualisation. AprilTag-equipped cubes are detected at 20&nbsp;Hz; MoveIt&nbsp;2 drives the physical arm; Unity on the Quest&nbsp;3 renders a holographic twin and accepts XR controller teleop commands over ROS-TCP-Endpoint.</p>
+    <table class="data-table">
+      <thead><tr><th>Subsystem</th><th>Lead</th><th>Status</th><th>Docs</th></tr></thead>
+      <tbody>
+        <tr><td>Perception (AprilTag cubes)</td><td>John Chen</td><td><span class="badge b-ok">Working</span></td><td><a href="perception.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">perception.html</a></td></tr>
+        <tr><td>Autonomous Pick-and-Place</td><td>Oliver Lau</td><td><span class="badge b-ok">Working</span></td><td><a href="autonomous.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">autonomous.html</a></td></tr>
+        <tr><td>Teleoperation (Quest 3 XR)</td><td>Nic</td><td><span class="badge b-ok">Working</span></td><td><a href="teleoperation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">teleoperation.html</a></td></tr>
+        <tr><td>XR Visualisation (Unity)</td><td>Sebastian</td><td><span class="badge b-test">Testing</span></td><td><a href="visualisation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">visualisation.html</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section alt" id="quickstart">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Quick Start</div>
+    <h2>One command to launch</h2>
+    <p>Source ROS&nbsp;2 Humble and the workspace first, then pick your mode:</p>
+    <div class="code-block"><span class="cm"># Real robot — full stack</span>
+./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard
+
+<span class="cm"># URSim (simulated robot, Docker)</span>
+./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard
+
+<span class="cm"># Fully fake — perception only, no robot</span>
+./launch.sh --perception --dashboard</div>
+    <div class="callout callout-note">
+      <strong>First time?</strong> Run calibration once before using <code>--perception</code> with a real camera: <code>./calibrate.sh --robot-ip 192.168.0.194</code>
+    </div>
+  </div>
 </section>
 
 <!-- SECTION: PREREQUISITES -->
@@ -60,42 +100,17 @@ colcon build --symlink-install</div>
         <div class="section-lbl">Launch Flags</div>
         <h2>All available flags</h2>
         <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Flag</th>
-                    <th>Effect</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>--robot-ip &lt;IP&gt;</td>
-                    <td>Connect to real UR3e or URSim at this IP</td>
-                </tr>
-                <tr>
-                    <td>--fake-gripper</td>
-                    <td>Skip Modbus/serial gripper comms &mdash; required for URSim</td>
-                </tr>
-                <tr>
-                    <td>--perception</td>
-                    <td>Start Brio/RealSense camera + AprilTag cube detection</td>
-                </tr>
-                <tr>
-                    <td>--moveit</td>
-                    <td>Start MoveIt pick-and-place stack</td>
-                </tr>
-                <tr>
-                    <td>--dashboard</td>
-                    <td>Open e-stop dashboard (Qt window, bridge on :9090)</td>
-                </tr>
-                <tr>
-                    <td>--no-rviz</td>
-                    <td>Skip RViz</td>
-                </tr>
-                <tr>
-                    <td>--verbose</td>
-                    <td>Print full node logs to terminal</td>
-                </tr>
-            </tbody>
+          <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>--robot-ip &lt;IP&gt;</td><td>Connect to real UR3e or URSim at this IP (default real robot: 192.168.0.194)</td></tr>
+            <tr><td>--perception</td><td>Start camera + AprilTag + cube pose pipeline. Auto-detects: RealSense → Brio 4K → USB webcam → sim fallback</td></tr>
+            <tr><td>--moveit</td><td>Start MoveIt pick-and-place stack with staggered startup (move_group at t=0, pick/place service at t=10s)</td></tr>
+            <tr><td>--fake-gripper</td><td>Real UR arm + fake OnRobot gripper — required with URSim</td></tr>
+            <tr><td>--dashboard</td><td>Open E-stop dashboard (PyQt5 window)</td></tr>
+            <tr><td>--dashboard-fullscreen</td><td>Open dashboard fullscreen — designed for Steam Deck 1280×800</td></tr>
+            <tr><td>--no-rviz</td><td>Suppress all RViz windows</td></tr>
+            <tr><td>--verbose</td><td>Print all subprocess logs to terminal</td></tr>
+          </tbody>
         </table>
     </div>
 </section>
@@ -106,10 +121,19 @@ colcon build --symlink-install</div>
         <div class="ph-line"></div>
         <div class="section-lbl">Option A</div>
         <h2>Real Robot</h2>
-        <p>Default IP: <code>192.168.0.194</code> (check the robot&rsquo;s touchscreen if different)</p>
-        <div class="code-block">cd ~/git/RS2-HoloAssist/demo
+        <p>Default IP: <code>192.168.0.194</code> — check the robot touchscreen if different.</p>
+        <div class="code-block"><span class="cm"># Teleop only</span>
+./launch.sh --robot-ip 192.168.0.194
+
+<span class="cm"># With perception (cube tracking)</span>
+./launch.sh --robot-ip 192.168.0.194 --perception
+
+<span class="cm"># Full stack: perception + autonomous pick-and-place</span>
 ./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard</div>
-        <p>The launcher prints startup info including the WiFi IP &mdash; enter that in the Quest Unity app under ROS Settings.</p>
+        <p>The launcher prints the WiFi IP at startup — enter that in the Unity Quest app under ROS Settings, port <code>10000</code>.</p>
+        <div class="callout callout-note">
+          <strong>Always-on processes:</strong> UR + OnRobot driver, trolley scene publisher, ROS-TCP endpoint (:10000), and IP beacon (UDP multicast for Quest auto-discovery) start regardless of flags.
+        </div>
     </div>
 </section>
 
@@ -148,6 +172,30 @@ colcon build --symlink-install</div>
     </div>
 </section>
 
+<!-- SECTION: DASHBOARD -->
+<section class="section alt" id="dashboard">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Dashboard</div>
+    <h2>E-stop &amp; monitoring dashboard</h2>
+    <p>PyQt5 dashboard designed for 1280×800 (Steam Deck). Tabs: Status · Headset · Graph · Stats · Latency · Session.</p>
+    <div class="code-block"><span class="cm"># Launch standalone</span>
+./dashboard.sh
+./dashboard.sh --fullscreen
+
+<span class="cm"># Connect remotely from Steam Deck or another machine</span>
+./dashboard.sh --bridge ws://192.168.0.xxx:9090</div>
+    <p>In normal mode, also starts <code>bridge_server.py</code> on port <strong>9090</strong> (WebSocket) for remote dashboard clients.</p>
+    <div class="callout callout-warn">
+      <strong>E-stop:</strong> Burst-publishes <code>[0,0,0,0,0,0] × 10</code> to <code>/forward_velocity_controller/commands</code>, then switches controllers off. Hold <strong>RESUME</strong> for 5 s to re-enable.
+    </div>
+    <div class="photo-row">
+      <div class="photo-slot"><img src="../screenshots/dashboard.png" alt="E-stop dashboard"></div>
+      <div class="photo-slot"><img src="../screenshots/debugtabdashboard.png" alt="Debug tab"></div>
+    </div>
+  </div>
+</section>
+
 <!-- SECTION: QUEST 3 -->
 <section class="section alt" id="quest">
     <div class="section-in">
@@ -167,6 +215,27 @@ colcon build --symlink-install</div>
   </div>
 </div>
     </div>
+</section>
+
+<!-- SECTION: STARTUP CHECKLIST -->
+<section class="section" id="checklist">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Startup Checklist</div>
+    <h2>Expected startup checklist</h2>
+    <p>After <code>./launch.sh --robot-ip 192.168.0.194 --perception</code>:</p>
+    <table class="data-table">
+      <thead><tr><th>Check</th><th>Command</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>UR driver active</td><td><code>ros2 control list_controllers</code></td><td><code>joint_state_broadcaster [active]</code></td></tr>
+        <tr><td>Velocity controller</td><td><code>ros2 control list_controllers</code></td><td><code>forward_velocity_controller [active]</code></td></tr>
+        <tr><td>TCP endpoint</td><td>Port 10000 accepting connections</td><td>Unity can connect</td></tr>
+        <tr><td>Calibration TF</td><td><code>ros2 run tf2_ros tf2_echo base_link camera_link</code></td><td>Static transform appears</td></tr>
+        <tr><td>Cube poses</td><td><code>ros2 topic hz /holoassist/perception/april_cube_1_pose</code></td><td>~20 Hz when cube visible</td></tr>
+        <tr><td>Unity connection</td><td>Set ROS IP to WiFi IP printed at launch, port 10000, hit Play</td><td>Robot model appears in Quest</td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <!-- SECTION: STOPPING -->
@@ -253,6 +322,8 @@ buildDock([
         href: '../index.html',
         svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>'
     },
+    { label:'Overview',    href:'#overview',   id:'overview',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
+    { label:'Quick Start', href:'#quickstart', id:'quickstart', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
     {
         label: 'Prerequisites',
         href: '#prereqs',
@@ -282,6 +353,18 @@ buildDock([
         href: '#issues',
         id: 'issues',
         svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    },
+    {
+        label: 'Dashboard',
+        href: '#dashboard',
+        id: 'dashboard',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+    },
+    {
+        label: 'Checklist',
+        href: '#checklist',
+        id: 'checklist',
+        svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
     }
 ]);
 </script>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dependencies — HoloAssist</title>
+<link rel="icon" href="../screenshots/logo.png">
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </a>
+    <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">HoloAssist &mdash; Reference</p>
+    <div class="hero-line"></div>
+    <h1 class="hero-title">Depen<span class="thin">den</span><br>cies</h1>
+    <p class="hero-desc">System baseline, Python packages, APT dependencies, ROS 2 workspace package catalog, and build instructions.</p>
+    <div class="hero-meta">
+      <div><span class="hero-meta-val">ROS 2</span>Humble</div>
+      <div><span class="hero-meta-val">Ubuntu</span>22.04</div>
+      <div><span class="hero-meta-val">16</span>packages</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION: SYSTEM BASELINE -->
+<section class="section" id="baseline">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">System Baseline</div>
+    <h2>OS, Kernel &amp; Runtime</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Version</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>OS</td>
+          <td>Ubuntu 22.04.5 LTS</td>
+        </tr>
+        <tr>
+          <td>Kernel</td>
+          <td>6.8.0-111-generic</td>
+        </tr>
+        <tr>
+          <td>Python</td>
+          <td>3.10.12</td>
+        </tr>
+        <tr>
+          <td>ROS 2</td>
+          <td>Humble Hawksbill</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION: PYTHON DEPENDENCIES -->
+<section class="section alt" id="python">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Python Dependencies</div>
+    <h2>Root-Level Python Packages</h2>
+    <p>Required to run <code>launch.py</code>, <code>calibrate.py</code>, and <code>dashboard/</code>.</p>
+
+    <h3><code>launch.py</code> / <code>calibrate.py</code></h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Install</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>python3-netifaces</code></td>
+          <td><code>sudo apt install python3-netifaces</code></td>
+          <td>WiFi IP auto-detect for Unity hint</td>
+        </tr>
+        <tr>
+          <td><code>python3-yaml</code></td>
+          <td><code>sudo apt install python3-yaml</code></td>
+          <td>Reads <code>holoassist_calibration.calib</code></td>
+        </tr>
+        <tr>
+          <td><code>pyrealsense2</code></td>
+          <td>bundled with <code>ros-humble-realsense2-camera</code></td>
+          <td>Camera auto-detection</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3><code>dashboard/</code></h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Install</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>python3-pyqt5</code></td>
+          <td><code>sudo apt install python3-pyqt5</code></td>
+          <td>Dashboard UI</td>
+        </tr>
+        <tr>
+          <td><code>websockets</code></td>
+          <td><code>pip install websockets</code></td>
+          <td>Bridge server for Steam Deck remote</td>
+        </tr>
+        <tr>
+          <td><code>rclpy</code></td>
+          <td>via ROS Humble</td>
+          <td>ROS interface (optional <code>--no-ros</code> mode exists)</td>
+        </tr>
+        <tr>
+          <td><code>python3-opencv</code></td>
+          <td><code>sudo apt install python3-opencv</code></td>
+          <td>Headset image stream decoding</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3><code>beacon.py</code></h3>
+    <p>Standard library only &mdash; no additional deps.</p>
+  </div>
+</section>
+
+<!-- SECTION: APT PACKAGES -->
+<section class="section" id="apt">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">APT Packages</div>
+    <h2>ROS + System Install Command</h2>
+    <p>Install all required APT packages in one command:</p>
+    <div class="code-block"><span class="cm"># ROS 2 Humble + system dependencies</span>
+sudo apt install -y \
+  <span class="cv">ros-humble-moveit</span> \
+  <span class="cv">ros-humble-rviz2</span> \
+  <span class="cv">ros-humble-realsense2-camera</span> \
+  <span class="cv">ros-humble-apriltag</span> \
+  <span class="cv">ros-humble-apriltag-ros</span> \
+  <span class="cv">ros-humble-hardware-interface-testing</span> \
+  <span class="cv">python3-opencv</span> \
+  <span class="cv">python3-numpy</span> \
+  <span class="cv">python3-pyqt5</span> \
+  <span class="cv">python3-netifaces</span> \
+  <span class="cv">python3-yaml</span> \
+  <span class="cv">python3-colcon-common-extensions</span> \
+  <span class="cv">python3-rosdep</span></div>
+  </div>
+</section>
+
+<!-- SECTION: ROS 2 WORKSPACE PACKAGES -->
+<section class="section alt" id="packages">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">ROS 2 Workspace</div>
+    <h2><code>ros2_ws/src</code> Package Catalog</h2>
+
+    <h3>Vendored Upstream Repos</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Directory</th>
+          <th>Remote</th>
+          <th>Pinned</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>easy_handeye2</code></td>
+          <td><code>github.com/marcoesposito1988/easy_handeye2</code></td>
+          <td><code>b42cae6</code></td>
+        </tr>
+        <tr>
+          <td><code>ROS-TCP-Endpoint</code></td>
+          <td><code>github.com/Unity-Technologies/ROS-TCP-Endpoint</code></td>
+          <td><code>ROS2v0.7.0</code></td>
+        </tr>
+        <tr>
+          <td><code>Universal_Robots_ROS2_Driver</code></td>
+          <td><code>github.com/UniversalRobots/Universal_Robots_ROS2_Driver</code></td>
+          <td><code>2.12.0</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>All Packages</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Version</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ros_tcp_endpoint</code></td>
+          <td>0.7.0</td>
+          <td>ROS &harr; Unity TCP bridge (port 10000)</td>
+        </tr>
+        <tr>
+          <td><code>ur_robot_driver</code></td>
+          <td>2.12.0</td>
+          <td>UR3e hardware driver</td>
+        </tr>
+        <tr>
+          <td><code>ur_controllers</code></td>
+          <td>2.12.0</td>
+          <td>Speed-scaled trajectory + velocity controllers</td>
+        </tr>
+        <tr>
+          <td><code>ur_bringup</code></td>
+          <td>2.12.0</td>
+          <td>UR launch/config helpers</td>
+        </tr>
+        <tr>
+          <td><code>ur_calibration</code></td>
+          <td>2.12.0</td>
+          <td>Factory calibration extraction</td>
+        </tr>
+        <tr>
+          <td><code>ur_dashboard_msgs</code></td>
+          <td>2.12.0</td>
+          <td>Dashboard/status message types</td>
+        </tr>
+        <tr>
+          <td><code>ur_moveit_config</code></td>
+          <td>2.12.0</td>
+          <td>Upstream UR MoveIt configs (reference)</td>
+        </tr>
+        <tr>
+          <td><code>easy_handeye2</code></td>
+          <td>0.5.0</td>
+          <td>Eye-to-hand calibration GUI</td>
+        </tr>
+        <tr>
+          <td><code>easy_handeye2_msgs</code></td>
+          <td>0.5.0</td>
+          <td>Calibration service/message types</td>
+        </tr>
+        <tr>
+          <td><code>onrobot_description</code></td>
+          <td>0.0.1</td>
+          <td>RG2 URDF/xacro</td>
+        </tr>
+        <tr>
+          <td><code>onrobot_driver</code></td>
+          <td>0.0.1</td>
+          <td>OnRobot RG2 hardware interface</td>
+        </tr>
+        <tr>
+          <td><code>ur_onrobot_description</code></td>
+          <td>0.0.1</td>
+          <td>Combined UR + OnRobot robot description</td>
+        </tr>
+        <tr>
+          <td><code>ur_onrobot_control</code></td>
+          <td>0.0.1</td>
+          <td>Launches UR + OnRobot controllers</td>
+        </tr>
+        <tr>
+          <td><code>ur_onrobot_moveit_config</code></td>
+          <td>0.0.1</td>
+          <td>MoveIt SRDF/config for UR + RG2</td>
+        </tr>
+        <tr>
+          <td><code>holo_assist_depth_tracker</code></td>
+          <td>0.1.0</td>
+          <td>Real-camera perception, cube pose fusion</td>
+        </tr>
+        <tr>
+          <td><code>holo_assist_depth_tracker_sim</code></td>
+          <td>0.1.0</td>
+          <td>Sim perception, pick/place service bridge</td>
+        </tr>
+        <tr>
+          <td><code>holo_assist_depth_tracker_sim_interfaces</code></td>
+          <td>0.1.0</td>
+          <td><code>PickCubeToBin</code> service + custom msgs</td>
+        </tr>
+        <tr>
+          <td><code>moveit_robot_control</code></td>
+          <td>0.0.1</td>
+          <td>MoveIt execution, workspace scene, pick/place sequencer</td>
+        </tr>
+        <tr>
+          <td><code>moveit_robot_control_msgs</code></td>
+          <td>0.0.1</td>
+          <td>Typed target/status messages</td>
+        </tr>
+        <tr>
+          <td><code>holoassist_unity_bridge</code></td>
+          <td>0.0.0</td>
+          <td>Unity integration hooks (WIP)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION: DEPENDENCY FLOW -->
+<section class="section" id="depflow">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Dep Flow</div>
+    <h2>Custom Package Dependency Flow</h2>
+    <p>How the custom HoloAssist packages depend on each other, from sensor input through to robot execution:</p>
+    <div class="code-block"><span class="cv">RealSense</span> / <span class="cv">apriltag_ros</span>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
+<span class="cv">holo_assist_depth_tracker</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">holo_assist_depth_tracker_sim</span>
+<span class="cm">(cube_pose_node &rarr; /holoassist/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">(sim truth / pick-place service</span>
+<span class="cm">&nbsp;perception/april_cube_N_pose)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">&nbsp;bridge &rarr; PickCubeToBin service)</span>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──────────────┬────────────────────────┘
+                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">moveit_robot_control</span>
+           &nbsp;&nbsp;&nbsp;<span class="cm">(coordinate_listener +</span>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">pick_place_sequencer +</span>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">workspace_scene_manager)</span>
+                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">ur_onrobot_control</span>
+           &nbsp;&nbsp;&nbsp;<span class="cm">(UR driver + controllers)</span>
+                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+                   &nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">UR3e robot</span></div>
+  </div>
+</section>
+
+<!-- SECTION: BUILD -->
+<section class="section alt" id="build">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Build</div>
+    <h2>Building the Workspace</h2>
+    <p>Run these commands from the repo root to build all packages in <code>ros2_ws</code>:</p>
+    <div class="code-block"><span class="cm"># Navigate to workspace</span>
+cd ros2_ws
+
+<span class="cm"># Source ROS 2 Humble</span>
+source /opt/ros/humble/setup.bash
+
+<span class="cm"># Install all package dependencies</span>
+rosdep install --from-paths src --ignore-src -r -y
+
+<span class="cm"># Build (symlink-install for faster iteration)</span>
+colcon build --symlink-install
+
+<span class="cm"># Source the built workspace</span>
+source install/setup.bash</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="doc-footer">
+  <div class="doc-footer-in">
+    <div>
+      <h3>Dependencies</h3>
+      <p>UTS Robotics Studio 2, 2026</p>
+    </div>
+    <a href="../index.html" class="doc-footer-back">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to HoloAssist
+    </a>
+  </div>
+</footer>
+
+<script src="../shared.js"></script>
+<script>
+buildDock([
+  { label:'Home',      href:'../index.html', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
+  { label:'Baseline',  href:'#baseline',  id:'baseline',  svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' },
+  { label:'Python',    href:'#python',    id:'python',    svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 10h8M8 14h8"/></svg>' },
+  { label:'APT',       href:'#apt',       id:'apt',       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' },
+  { label:'Packages',  href:'#packages',  id:'packages',  svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { label:'Dep Flow',  href:'#depflow',   id:'depflow',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { label:'Build',     href:'#build',     id:'build',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>' },
+]);
+</script>
+
+</body>
+</html>

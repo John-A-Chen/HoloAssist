@@ -84,6 +84,16 @@
         .feat-item:hover { background: rgba(51,187,255,0.05); }
         .feat-name { font-size: 0.94rem; font-weight: 500; color: var(--body); }
 
+        /* ── ABOUT ── */
+        .page-about .pi { background: var(--darker); }
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; margin-top: 1.5rem; }
+        .about-left strong { font-weight: 600; }
+        .about-stack { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .about-tag { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.68rem; letter-spacing: 1px; padding: 4px 10px; border-radius: 3px; border: 1px solid rgba(51,187,255,0.25); color: var(--blue-light); background: rgba(51,187,255,0.07); }
+        .about-arch { border: 1px solid rgba(255,102,0,0.15); border-radius: 4px; padding: 1.25rem; background: rgba(0,0,0,0.3); }
+        .about-arch-lbl { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 0.75rem; }
+        @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr; } }
+
         /* ── SUBSYSTEM SLIDES ── */
         .sub-slide { scroll-snap-align: start; min-height: 100vh; position: relative; overflow: hidden; }
         .sc-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.7s ease, opacity 0.45s ease; }
@@ -138,6 +148,19 @@
         .spec-lbl { font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--orange); margin-bottom: 0.35rem; }
         .spec-val { font-size: 2rem; font-weight: 800; color: var(--light); line-height: 1; margin-bottom: 0.25rem; }
         .spec-sub { font-size: 0.84rem; color: var(--body); }
+
+        /* ── WHO IS THIS FOR ── */
+        .page-who .pi { background: var(--steel); }
+        .who-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 2rem 0 2.5rem; }
+        .who-card { border: 1px solid rgba(255,102,0,0.13); border-radius: 6px; padding: 1.75rem; background: rgba(0,0,0,0.25); transition: background 0.2s; }
+        .who-card:hover { background: rgba(51,187,255,0.04); }
+        .who-icon { color: var(--orange); margin-bottom: 1rem; }
+        .who-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--light); margin-bottom: 0.75rem; line-height: 1.3; }
+        .who-card p { font-size: 0.88rem; color: var(--body); line-height: 1.72; margin: 0; }
+        .who-footer { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 2rem; max-width: 760px; }
+        .who-mission { font-size: 1rem; color: var(--body); line-height: 1.75; }
+        .who-mission strong { color: var(--light); font-weight: 600; }
+        @media (max-width: 900px) { .who-grid { grid-template-columns: 1fr; } }
 
         /* ── GALLERY ── */
         .page-gallery .pi { background: var(--steel); justify-content: flex-start; }
@@ -234,6 +257,7 @@
         </p>
         <div class="hero-cta">
             <a href="#gallery" class="btn btn-p">View Demo Gallery</a>
+            <a href="docs/running.html" class="btn btn-o">Quick Start</a>
             <a href="docs/index.html" class="btn btn-o">Read the Docs</a>
         </div>
     </div>
@@ -250,25 +274,48 @@
     </div>
 </section>
 
-<!-- ── STATUS ── -->
-<section class="page page-status" id="status">
+<!-- ── ABOUT ── -->
+<section class="page page-about" id="about">
     <div class="pi">
-        <div class="ph"><div class="ph-line"></div><h2>System Status</h2><p>All major subsystems operational &mdash; 26 May 2026</p></div>
-        <div class="feat-grid">
-            <div class="feat-item"><span class="feat-name">UR3e Driver &mdash; Real Robot</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">UR3e Driver &mdash; URSim Docker</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">OnRobot RG2 Gripper (real)</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">OnRobot RG2 Gripper (fake)</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Brio Camera AprilTag Detection</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Single-Tag Cube Detection</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Cube Pose Estimation (4 cubes)</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Cube Persistence in RViz</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Bin Verification (20 Hz)</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Trolley Scene in RViz</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">MoveIt Pick-and-Place Stack</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">E-Stop Dashboard</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">TCP Scanning Auto-Discovery</span><span class="badge b-ok">Working</span></div>
-            <div class="feat-item"><span class="feat-name">Quest 3 &harr; ROS Bridge (:10000)</span><span class="badge b-ok">Working</span></div>
+        <div class="ph"><div class="ph-line"></div><h2>What is HoloAssist?</h2><p>Open-source XR teleoperation for collaborative robots &mdash; ROS 2 Humble + Unity + Meta Quest 3</p></div>
+        <div class="about-grid">
+            <div class="about-left">
+                <p style="font-size:1.05rem;line-height:1.8;color:var(--body);max-width:640px;margin-bottom:1.5rem;">
+                    HoloAssist bridges Extended Reality (XR) and collaborative robotics by connecting a <strong style="color:var(--light)">Meta Quest 3</strong> headset to a <strong style="color:var(--light)">UR3e robot arm</strong> over ROS&nbsp;2. Operators teleop the robot in real time using XR controllers, see live cube positions and the robot's planning scene as AR holograms, and trigger autonomous pick-and-place with a single service call.
+                </p>
+                <p style="font-size:1.05rem;line-height:1.8;color:var(--body);max-width:640px;margin-bottom:2rem;">
+                    The goal is to ship a production-ready <strong style="color:var(--light)">Unity + ROS&nbsp;2 package</strong> that fills a clear niche: there is no off-the-shelf XR teleop solution for collaborative robots combining spatial AR awareness with low-latency joint control. HoloAssist aims to be that package — open-source, hardware-agnostic, and deployable on any ROS&nbsp;2 Humble system.
+                </p>
+                <div class="about-stack">
+                    <div class="about-tag">ROS 2 Humble</div>
+                    <div class="about-tag">Meta Quest 3</div>
+                    <div class="about-tag">Unity</div>
+                    <div class="about-tag">UR3e</div>
+                    <div class="about-tag">OnRobot RG2</div>
+                    <div class="about-tag">MoveIt 2</div>
+                    <div class="about-tag">AprilTag</div>
+                    <div class="about-tag">ROS-TCP-Endpoint</div>
+                </div>
+            </div>
+            <div class="about-right">
+                <div class="about-arch">
+                    <div class="about-arch-lbl">System Architecture</div>
+                    <div class="code-block" style="font-size:0.75rem;margin:0;"><span class="cv">Meta Quest 3</span>  <span class="cm">Unity · XR Controllers · AR Overlay</span>
+  │  ROS-TCP-Endpoint  :10000
+  ▼
+<span class="cv">ROS 2 Humble</span>  <span class="cm">Ubuntu 22.04 · UR3e Laptop</span>
+  ├─ <span class="cv">UR3e Driver</span>      <span class="cm">ur_robot_driver 2.12</span>
+  ├─ <span class="cv">Perception</span>       <span class="cm">AprilTag → 4 cube poses @ 20 Hz</span>
+  ├─ <span class="cv">MoveIt 2</span>         <span class="cm">pick-and-place · OMPL · Cartesian</span>
+  ├─ <span class="cv">Teleop</span>           <span class="cm">RMRC · Direct Joint · Hand Guide</span>
+  └─ <span class="cv">Dashboard</span>        <span class="cm">PyQt5 E-stop · Steam Deck remote</span></div>
+                </div>
+                <div class="about-links" style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+                    <a href="docs/running.html" class="btn btn-p" style="font-size:0.78rem;padding:9px 18px;">Quick Start</a>
+                    <a href="docs/index.html" class="btn btn-o" style="font-size:0.78rem;padding:9px 18px;">Documentation</a>
+                    <a href="https://github.com/John-A-Chen/HoloAssist" target="_blank" rel="noreferrer" class="btn btn-o" style="font-size:0.78rem;padding:9px 18px;">GitHub</a>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -421,39 +468,30 @@
     </div>
 </section>
 
-<!-- ── ARCHITECTURE ── -->
-<section class="page page-arch" id="architecture">
+<!-- ── WHO IS THIS FOR ── -->
+<section class="page page-who" id="who">
     <div class="pi">
-        <div class="ph"><div class="ph-line"></div><h2>System Architecture</h2><p>Data flows from Brio camera through ROS 2 Humble to the UR3e and Quest 3.</p></div>
-        <div class="arch-layout">
-            <div class="arch-code"><span class="an">Brio / RealSense</span>  <span class="aa">30 fps</span>
-  │  /camera/color/image_raw
-  ▼
-<span class="an">AprilTag Detector</span>  <span class="aa">[36h11 family]</span>
-  │  /detections_all
-  ▼
-<span class="an">Cube Pose Node</span>  <span class="aa">[20 Hz timer — TF safe]</span>
-  │  /holoassist/perception/april_cube_N_pose
-  │  /holoassist/perception/april_cube_N_bin_check
-  │  4 cubes · single-tag · freeze on loss
-  ▼
-<span class="an">MoveIt Pick-and-Place</span>  <span class="aa">[scaled_joint_trajectory]</span>
-  ▼
-<span class="an">UR3e + OnRobot RG2</span>
-  │  /joint_states  ·  TF tree
-  ▼
-<span class="an">RViz</span>  +  <span class="an">ROS-TCP :10000</span>
-              │
-       <span class="an">Quest 3  (Unity)</span>
-        <span class="aa">AR overlay + teleop controls</span></div>
-            <div class="arch-specs">
-                <div class="spec"><div class="spec-lbl">Detection Rate</div><div class="spec-val">20</div><div class="spec-sub">Hz — timer-based (TF safe)</div></div>
-                <div class="spec"><div class="spec-lbl">AprilTag Cubes</div><div class="spec-val">4</div><div class="spec-sub">physical 40 mm cubes (36h11)</div></div>
-                <div class="spec"><div class="spec-lbl">Robot Platform</div><div class="spec-val" style="font-size:1.4rem">UR3e</div><div class="spec-sub">Universal Robots + RG2 gripper</div></div>
-                <div class="spec"><div class="spec-lbl">XR Headset</div><div class="spec-val" style="font-size:1.4rem">Quest&nbsp;3</div><div class="spec-sub">ROS-TCP endpoint :10000</div></div>
-                <div class="spec"><div class="spec-lbl">Bin XY Margin</div><div class="spec-val">8</div><div class="spec-sub">cm — tunable in cubes.yaml</div></div>
-                <div class="spec"><div class="spec-lbl">Middleware</div><div class="spec-val" style="font-size:1.15rem">ROS 2</div><div class="spec-sub">Humble · Ubuntu 22.04</div></div>
+        <div class="ph"><div class="ph-line"></div><h2>Who is this for?</h2><p>Built at the University of Technology Sydney — for developers, researchers, and anyone who cares about safer human&ndash;robot collaboration.</p></div>
+        <div class="who-grid">
+            <div class="who-card">
+                <div class="who-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+                <h3>ROS 2 + Unity Developers</h3>
+                <p>If you are building XR interfaces for collaborative robots, there is no off-the-shelf package that combines low-latency joint teleop with spatial AR. HoloAssist is our attempt to build and open-source that stack — ROS 2 Humble, Unity, and Meta Quest out of the box.</p>
             </div>
+            <div class="who-card">
+                <div class="who-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                <h3>Dangerous Environment Applications</h3>
+                <p>Teleoperation with spatial AR awareness changes what is possible in hazardous settings — remote handling, precision industrial tasks, and environments where keeping humans at a safe distance matters. XR gives operators situational awareness that a flat screen cannot.</p>
+            </div>
+            <div class="who-card">
+                <div class="who-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+                <h3>Inspired by What&rsquo;s Coming</h3>
+                <p>The pace of robotics development — humanoid robots, quadrupeds, dexterous manipulation — coming out of China and labs worldwide is extraordinary. We are a small academic team at UTS trying to contribute something real to that wave: open-source XR teleoperation that anyone can deploy on their own robot.</p>
+            </div>
+        </div>
+        <div class="who-footer">
+            <p class="who-mission">We are four students at <strong>University of Technology Sydney</strong> who wanted to build something that matters. The goal is to publish a working Unity package that the robotics community can actually use — then move on to harder problems.</p>
+            <a href="https://github.com/John-A-Chen/HoloAssist" target="_blank" rel="noreferrer" class="btn btn-o" style="margin-top:1.25rem;display:inline-flex;align-items:center;gap:8px;font-size:0.82rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg> View on GitHub</a>
         </div>
     </div>
 </section>
@@ -502,8 +540,8 @@
         <div class="ft-col"><h4>Subsystems</h4><ul>
             <li><a href="docs/autonomous.html">Autonomous</a></li>
             <li><a href="docs/teleoperation.html">Teleoperation</a></li>
-            <li><a href="#architecture">Architecture</a></li>
-            <li><a href="#status">System Status</a></li>
+            <li><a href="#who">Who Is This For</a></li>
+            <li><a href="#about">About</a></li>
         </ul></div>
         <div class="ft-col"><h4>Quick Start</h4><ul>
             <li><a href="docs/running.html#real">Real Robot</a></li>
@@ -524,7 +562,7 @@
 buildDock([
     { label:'Home',          href:'#home',          id:'home',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/></svg>' },
-    { label:'Status',        href:'#status',        id:'status',
+    { label:'About',         href:'#about',         id:'about',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
     { label:'Perception',    href:'#perception',    id:'perception',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' },
@@ -534,7 +572,7 @@ buildDock([
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8H2v-5l-1-1V11a2 2 0 1 1 4 0v2.5"/></svg>' },
     { label:'Visualisation', href:'#visualisation', id:'visualisation',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/></svg>' },
-    { label:'Architecture',  href:'#architecture',  id:'architecture',
+    { label:'Who For',  href:'#who',  id:'who',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
     { label:'Gallery',       href:'#gallery',       id:'gallery',
       svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' },

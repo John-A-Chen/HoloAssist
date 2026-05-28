@@ -109,6 +109,69 @@
   </div>
 </section>
 
+<section class="section alt" id="statemachine">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">State Machine</div>
+    <h2>Pick-and-place sequence</h2>
+    <p>Every pick triggers this six-stage state machine. Cartesian path attempted first; falls back to MoveIt OMPL pose-goal on failure.</p>
+    <div class="code-block"><span class="cv">PREGRASP</span>   <span class="cm">→ move to hover above cube (pregrasp_z_offset = 0.10 m above cube Z)</span>
+<span class="cv">GRASP</span>      <span class="cm">→ gripper open → descend → gripper close</span>
+<span class="cv">LIFT</span>       <span class="cm">→ ascend back to hover (cube attached in planning scene)</span>
+<span class="cv">MOVE_TO_BIN</span> <span class="cm">→ joint-space move above bin → Cartesian descent</span>
+<span class="cv">PLACE</span>      <span class="cm">→ gripper open → cube released from planning scene</span>
+<span class="cv">RETREAT</span>    <span class="cm">→ ascend to safe pose</span></div>
+    <div class="callout callout-note">
+      Monitor progress: <code>ros2 topic echo /pick_place/status</code> — publishes timestamped JSON at each stage.
+    </div>
+  </div>
+</section>
+
+<section class="section" id="binposes">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Bin Poses</div>
+    <h2>Bin target positions</h2>
+    <p>All positions in <code>base_link</code> frame, gripper pointing down. Configured in <code>config/bin_poses.json</code> — edit and relaunch to change, no code changes needed.</p>
+    <table class="data-table">
+      <thead><tr><th>Bin</th><th>X (m)</th><th>Y (m)</th><th>Z (m)</th></tr></thead>
+      <tbody>
+        <tr><td>bin_1</td><td>0.30</td><td>0.00</td><td>0.05</td></tr>
+        <tr><td>bin_2</td><td>−0.30</td><td>0.00</td><td>0.05</td></tr>
+        <tr><td>bin_3</td><td>0.30</td><td>−0.20</td><td>0.05</td></tr>
+        <tr><td>bin_4</td><td>0.30</td><td>−0.10</td><td>0.05</td></tr>
+      </tbody>
+    </table>
+    <h3>Trigger a pick</h3>
+    <div class="code-block"><span class="cm"># Trigger cube 1 → bin 1</span>
+ros2 service call /holoassist/pick_cube_to_bin \
+  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
+
+<span class="cm"># Short form also accepted</span>
+ros2 service call /holoassist/pick_cube_to_bin \
+  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  "{cube_name: '1', bin_id: '1'}"</div>
+  </div>
+</section>
+
+<section class="section alt" id="params">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Parameters</div>
+    <h2>Key tuning parameters</h2>
+    <p>Set in <code>full_holoassist_hardware.launch.py</code>. Relaunch after changing.</p>
+    <div class="cfg-table">
+      <div class="cfg-row"><div>pregrasp_z_offset</div><div>0.10 m</div><div>Hover height above cube before descent</div></div>
+      <div class="cfg-row"><div>grasp_z_absolute</div><div>0.05 m</div><div>Absolute Z for pick descent (set −1.0 to use offset mode instead)</div></div>
+      <div class="cfg-row"><div>place_above_z_offset</div><div>0.15 m</div><div>Hover height above bin before placing</div></div>
+      <div class="cfg-row"><div>place_z_offset</div><div>0.05 m</div><div>Z height when releasing into bin</div></div>
+      <div class="cfg-row"><div>velocity_scale</div><div>0.05</div><div>MoveIt velocity scaling (0–1) — keep low for safety</div></div>
+      <div class="cfg-row"><div>pose_goal_planning_time</div><div>5.0 s</div><div>OMPL planning time budget before failure</div></div>
+    </div>
+  </div>
+</section>
+
 <section class="section" id="topics">
   <div class="section-in">
     <div class="ph-line"></div>
@@ -230,6 +293,9 @@ buildDock([
   { label:'Config',   href:'#config',   id:'config',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
   { label:'Criteria', href:'#criteria', id:'criteria', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { label:'Issues',   href:'#issues',   id:'issues',   svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { label:'State Machine', href:'#statemachine', id:'statemachine', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m4.93 4.93 2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>' },
+  { label:'Bin Poses', href:'#binposes', id:'binposes', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { label:'Params', href:'#params', id:'params', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>
 
