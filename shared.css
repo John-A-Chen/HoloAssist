@@ -269,13 +269,13 @@ body.has-cursor * { cursor: none !important; }
     .cfg-row > div:first-child, .cfg-row > div:nth-child(2) { border-right: none; border-bottom: 1px solid rgba(255,255,255,.04); }
     .issues li { grid-template-columns: 1fr; gap: .5rem; }
 }
-@media (max-width: 900px), (max-aspect-ratio: 4/5), (pointer: coarse) {
+@media (max-width: 900px), (max-aspect-ratio: 4/3), (pointer: coarse) {
     html { font-size: 17px; }
     .dock-wrap { left: 0; right: 0; bottom: max(0.55rem, env(safe-area-inset-bottom)); top: auto; transform: none; display: flex; justify-content: center; padding: 0 0.4rem; }
     .dock { width: min(100%, calc(100vw - 0.8rem)); flex-direction: row; justify-content: center; border-radius: 1rem; padding: clamp(4px, 1vw, 8px); gap: clamp(2px, 1vw, 6px); overflow: hidden; max-width: 100%; scrollbar-width: none; }
     .dock::-webkit-scrollbar { display: none; }
     .d-sep { width: 1px; height: calc(var(--compact-dock-icon) * 0.58); margin: 0; flex: 0 0 1px; }
-    .di { --sz: var(--compact-dock-icon); width: var(--compact-dock-icon) !important; height: var(--compact-dock-icon) !important; flex: 0 1 var(--compact-dock-icon); min-width: 0; border-radius: clamp(8px, 2.4vw, 14px); }
+    .di { --sz: var(--compact-dock-icon); flex: 0 1 var(--sz); min-width: 0; border-radius: clamp(8px, 2.4vw, 14px); }
     .di-icon { width: calc(var(--compact-dock-icon) * 0.46); height: calc(var(--compact-dock-icon) * 0.46); }
     .di-label { display: none; }
     .di:hover { transform: translateY(-3px) !important; }

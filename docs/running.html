@@ -9,16 +9,6 @@
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="nav">
-    <div class="nav-inner">
-        <a href="../index.html" class="nav-back">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            Back
-        </a>
-        <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
-    </div>
-</nav>
 
 <!-- HERO -->
 <section class="hero" id="hero">
@@ -103,7 +93,7 @@ colcon build --symlink-install</div>
           <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
           <tbody>
             <tr><td>--robot-ip &lt;IP&gt;</td><td>Connect to real UR3e or URSim at this IP (default real robot: 192.168.0.194)</td></tr>
-            <tr><td>--perception</td><td>Start camera + AprilTag + cube pose pipeline. Auto-detects: RealSense → Brio 4K → USB webcam → sim fallback</td></tr>
+            <tr><td>--perception</td><td>Start camera + AprilTag + cube pose pipeline. Works with any camera: RealSense D435i, UVC webcam, laptop webcam, or sim fallback</td></tr>
             <tr><td>--moveit</td><td>Start MoveIt pick-and-place stack with staggered startup (move_group at t=0, pick/place service at t=10s)</td></tr>
             <tr><td>--fake-gripper</td><td>Real UR arm + fake OnRobot gripper — required with URSim</td></tr>
             <tr><td>--dashboard</td><td>Open E-stop dashboard (PyQt5 window)</td></tr>
@@ -209,11 +199,6 @@ colcon build --symlink-install</div>
             <li>TCP scanning auto-discovers the ROS bridge on the network.</li>
             <li>ROS-TCP-Endpoint listens on port <strong>10000</strong>.</li>
         </ol>
-        <div class="photo-row">
-  <div class="photo-slot">
-    <img src="../screenshots/qr.png" alt="Quest 3 QR connection code">
-  </div>
-</div>
     </div>
 </section>
 
@@ -294,7 +279,7 @@ tail -f /tmp/holoassist_moveit.log</div>
             </li>
             <li>
                 <span class="issue-ttl">Cubes not visible in RViz</span>
-                <span class="issue-body">Point the Brio at a cube face until the marker appears &mdash; then it persists.</span>
+                <span class="issue-body">Point the camera at a cube face until the marker appears &mdash; then it persists.</span>
             </li>
         </ul>
     </div>

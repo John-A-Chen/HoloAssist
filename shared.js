@@ -4,7 +4,8 @@ const _GH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function buildDock(items, opts) {
     opts = opts || {};
     var BASE = opts.base || 64, MAG = opts.mag || 88, DIST = opts.dist || 160;
-    var compactDock = window.matchMedia('(max-width: 900px), (max-aspect-ratio: 4/5), (pointer: coarse)');
+    var COMPACT_BASE = 38, COMPACT_MAG = 54;
+    var compactDock = window.matchMedia('(max-width: 900px), (max-aspect-ratio: 4/3), (pointer: coarse)');
 
     var wrap = document.createElement('aside');
     wrap.className = 'dock-wrap';
@@ -57,11 +58,16 @@ function buildDock(items, opts) {
     }
 
     nav.addEventListener('pointermove', function(e) {
-        if (compactDock.matches) return;
+        if (window.matchMedia('(pointer: coarse)').matches) return;
+        var mobile = compactDock.matches;
+        var base = mobile ? COMPACT_BASE : BASE;
+        var mag  = mobile ? COMPACT_MAG  : MAG;
         [].slice.call(nav.querySelectorAll('.di')).forEach(function(l) {
-            var r = l.getBoundingClientRect(), c = r.top + r.height / 2;
-            var inf = Math.max(0, 1 - Math.abs(e.clientY - c) / DIST);
-            setW(l, BASE + (MAG - BASE) * inf * inf * (3 - 2 * inf));
+            var r = l.getBoundingClientRect();
+            var cursor = mobile ? e.clientX : e.clientY;
+            var center = mobile ? r.left + r.width / 2 : r.top + r.height / 2;
+            var inf = Math.max(0, 1 - Math.abs(cursor - center) / DIST);
+            setW(l, base + (mag - base) * inf * inf * (3 - 2 * inf));
         });
     });
     nav.addEventListener('pointerleave', reset);

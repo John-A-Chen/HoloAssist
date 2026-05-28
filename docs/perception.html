@@ -9,15 +9,6 @@
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="../index.html" class="nav-back">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      Back
-    </a>
-    <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
-  </div>
-</nav>
 
 <section class="hero">
   <div class="hero-bg"></div>
@@ -26,7 +17,7 @@
   <img class="hero-photo" src="../screenshots/perception.png" alt="">
   <div class="hero-content">
     <div class="hero-num">01 / 04</div>
-    <div class="hero-eyebrow">HoloAssist — Subsystem</div>
+    <p class="hero-eyebrow">HoloAssist &mdash; Subsystem</p>
     <div class="hero-line"></div>
     <h1 class="hero-title">Per<span class="thin">cep</span><br>tion</h1>
     <p class="hero-desc">
@@ -66,7 +57,7 @@
     <p>
       <strong>Lead:</strong> John Chen &nbsp;·&nbsp;
       <strong>Package:</strong> holo_assist_depth_tracker &nbsp;·&nbsp;
-      <strong>Camera:</strong> Logitech Brio 4K / Intel RealSense D435i
+      <strong>Camera:</strong> Any camera — RealSense D435i, UVC webcam, or laptop webcam
     </p>
     <div class="photo-row">
       <div class="photo-slot">
@@ -88,7 +79,7 @@
     <div class="section-lbl">Data Flow</div>
     <h2>From camera to cube poses</h2>
     <p>The full pipeline from raw camera frames to Unity cube holograms and MoveIt grasp targets.</p>
-    <div class="code-block"><span class="cv">Brio / RealSense D435i</span>  <span class="cm">30 fps colour stream</span>
+    <div class="code-block"><span class="cv">Camera</span>  <span class="cm">colour stream (any supported camera)</span>
   │  /camera/color/image_raw
   ▼
 <span class="cv">apriltag_ros</span>  <span class="cm">[36h11 family · tag size 0.032 m]</span>
@@ -121,7 +112,7 @@
       <div class="pipe-step">
         <div class="pipe-num">01</div>
         <h4>Camera Capture</h4>
-        <p>Brio 4K at 848×480 / 30 fps via <code>camera_only.launch.py</code>. RealSense D435i or USB webcam as fallback. Publishes <code>/camera/color/image_raw</code>.</p>
+        <p>Any camera (RealSense D435i, UVC webcam, laptop webcam) via <code>camera_only.launch.py</code>. Publishes <code>/camera/color/image_raw</code>.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
@@ -338,7 +329,7 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
       </li>
       <li>
         <div class="issue-ttl">Cubes not visible in RViz after launch</div>
-        <div class="issue-body">Cubes only appear after first detection. Point the Brio at a cube face until the RViz marker appears — then it persists even if occluded. This is the intended freeze-on-loss behaviour.</div>
+        <div class="issue-body">Cubes only appear after first detection. Point the camera at a cube face until the RViz marker appears — then it persists even if occluded. This is the intended freeze-on-loss behaviour.</div>
       </li>
       <li>
         <div class="issue-ttl">Cube pose offset or scaled wrong</div>

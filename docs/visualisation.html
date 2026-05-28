@@ -53,16 +53,6 @@ span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; ba
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="../index.html" class="nav-back">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      Back
-    </a>
-    <a href="../index.html" class="nav-brand">Holo<span>Assist</span></a>
-    <span class="nav-meta">Subsystem 4 · XR Scene &amp; Visualisation · 2026-05-27</span>
-  </div>
-</nav>
 
 <!-- ── HERO ── -->
 <section class="hero" id="home">
@@ -72,7 +62,7 @@ span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; ba
   <img class="hero-photo" src="../screenshots/visualisation.png" alt="">
   <div class="hero-content">
     <div class="hero-num">04 / 04</div>
-    <div class="hero-eyebrow">HoloAssist — Subsystem</div>
+    <p class="hero-eyebrow">HoloAssist &mdash; Subsystem</p>
     <div class="hero-line"></div>
     <h1 class="hero-title">XR Scene <span class="thin">&amp;</span><br>Visua&shy;lisation</h1>
     <p class="hero-sub">Subsystem owner: <strong style="color:var(--light)">Sebastian Baudille</strong> &nbsp;·&nbsp; Unity XR</p>
@@ -95,7 +85,7 @@ span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; ba
 <section class="section" id="quickstart">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">01 — Quick Start</div>
+    <div class="section-lbl">Quick Start</div>
     <h2>Get the XR scene running</h2>
 
     <h3>Required hardware</h3>
@@ -103,7 +93,7 @@ span.confirmed { display: inline-block; padding: 1px 7px; border-radius: 3px; ba
       <li>Meta Quest 3 headset, paired controllers, charged. Developer mode enabled.</li>
       <li>USB-C cable for the Quest (build and run from Editor).</li>
       <li>Linux laptop running Ubuntu 22.04 with ROS 2 Humble installed.</li>
-      <li>Logitech Brio 4K (or any UVC webcam / Intel RealSense) for AprilTag cube perception.</li>
+      <li>Any camera (RealSense D435i, UVC webcam, or laptop webcam) for AprilTag cube perception.</li>
       <li>Printed 36h11 AprilTags on 40 mm cubes (tag IDs 10–33, four cubes). See the perception docs.</li>
       <li>UR3e + OnRobot RG2 on the robot router (<code>192.168.0.194</code>) or URSim in Docker (<code>192.168.56.101</code>).</li>
     </ul>
@@ -145,7 +135,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
     <h3>What success looks like</h3>
     <ul>
       <li>Quest passthrough shows the physical room with a UR3e holographic twin anchored at the trolley.</li>
-      <li>Cube holograms appear within 1–2 seconds of pointing the Brio at a printed cube face.</li>
+      <li>Cube holograms appear within 1–2 seconds of pointing the camera at a printed cube face.</li>
       <li>The <strong>RobotHUD</strong> floats in front of the operator showing mode, joint angles, and EE pose.</li>
       <li>Holding the left primary button (<code>X</code>) opens the radial menu for mode switching.</li>
       <li>Right stick moves the arm; right trigger drives the gripper.</li>
@@ -173,7 +163,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section alt" id="purpose">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">02 — Purpose &amp; Role</div>
+    <div class="section-lbl">Purpose &amp; Role</div>
     <h2>What this subsystem owns</h2>
     <p>
       Subsystem 4 is the <strong>operator's window</strong> into HoloAssist. The Quest 3 scene is rendered here.
@@ -224,7 +214,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section" id="stack">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">03 — Software Stack</div>
+    <div class="section-lbl">Software Stack</div>
     <h2>Dependencies and versions</h2>
     <p>All versions read from the project's package manifest. Verify with <code>cat "Unity/My project/Packages/manifest.json"</code>.</p>
     <table class="data-table">
@@ -251,7 +241,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section alt" id="repo">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">04 — Code &amp; Repo Structure</div>
+    <div class="section-lbl">Code &amp; Repo Structure</div>
     <h2>Scripts and file structure</h2>
     <p>Only paths owned or maintained by S4 are listed. Scripts authored by S3 (teleop) are noted where S4 references them.</p>
     <table class="data-table">
@@ -283,7 +273,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section" id="scene">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">05 — Scene Structure</div>
+    <div class="section-lbl">Scene Structure</div>
     <h2>Scene hierarchy and GameObjects</h2>
     <p>Main scene: <code>Assets/Scenes/SampleScene.unity</code>. Exact hierarchy paths can shift between builds — confirm in the Hierarchy window.</p>
 
@@ -328,7 +318,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section alt" id="scripts">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">06 — Main Scripts</div>
+    <div class="section-lbl">Main Scripts</div>
     <h2>Key script reference</h2>
     <p>Key fields, failure modes, and wiring notes for the most critical scripts.</p>
 
@@ -417,7 +407,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
 <section class="section" id="topics">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">07 — ROS Topics</div>
+    <div class="section-lbl">ROS Topics</div>
     <h2>ROS interface</h2>
     <p>All topics bridged over ROS-TCP-Endpoint at port 10000.</p>
     <h3>Published (Quest → ROS)</h3>
@@ -443,11 +433,31 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
   </div>
 </section>
 
-<!-- ── KNOWN ISSUES ── -->
-<section class="section alt" id="issues">
+<!-- ── APK ── -->
+<section class="section alt" id="apk">
   <div class="section-in">
     <div class="ph-line"></div>
-    <div class="section-lbl">08 — Known Issues</div>
+    <div class="section-lbl">Goal: Standalone APK</div>
+    <h2>Shipping as a Meta Quest 3 APK</h2>
+    <p style="margin-bottom:1rem;">The other HoloAssist subsystems <em>integrate</em> existing ROS&nbsp;2 packages — ur_robot_driver, MoveIt&nbsp;2, apriltag_ros, ROS-TCP-Endpoint. The XR Visualisation subsystem is different: <strong style="color:var(--light)">it had to be built from scratch in Unity</strong>. There is no off-the-shelf package for spatial AR teleoperation on a collaborative robot. This is the piece that had to be authored.</p>
+    <p style="margin-bottom:1.5rem;">The end goal is a <strong style="color:var(--light)">standalone APK</strong> deployed directly to a Meta Quest 3 headset — no tethered PC required for the Unity side. Currently the app sideloads via <code>adb install</code>. A future release will target Meta App Lab or open distribution so any team with a Quest 3 and a ROS&nbsp;2 system can deploy it in minutes.</p>
+    <table class="data-table">
+      <thead><tr><th>Custom-built (this subsystem)</th><th>Packages integrated</th></tr></thead>
+      <tbody>
+        <tr><td>Cube hologram renderer, smoothing, persistence (<code>CubePoseSubscriber</code>)</td><td>Meta XR SDK 85.0 — passthrough, controllers, camera rig</td></tr>
+        <tr><td>RobotHUD, RobotInfoPanel, RadialMenu</td><td>ROS-TCP-Connector v0.7.0 — Unity → ROS bridge</td></tr>
+        <tr><td>BinDetector, TaskTracker, EnvironmentCycler (Portal Chamber, etc.)</td><td>URDF-Importer v0.5.2 — UR3e + RG2 ArticulationBody</td></tr>
+        <tr><td>PanelPlacer, PassthroughToggle, ROSAutoConnect</td><td>XR Interaction Toolkit 3.3.1 — panel grabbing</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── KNOWN ISSUES ── -->
+<section class="section" id="issues">
+  <div class="section-in">
+    <div class="ph-line"></div>
+    <div class="section-lbl">Known Issues</div>
     <h2>Troubleshooting</h2>
     <ul class="issues">
       <li>
@@ -510,6 +520,7 @@ buildDock([
   { label:'Scene',       href:'#scene',      id:'scene',      svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h3l2 5h8l2-5h3"/></svg>' },
   { label:'Scripts',     href:'#scripts',    id:'scripts',    svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>' },
   { label:'Topics',      href:'#topics',     id:'topics',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { label:'APK Goal',    href:'#apk',        id:'apk',        svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>' },
   { label:'Issues',      href:'#issues',     id:'issues',     svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
 ], { base: 64, mag: 88, dist: 160 });
 </script>

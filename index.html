@@ -18,7 +18,7 @@
         /* Dock larger on main page */
         .di { --sz: 80px; }
         .di-icon { width: 2rem; height: 2rem; }
-        @media (max-width: 900px), (max-aspect-ratio: 4/5), (pointer: coarse) {
+        @media (max-width: 900px), (max-aspect-ratio: 4/3), (pointer: coarse) {
             .di { --sz: var(--compact-dock-icon); }
             .di-icon { width: calc(var(--compact-dock-icon) * 0.46); height: calc(var(--compact-dock-icon) * 0.46); }
         }
@@ -92,7 +92,7 @@
         .about-tag { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.68rem; letter-spacing: 1px; padding: 4px 10px; border-radius: 3px; border: 1px solid rgba(51,187,255,0.25); color: var(--blue-light); background: rgba(51,187,255,0.07); }
         .about-arch { border: 1px solid rgba(255,102,0,0.15); border-radius: 4px; padding: 1.25rem; background: rgba(0,0,0,0.3); }
         .about-arch-lbl { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 0.75rem; }
-        @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 900px), (max-aspect-ratio: 4/3) { .about-grid { grid-template-columns: 1fr; } }
 
         /* ── SUBSYSTEM SLIDES ── */
         .sub-slide { scroll-snap-align: start; min-height: 100vh; position: relative; overflow: hidden; }
@@ -296,6 +296,7 @@
                     <div class="about-tag">AprilTag</div>
                     <div class="about-tag">ROS-TCP-Endpoint</div>
                 </div>
+                <p style="font-size:0.75rem;margin-top:1.75rem;color:rgba(204,204,204,0.28);font-family:'SFMono-Regular',Consolas,monospace;letter-spacing:0.5px;">Design: <span style="color:rgba(255,102,0,0.55)">Portal</span> series &mdash; Aperture orange, test-chamber grid, terminal green on black.</p>
             </div>
             <div class="about-right">
                 <div class="about-arch">
@@ -309,11 +310,6 @@
   ├─ <span class="cv">MoveIt 2</span>         <span class="cm">pick-and-place · OMPL · Cartesian</span>
   ├─ <span class="cv">Teleop</span>           <span class="cm">RMRC · Direct Joint · Hand Guide</span>
   └─ <span class="cv">Dashboard</span>        <span class="cm">PyQt5 E-stop · Steam Deck remote</span></div>
-                </div>
-                <div class="about-links" style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
-                    <a href="docs/running.html" class="btn btn-p" style="font-size:0.78rem;padding:9px 18px;">Quick Start</a>
-                    <a href="docs/index.html" class="btn btn-o" style="font-size:0.78rem;padding:9px 18px;">Documentation</a>
-                    <a href="https://github.com/John-A-Chen/HoloAssist" target="_blank" rel="noreferrer" class="btn btn-o" style="font-size:0.78rem;padding:9px 18px;">GitHub</a>
                 </div>
             </div>
         </div>
@@ -331,7 +327,7 @@
             <div class="slide-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
             <h2 class="slide-title">Perception</h2>
             <p class="slide-tag">AprilTag cube tracking &middot; 20 Hz &middot; 4 cubes &middot; single-tag detection</p>
-            <p class="slide-desc">AprilTag-based pipeline detecting up to 4 physical 40 mm cubes at 20 Hz. Single-face detection supported — multi-face consensus filter averages estimates within 5 cm. Positions freeze in RViz on tag loss. Camera-agnostic: RealSense, Brio 4K, or USB webcam.</p>
+            <p class="slide-desc">AprilTag-based pipeline detecting up to 4 physical 40 mm cubes at 20 Hz. Single-face detection supported — multi-face consensus filter averages estimates within 5 cm. Positions freeze in RViz on tag loss. Camera-agnostic: RealSense D435i, UVC webcam, or laptop webcam.</p>
         </div>
         <div class="slide-bottom">
             <div class="slide-specs">
