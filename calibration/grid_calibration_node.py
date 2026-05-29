@@ -298,6 +298,13 @@ class GridCalibrationNode(Node):
     # ── Visualisation ────────────────────────────────────────────────────────
 
     def _publish_markers(self) -> None:
+        # Only show markers for user-recorded poses (poses_file set).
+        # Suppress the Cartesian grid entirely — it clutters RViz before
+        # the user has recorded any real poses.
+        if not self._poses_file:
+            self._marker_pub.publish(MarkerArray())
+            return
+
         now = self.get_clock().now().to_msg()
         arr = MarkerArray()
 
