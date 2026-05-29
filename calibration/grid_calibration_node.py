@@ -302,7 +302,13 @@ class GridCalibrationNode(Node):
         # Suppress the Cartesian grid entirely — it clutters RViz before
         # the user has recorded any real poses.
         if not self._poses_file:
-            self._marker_pub.publish(MarkerArray())
+            kill = Marker()
+            kill.header.frame_id = "base_link"
+            kill.header.stamp = self.get_clock().now().to_msg()
+            kill.action = Marker.DELETEALL
+            arr = MarkerArray()
+            arr.markers = [kill]
+            self._marker_pub.publish(arr)
             return
 
         now = self.get_clock().now().to_msg()
