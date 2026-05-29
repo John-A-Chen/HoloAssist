@@ -422,6 +422,17 @@ def main():
         run("Dashboard", dashboard_cmd)
         time.sleep(1)  # give Qt a moment to open before the terminal fills up
 
+    # ── RViz (early — loads in background while driver starts) ────────
+    # Perception owns the config (holoassist_full.rviz); displays populate
+    # once topics come online so we get maximum load time for free.
+    if not args.no_rviz and args.perception:
+        rviz_cfg = os.path.join(
+            ROS2_WS,
+            "install/holoassist_perception/share"
+            "/holoassist_perception/rviz/holoassist_full.rviz",
+        )
+        run("RViz", f"ros2 run rviz2 rviz2 -d {rviz_cfg}")
+
     # ── Phase 1: UR + OnRobot driver ─────────────────────────────────
     # Release UR reverse/script/trajectory ports from any previous run before binding.
     subprocess.run(
@@ -451,6 +462,11 @@ def main():
     run(
         "Trolley Scene Publisher",
         "ros2 run holoassist_perception holoassist_trolley_scene_publisher",
+    )
+    run(
+        "Calibration Poses Publisher",
+        f"python3 {REPO_ROOT}/calibration/waypoint_publisher_node.py",
+        always_quiet=True,
     )
 
     if _verbose:
@@ -501,8 +517,6 @@ def main():
         if cam["type"] is None:
             _pfail("Perception", "no camera detected — skipping")
         else:
-            rviz_flag_perception = "false" if args.no_rviz else "true"
-
             if cam["type"] in ("brio", "webcam"):
                 hfov, w, h, fps = _WEBCAM_PRESETS[cam["preset"]]
                 run(
@@ -563,7 +577,7 @@ def main():
                 f"Perception ({cam['type']})",
                 f"ros2 launch holoassist_perception perception.launch.py"
                 f" start_camera:={start_camera}"
-                f" start_rviz:={rviz_flag_perception}",
+                f" start_rviz:=false",
             )
             time.sleep(5)
 

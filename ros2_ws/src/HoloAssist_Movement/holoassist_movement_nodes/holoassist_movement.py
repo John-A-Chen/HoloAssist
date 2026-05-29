@@ -3249,7 +3249,11 @@ def parse_args():
         action="store_true",
         help="Plan and select routes, but do not publish trajectories.",
     )
-    return parser.parse_args()
+    import sys
+    argv = sys.argv[1:]
+    if "--ros-args" in argv:
+        argv = argv[:argv.index("--ros-args")]
+    return parser.parse_args(argv)
 
 
 def orientation_from_args(args: argparse.Namespace) -> Optional[Quaternion]:

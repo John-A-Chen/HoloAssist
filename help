@@ -1,0 +1,24 @@
+● Reverted. So the problem stands — in sim mode, tool_communication.py will still try port 54321 on
+  URSim and crash the driver. The options without touching ur_onrobot_control are:
+
+  1. Always pass --fake-gripper with --sim (and enforce this in launch.py): but
+  use_fake_gripper_hardware doesn't gate tool_communication.py — that's gated on use_fake_hardware — so
+  this alone won't fix it.
+  2. In sim mode, pass use_fake_hardware:=true to the driver: the driver won't connect to URSim at all
+  (mock arm), so PolyScope can't drive it via External Control, but MoveIt can still plan/execute
+  against fake joint states. This is what --no-moveit + fake would look like.
+  3. Kill tool_communication.py from launch.py after starting the driver: ugly.
+  4. Accept it and kill/ignore the socat failure — the rest of the driver may still work if the
+  controller_manager comes up despite the tool_comm node dying.
+
+  What's your actual goal for the sim setup — do you need External Control from PolyScope to work, or
+  are you just using URSim + MoveIt for planning/testing pick-place logic?
+
+✻ Brewed for 36s
+
+❯ thank you for your help today im going to bed                                                         
+
+● Good night!
+
+✻ Crunched for 1s
+

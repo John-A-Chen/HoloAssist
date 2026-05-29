@@ -370,7 +370,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /holoassist/calibration/waypoint_markers
+        Value: /holoassist/scene/calibration_poses
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
@@ -384,7 +384,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /holoassist/calibration/waypoint_markers
+        Value: /holoassist/scene/calibration_poses
       Value: true
   Enabled: true
   Global Options:

@@ -62,7 +62,7 @@ def generate_launch_description() -> LaunchDescription:
     kinematics_config_arg = DeclareLaunchArgument(
         "kinematics_config",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("ur_onrobot_description"), "config", "ur3e_calibration.yaml"]
+            [FindPackageShare("ur_description"), "config", "ur3e", "default_kinematics.yaml"]
         ),
     )
 
