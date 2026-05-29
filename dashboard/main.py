@@ -1267,6 +1267,13 @@ class CubePickScreen(QWidget):
         grid = QGridLayout()
         grid.setSpacing(8)
 
+        # (bg, border) per cube — matches physical AprilTag cube colours
+        self._cube_colors = [
+            ("#c62828", "#ef9a9a"),  # red
+            ("#2e7d32", "#a5d6a7"),  # green
+            ("#1565c0", "#90caf9"),  # blue
+            ("#f57f17", "#fff176"),  # yellow
+        ]
         self.cube_buttons = []
         for cube_id in range(1, 5):
             btn = QPushButton(f"APRIL CUBE\n{cube_id}")
@@ -1311,6 +1318,29 @@ class CubePickScreen(QWidget):
         self.monitor_state.setStyleSheet(f"color: {TEXT_DIM};")
         status_panel.addWidget(self.monitor_state)
 
+        # Compact status strip (BLOCK / STEP / STATE in a grid)
+        strip = QFrame()
+        strip.setStyleSheet(
+            f"background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 4px;"
+        )
+        strip_layout = QGridLayout(strip)
+        strip_layout.setContentsMargins(8, 5, 8, 5)
+        strip_layout.setSpacing(3)
+        for col, hdr in enumerate(["BLOCK", "STEP", "STATE"]):
+            lbl = QLabel(hdr)
+            lbl.setFont(QFont("monospace", 7, QFont.Bold))
+            lbl.setStyleSheet(f"color: {TEXT_DIM}; background: transparent; border: none;")
+            strip_layout.addWidget(lbl, 0, col)
+        self._strip_block = QLabel("---")
+        self._strip_step = QLabel("---")
+        self._strip_state = QLabel("WAITING")
+        for col, lbl in enumerate([self._strip_block, self._strip_step, self._strip_state]):
+            lbl.setFont(QFont("monospace", 9, QFont.Bold))
+            lbl.setStyleSheet(f"color: {TEXT}; background: transparent; border: none;")
+            lbl.setWordWrap(True)
+            strip_layout.addWidget(lbl, 1, col)
+        status_panel.addWidget(strip)
+
         self.pick_place_status = QTextEdit()
         self.pick_place_status.setReadOnly(True)
         self.pick_place_status.setMinimumWidth(360)
@@ -1334,18 +1364,20 @@ class CubePickScreen(QWidget):
     def _update_bin_buttons(self):
         border = _scaled_px(2, self._style_scale, 1)
         radius = _scaled_px(8, self._style_scale, 5)
+        bin_active_colors = [("#6fdd8b", GREEN), ("#79bbff", BLUE)]  # green / blue per bin
         for idx, btn in enumerate(self.bin_buttons, start=1):
             active = idx == self.selected_bin_id
             btn.setChecked(active)
+            active_border, active_bg = bin_active_colors[idx - 1]
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {GREEN if active else DARK_BG};
-                    color: {'white' if active else TEXT};
-                    border: {border}px solid {('#6fdd8b' if active else BORDER)};
+                    background-color: {(active_bg + '33') if active else DARK_BG};
+                    color: {(active_border) if active else TEXT};
+                    border: {border}px solid {(active_border if active else BORDER)};
                     border-radius: {radius}px;
                 }}
                 QPushButton:hover {{
-                    border-color: {GREEN};
+                    border-color: {active_border};
                 }}
             """)
 
@@ -1426,6 +1458,14 @@ class CubePickScreen(QWidget):
         self.monitor_state.setText(f"State: {state.upper()}")
         self.monitor_state.setStyleSheet(f"color: {state_color};")
 
+        # Compact strip
+        self._strip_block.setText(f"{block} → {destination}")
+        self._strip_step.setText(step_label if step_label != "---" else "---")
+        self._strip_state.setText(state.upper())
+        self._strip_state.setStyleSheet(
+            f"color: {state_color}; font-weight: bold; background: transparent; border: none;"
+        )
+
         if status.pick_place_error:
             status_text = "ERROR:\n" + status.pick_place_error
             if status.pick_place_error_detail:
@@ -1444,23 +1484,34 @@ class CubePickScreen(QWidget):
         self._cube_buttons_enabled = enabled
         border = _scaled_px(3, self._style_scale, 2)
         radius = _scaled_px(8, self._style_scale, 5)
-        for btn in self.cube_buttons:
+        for idx, btn in enumerate(self.cube_buttons):
             btn.setEnabled(enabled)
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {BLUE if enabled else DARK_BG};
-                    color: {'white' if enabled else TEXT_DIM};
-                    border: {border}px solid {('#79bbff' if enabled else BORDER)};
-                    border-radius: {radius}px;
-                }}
-                QPushButton:hover {{
-                    background-color: #79bbff;
-                    color: white;
-                }}
-                QPushButton:pressed {{
-                    background-color: #2f81f7;
-                }}
-            """)
+            if enabled and idx < len(self._cube_colors):
+                bg, border_col = self._cube_colors[idx]
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {bg}33;
+                        color: {border_col};
+                        border: {border}px solid {bg};
+                        border-radius: {radius}px;
+                    }}
+                    QPushButton:hover {{
+                        background-color: {bg}66;
+                    }}
+                    QPushButton:pressed {{
+                        background-color: {bg};
+                        color: white;
+                    }}
+                """)
+            else:
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {DARK_BG};
+                        color: {TEXT_DIM};
+                        border: {border}px solid {BORDER};
+                        border-radius: {radius}px;
+                    }}
+                """)
 
     def apply_scale(self, scale: float):
         self._style_scale = scale
