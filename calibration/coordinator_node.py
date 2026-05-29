@@ -30,7 +30,7 @@ class CalibrationCoordinator(Node):
     def __init__(self):
         super().__init__("holoassist_calibration_coordinator")
         self.declare_parameter("poses_file", "")
-        self.declare_parameter("algorithm", "Park")
+        self.declare_parameter("algorithm", "OpenCV/Park")
         self.declare_parameter("settle_seconds", 0.8)
         self.declare_parameter("move_timeout_seconds", 60.0)
         self.declare_parameter("auto_save", True)

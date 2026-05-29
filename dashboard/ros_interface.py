@@ -1067,17 +1067,18 @@ class RosInterface:
         main_ws = root.parent / "main" / "ros2_ws" / "install" / "setup.bash"
 
         def _source() -> str:
-            s = "source /opt/ros/humble/setup.bash"
+            # Unset any existing ROS prefix paths first to avoid stale overlays
+            s = "unset AMENT_PREFIX_PATH COLCON_PREFIX_PATH && source /opt/ros/humble/setup.bash"
             if main_ws.exists():
                 s += f" && source {main_ws}"
-            if demo_ws.exists():
+            elif demo_ws.exists():
                 s += f" && source {demo_ws}"
             return s
 
         def _run(name: str, cmd: str):
             full = f"{_source()} && {cmd}"
             proc = subprocess.Popen(
-                ["bash", "-lc", full],
+                ["bash", "-c", full],   # plain bash, not login shell (-l omitted)
                 cwd=str(root),
                 start_new_session=True,
             )

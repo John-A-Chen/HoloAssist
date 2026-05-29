@@ -78,9 +78,9 @@ def main():
     )
     parser.add_argument(
         "--algorithm",
-        default="Park",
-        choices=["Park", "OpenCV/Tsai-Lenz", "OpenCV/Andreff", "OpenCV/Daniilidis", "OpenCV/Horaud"],
-        help="Hand-eye calibration algorithm (default: Park)",
+        default="OpenCV/Park",
+        choices=["OpenCV/Park", "OpenCV/Tsai-Lenz", "OpenCV/Andreff", "OpenCV/Daniilidis", "OpenCV/Horaud"],
+        help="Hand-eye calibration algorithm (default: OpenCV/Park)",
     )
     args = parser.parse_args()
 
