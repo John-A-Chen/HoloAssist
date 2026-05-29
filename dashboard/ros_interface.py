@@ -1366,6 +1366,8 @@ class RosInterface:
     # ── SHUTDOWN ────────────────────────────────────────────────────
 
     def shutdown(self):
+        if self.calibration_stack_running():
+            self.stop_calibration_stack()
         self._running = False
         self._safety_stop.set()
         if self._spin_thread is not None:

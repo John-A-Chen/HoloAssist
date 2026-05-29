@@ -43,13 +43,8 @@ _WEBCAM_PRESETS = {
 
 processes = []
 _pgids: set = set()  # all process group IDs we've spawned, for final cleanup
-_sim_started = False  # True if we launched the URSim Docker container
 _verbose = False  # set by --verbose in main()
 _NW = 42          # name column width for aligned one-liners
-
-URSIM_IMAGE = "universalrobots/ursim_e-series:5.25.1"
-URSIM_CONTAINER = "ursim"
-URSIM_PORTS = ["29999:29999", "30001-30004:30001-30004"]
 
 # Lines filtered from verbose output — harmless FastDDS SHM init noise
 _NOISE_PATTERNS = [
@@ -157,54 +152,6 @@ def get_wifi_ip():
 
 
 # ── Process management ────────────────────────────────────────────────
-
-def _start_sim() -> bool:
-    """Start the URSim Docker container if not already running. Returns True on success."""
-    global _sim_started
-    r = subprocess.run(
-        ["docker", "inspect", "--format", "{{.State.Running}}", URSIM_CONTAINER],
-        capture_output=True, text=True,
-    )
-    if r.returncode == 0 and r.stdout.strip() == "true":
-        _pok("URSim", "already running")
-        _sim_started = True
-        return True
-
-    if r.returncode == 0:
-        # Container exists but stopped — restart it
-        result = subprocess.run(["docker", "start", URSIM_CONTAINER],
-                                capture_output=True, text=True)
-    else:
-        # Container doesn't exist — create it
-        port_args = []
-        for p in URSIM_PORTS:
-            port_args += ["-p", p]
-        _pstart("URSim", f"docker run {URSIM_IMAGE}")
-        result = subprocess.run(
-            ["docker", "run", "-d", "--name", URSIM_CONTAINER] + port_args + [URSIM_IMAGE],
-            capture_output=True, text=True,
-        )
-
-    if result.returncode != 0:
-        _pfail("URSim", result.stderr.strip()[:72])
-        return False
-
-    _sim_started = True
-    _pinfo("waiting for URSim (port 29999)…")
-    deadline = time.time() + 60
-    while time.time() < deadline:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(1)
-            s.connect(("127.0.0.1", 29999))
-            s.close()
-            _pok("URSim", "ready on 127.0.0.1:29999")
-            return True
-        except Exception:
-            time.sleep(1)
-    _pfail("URSim", "timed out waiting for port 29999 (60s)")
-    return False
-
 
 def _wait_for_driver(timeout: int = 30) -> bool:
     """Poll until joint_state_broadcaster is active in controller_manager."""
@@ -365,17 +312,9 @@ def cleanup(*_):
     # Kill any lingering RViz windows (ros2 launch children may survive pgid kill)
     subprocess.run(["pkill", "-9", "-f", "rviz2"], capture_output=True)
 
-    # Stop URSim Docker container if we started it
-    if _sim_started:
-        if _verbose:
-            print(f">>> Stopping URSim container ({URSIM_CONTAINER})…")
-        else:
-            _pinfo(f"stopping  URSim")
-        try:
-            subprocess.run(["docker", "stop", URSIM_CONTAINER],
-                           capture_output=True, timeout=15)
-        except Exception:
-            pass
+    # Kill any calibration processes spawned independently (e.g. via LAUNCH STACK button)
+    for pattern in ["coordinator_node.py", "waypoint_publisher_node.py", "handeye_server"]:
+        subprocess.run(["pkill", "-9", "-f", pattern], capture_output=True)
 
     if _verbose:
         print(">>> All stopped.")
@@ -401,10 +340,6 @@ def main():
         help="ROS TCP endpoint bind IP (default: 0.0.0.0)",
     )
     parser.add_argument("--no-rviz", action="store_true", help="Disable RViz")
-    parser.add_argument(
-        "--sim", action="store_true",
-        help="Start (and stop on exit) the URSim Docker container. Sets robot IP to 127.0.0.1.",
-    )
     parser.add_argument(
         "--no-perception", dest="perception", action="store_false",
         help="Disable the perception pipeline (camera + AprilTag + cube pose).",
@@ -437,18 +372,14 @@ def main():
     open_dashboard = args.dashboard_fullscreen or args.dashboard
     dashboard_fullscreen = args.dashboard_fullscreen
 
-    if args.sim:
-        fake = False
-        robot_ip = args.robot_ip if args.robot_ip else "127.0.0.1"
-    else:
-        fake = args.robot_ip is None
-        robot_ip = "0.0.0.0" if fake else args.robot_ip
+    fake = args.robot_ip is None
+    robot_ip = "0.0.0.0" if fake else args.robot_ip
     wifi_ip = get_wifi_ip()
 
     print("=" * 65)
     print("  HoloAssist ROS 2 Launcher")
     print("=" * 65)
-    print(f"  Mode:        {'URSim (sim)' if args.sim else 'FAKE HARDWARE' if fake else 'REAL ROBOT'}")
+    print(f"  Mode:        {'FAKE HARDWARE' if fake else 'REAL ROBOT'}")
     if not fake:
         print(f"  Robot IP:    {robot_ip}")
     print(f"  ROS IP:      {args.ros_ip}")
@@ -490,14 +421,6 @@ def main():
             dashboard_cmd += " --fullscreen"
         run("Dashboard", dashboard_cmd)
         time.sleep(1)  # give Qt a moment to open before the terminal fills up
-
-    # ── URSim Docker container (if --sim) ────────────────────────────
-    if args.sim:
-        if not _verbose:
-            print()
-            _pinfo("── ursim ───────────────────────────────────────────────")
-        if not _start_sim():
-            sys.exit(1)
 
     # ── Phase 1: UR + OnRobot driver ─────────────────────────────────
     # Release UR reverse/script/trajectory ports from any previous run before binding.
@@ -542,20 +465,17 @@ def main():
     # active (the default), so MoveIt can use it immediately.  Switching to velocity
     # controllers here would break MoveIt until the dashboard MOVEIT button is pressed.
     # When --moveit is NOT set, switch to velocity + gripper controllers for teleop.
-    if not fake:
-        if args.moveit:
-            _pinfo("moveit mode — keeping trajectory controllers (scaled_joint + finger_width_traj)")
-        else:
-            switch_cmd = (
-                "ros2 service call /controller_manager/switch_controller"
-                " controller_manager_msgs/srv/SwitchController"
-                " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
-                " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
-                " strictness: 1}\""
-            )
-            run_once("Controller Switch", switch_cmd, retries=5, delay=3, timeout=20)
+    if args.moveit:
+        _pinfo("moveit mode — keeping trajectory controllers (scaled_joint + finger_width_traj)")
     else:
-        _pinfo("fake hardware — skipping controller switch")
+        switch_cmd = (
+            "ros2 service call /controller_manager/switch_controller"
+            " controller_manager_msgs/srv/SwitchController"
+            " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
+            " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
+            " strictness: 1}\""
+        )
+        run_once("Controller Switch", switch_cmd, retries=5, delay=3, timeout=20)
 
     # ── Phase 3: Communication bridges ───────────────────────────────
     subprocess.run(["bash", "-c", "fuser -k 10000/tcp 2>/dev/null"], capture_output=True)
@@ -670,7 +590,7 @@ def main():
         )
         moveit_cmd = (
             "ros2 launch holoassist_movement"
-            " full_holoassist_hardware.launch.py"
+            " movement.launch.py"
             f" robot_ip:={robot_ip}"
             f" use_rviz:={moveit_rviz}"
             + (f" rviz_config:={view_robot_rviz}" if moveit_rviz == "true" else "")
