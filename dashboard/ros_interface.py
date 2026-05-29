@@ -27,6 +27,7 @@ try:
     from sensor_msgs.msg import JointState, Image, CompressedImage, PointCloud2
     from geometry_msgs.msg import PoseStamped, TwistStamped, PointStamped
     from visualization_msgs.msg import Marker
+    import tf2_ros
     ROS_AVAILABLE = True
 except ImportError:
     ROS_AVAILABLE = False
@@ -146,7 +147,7 @@ class DashboardStatus:
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
     latency_history: list = field(default_factory=list)     # [(t, [joint_age_ms, vel_age_ms, cmd_interval_ms])]
-    camera_fps_history: list = field(default_factory=list)  # [(t, [hz])]
+    video_fps_history: list = field(default_factory=list)   # [(t, [cam_hz, headset_hz])]
     # Cube perception status — keyed by cube_id (1-4)
     # Each value: {"tags": [int, ...], "state": str, "bin": str|None}
     cube_statuses: dict = field(default_factory=dict)
@@ -210,14 +211,14 @@ class RosInterface:
         self._velocity_history: deque = deque(maxlen=300)      # 10Hz * 30s
         self._rate_history: deque = deque(maxlen=120)          # 2Hz * 60s
         self._latency_history: deque = deque(maxlen=300)       # 10Hz * 30s
-        self._camera_fps_history: deque = deque(maxlen=120)    # 2Hz * 60s
+        self._video_fps_history: deque = deque(maxlen=120)      # 2Hz * 60s
         self._session_info: dict = {}
         self._pick_place_status_lines: deque = deque(maxlen=40)
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
         self._operating_mode: OperatingMode = OperatingMode.TELEOP
         self._fake_hardware: bool = False  # set by _check_controller_status on startup
         self._pick_cube_client = None
-        self._camera_reconfigure_pub = None
+
         self._calibration_command_pub = None
         self._calib_procs: list = []   # (name, Popen) pairs for the calibration stack
 
@@ -233,6 +234,9 @@ class RosInterface:
             pass
 
         self._node = rclpy.create_node("holoassist_dashboard")
+
+        self._tf_buf = tf2_ros.Buffer()
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buf, self._node)
 
         reliable_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -363,11 +367,6 @@ class RosInterface:
         self._node.create_subscription(
             String, "/headset/device_type",
             self._headset_type_cb, 10,
-        )
-
-        # Camera reconfigure publisher
-        self._camera_reconfigure_pub = self._node.create_publisher(
-            String, "/holo_assist/camera_reconfigure", 10,
         )
 
         # Sampling timers for rolling graph data
@@ -721,13 +720,15 @@ class RosInterface:
     def _sample_rates(self):
         """Sample topic health as % of expected rate, for rolling graph."""
         now = time.time()
-        expected = [("joint_states", 500), ("velocity_cmd", 50), ("headset_image", 15)]
+        expected = [("joint_states", 500), ("velocity_cmd", 50), ("headset_image", 15), ("debug_image", 30)]
         pcts = []
         for topic, exp_hz in expected:
             hz = self._get_hz(topic)
             pcts.append(min(hz / exp_hz * 100, 120) if exp_hz > 0 else 0.0)
         self._rate_history.append((now, pcts))
-        self._camera_fps_history.append((now, [self._get_hz("debug_image")]))
+        cam_hz = self._get_hz("debug_image")
+        headset_hz = self._get_hz("headset_image")
+        self._video_fps_history.append((now, [cam_hz, headset_hz]))
 
     # ── E-STOP ──────────────────────────────────────────────────────
 
@@ -962,7 +963,7 @@ class RosInterface:
         vel_hist = list(self._velocity_history) if include_history else []
         rate_hist = list(self._rate_history) if include_history else []
         lat_hist = list(self._latency_history) if include_history else []
-        cam_fps_hist = list(self._camera_fps_history) if include_history else []
+        cam_fps_hist = list(self._video_fps_history) if include_history else []
 
         with self._lock:
             session_info_copy = dict(self._session_info)
@@ -1033,7 +1034,7 @@ class RosInterface:
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
-                camera_fps_history=cam_fps_hist,
+                video_fps_history=cam_fps_hist,
                 camera_type=self._status.camera_type,
                 headset_type=self._status.headset_type,
                 cube_statuses=dict(self._status.cube_statuses),
@@ -1149,7 +1150,7 @@ class RosInterface:
         self._add_event("Calibration stack stopped")
 
     def record_calibration_pose(self) -> int:
-        """Snapshot current arm joint positions (deg) and append to the recorded list. Returns new count."""
+        """Snapshot current joint positions and base_link→tool0 TF. Returns new count."""
         _ARM = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                 "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
         with self._lock:
@@ -1160,25 +1161,39 @@ class RosInterface:
             self._add_event("Record pose failed: arm joints not yet received")
             return 0
         pose_deg = [round(math.degrees(pose_map[j]), 3) for j in _ARM]
+
+        cart = None
+        try:
+            t = self._tf_buf.lookup_transform("base_link", "tool0", rclpy.time.Time())
+            tr = t.transform.translation
+            ro = t.transform.rotation
+            cart = {
+                "x": round(tr.x, 4), "y": round(tr.y, 4), "z": round(tr.z, 4),
+                "qx": round(ro.x, 6), "qy": round(ro.y, 6),
+                "qz": round(ro.z, 6), "qw": round(ro.w, 6),
+            }
+        except Exception:
+            self._add_event("Record pose: base_link→tool0 TF not available — cart pose skipped")
+
         with self._lock:
-            self._status.recorded_cal_poses.append(pose_deg)
+            self._status.recorded_cal_poses.append({"joints_deg": pose_deg, "cart": cart})
             count = len(self._status.recorded_cal_poses)
-        self._add_event(f"Recorded calibration pose {count}: {[f'{v:.1f}' for v in pose_deg]}")
+        self._add_event(f"Recorded pose {count}: {[f'{v:.1f}' for v in pose_deg]}"
+                        + (f" @ ({cart['x']:.3f}, {cart['y']:.3f}, {cart['z']:.3f})" if cart else ""))
         return count
 
     def save_recorded_cal_poses(self) -> str:
         """Write recorded poses to calibration/recorded_poses.yaml. Returns file path or empty string on error."""
         import pathlib
         with self._lock:
-            poses = list(self._status.recorded_cal_poses)
-        if not poses:
+            entries = list(self._status.recorded_cal_poses)
+        if not entries:
             self._add_event("Save poses: nothing recorded yet")
             return ""
         import shutil, yaml
         from datetime import datetime
         root = pathlib.Path(__file__).resolve().parent.parent
         out = root / "calibration" / "recorded_poses.yaml"
-        # Back up previous file before overwriting
         if out.exists():
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup = out.with_name(f"recorded_poses_{ts}.yaml")
@@ -1186,10 +1201,26 @@ class RosInterface:
             self._add_event(f"Backed up previous poses to {backup.name}")
         _ARM = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                 "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
-        data = {"joint_names": _ARM, "poses_deg": poses}
+        poses_deg = []
+        poses_cart = []
+        has_cart = False
+        for e in entries:
+            if isinstance(e, dict):
+                poses_deg.append(e["joints_deg"])
+                c = e.get("cart")
+                poses_cart.append(c)
+                if c is not None:
+                    has_cart = True
+            else:
+                poses_deg.append(e)
+                poses_cart.append(None)
+        data = {"joint_names": _ARM, "poses_deg": poses_deg}
+        if has_cart:
+            data["poses_cart"] = poses_cart
         with open(out, "w") as f:
             yaml.dump(data, f, default_flow_style=None)
-        self._add_event(f"Saved {len(poses)} poses to {out}")
+        cart_count = sum(1 for c in poses_cart if c is not None)
+        self._add_event(f"Saved {len(poses_deg)} poses to {out.name} ({cart_count} with Cartesian)")
         return str(out)
 
     def clear_recorded_cal_poses(self) -> None:
@@ -1315,42 +1346,6 @@ class RosInterface:
             self._status.last_pick_cube = cube_name
             self._status.last_pick_success = success
             self._status.last_pick_message = message
-
-    def reconfigure_camera(self, width: int, height: int, fps: float):
-        """Publish camera reconfigure and attempt ros2 param set on the active camera node."""
-        if ROS_AVAILABLE and self._camera_reconfigure_pub is not None:
-            msg = String()
-            msg.data = f"{width}x{height}@{fps:.0f}"
-            self._camera_reconfigure_pub.publish(msg)
-
-        with self._lock:
-            cam_type = self._status.camera_type
-
-        def _do():
-            profile = f"{width}x{height}x{int(fps)}"
-            if "realsense" in cam_type:
-                for node in ("/camera/camera", "/camera"):
-                    for param in ("color_module.color_profile", "depth_module.depth_profile"):
-                        try:
-                            subprocess.run(
-                                ["ros2", "param", "set", node, param, profile],
-                                capture_output=True, text=True, timeout=3,
-                            )
-                        except Exception:
-                            pass
-            else:
-                for node in ("/holo_assist_webcam_image_publisher", "/usb_cam"):
-                    for param, val in [("width", str(width)), ("height", str(height)), ("fps", str(fps))]:
-                        try:
-                            subprocess.run(
-                                ["ros2", "param", "set", node, param, val],
-                                capture_output=True, text=True, timeout=3,
-                            )
-                        except Exception:
-                            pass
-            self._add_event(f"Camera reconfigure: {width}×{height}@{int(fps)}Hz")
-
-        threading.Thread(target=_do, daemon=True).start()
 
     # ── MODE SWITCHING ─────────────────────────────────────────────
 

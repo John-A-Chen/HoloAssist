@@ -260,15 +260,27 @@ class GridCalibrationNode(Node):
         with open(p) as f:
             data = yaml.safe_load(f)
         poses_deg = data.get("poses_deg", [])
+        poses_cart = data.get("poses_cart", [])
         cart_poses, joint_poses = [], []
-        for deg_list in poses_deg:
-            rad_list = [math.radians(d) for d in deg_list]
-            joint_poses.append(rad_list)
-            # Dummy Cartesian pose just for marker rendering (position unknown without FK)
-            dummy = Pose()
-            dummy.orientation.w = 1.0
-            cart_poses.append(dummy)
-        self.get_logger().info(f"Loaded {len(joint_poses)} recorded poses from {p.name}")
+        for i, deg_list in enumerate(poses_deg):
+            joint_poses.append([math.radians(d) for d in deg_list])
+            c = poses_cart[i] if i < len(poses_cart) else None
+            if c:
+                pose = Pose()
+                pose.position.x = float(c["x"])
+                pose.position.y = float(c["y"])
+                pose.position.z = float(c["z"])
+                pose.orientation.x = float(c["qx"])
+                pose.orientation.y = float(c["qy"])
+                pose.orientation.z = float(c["qz"])
+                pose.orientation.w = float(c["qw"])
+                cart_poses.append(pose)
+            else:
+                dummy = Pose()
+                dummy.orientation.w = 1.0
+                cart_poses.append(dummy)
+        self.get_logger().info(f"Loaded {len(joint_poses)} poses from {p.name} "
+                               f"({sum(1 for c in poses_cart if c)} with Cartesian)")
         return cart_poses, joint_poses
 
     def _check_server_ready(self) -> None:
