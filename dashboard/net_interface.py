@@ -181,6 +181,7 @@ class NetInterface:
                 velocity_history=d.get("velocity_history", []),
                 rate_history=d.get("rate_history", []),
                 latency_history=d.get("latency_history", []),
+                video_fps_history=d.get("video_fps_history", []),
             )
 
     def emergency_stop(self):
@@ -205,9 +206,6 @@ class NetInterface:
     def calibration_command(self, action: str):
         self._send_cmd({"cmd": "calibration", "action": action})
 
-    def reconfigure_camera(self, width: int, height: int, fps: float):
-        self._send_cmd({"cmd": "reconfigure_camera", "width": width,
-                        "height": height, "fps": fps})
 
     def shutdown(self):
         self._running = False

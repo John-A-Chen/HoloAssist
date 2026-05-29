@@ -24,7 +24,7 @@ from PyQt5.QtGui import QFont, QKeyEvent, QPainter, QColor, QPen
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTabWidget, QTextEdit, QGridLayout,
-    QFrame, QProgressBar, QSizePolicy, QStackedWidget, QComboBox,
+    QFrame, QProgressBar, QSizePolicy, QStackedWidget,
 )
 
 from ros_interface import RosInterface, RobotState, OperatingMode, ROS_AVAILABLE, TOPIC_DEFAULTS
@@ -43,6 +43,7 @@ RED = "#f85149"
 YELLOW = "#d29922"
 BLUE = "#58a6ff"
 ORANGE = "#f0883e"
+CYAN   = "#39c5bb"
 
 BASE_WINDOW_WIDTH = 1280
 BASE_WINDOW_HEIGHT = 800
@@ -706,20 +707,8 @@ class MergedStatusScreen(QWidget):
 # ── Screen: Camera (debug image from depth tracker) ────────────────
 
 class CameraScreen(QWidget):
-    _PRESETS = [
-        ("640×480 @ 15 Hz",    640,  480,  15.0),
-        ("640×480 @ 30 Hz",    640,  480,  30.0),
-        ("848×480 @ 30 Hz",    848,  480,  30.0),   # RealSense wide-FOV depth
-        ("1280×720 @ 15 Hz",  1280,  720,  15.0),
-        ("1280×720 @ 30 Hz",  1280,  720,  30.0),
-        ("1280×800 @ 30 Hz",  1280,  800,  30.0),   # RealSense D415 native
-        ("1920×1080 @ 15 Hz", 1920, 1080,  15.0),
-        ("1920×1080 @ 30 Hz", 1920, 1080,  30.0),
-    ]
-
-    def __init__(self, ros=None, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._ros = ros
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
         layout.setSpacing(4)
@@ -730,27 +719,6 @@ class CameraScreen(QWidget):
         self.camera_info.setStyleSheet(f"color: {TEXT_DIM};")
         header.addWidget(self.camera_info)
         header.addStretch()
-        self.res_combo = QComboBox()
-        self.res_combo.setFont(QFont("monospace", 8))
-        self.res_combo.setStyleSheet(f"""
-            QComboBox {{
-                background: {PANEL_BG};
-                color: {TEXT};
-                border: 1px solid {BORDER};
-                border-radius: 3px;
-                padding: 1px 6px;
-            }}
-            QComboBox::drop-down {{ border: none; }}
-            QComboBox QAbstractItemView {{
-                background: {PANEL_BG};
-                color: {TEXT};
-                selection-background-color: {BLUE};
-            }}
-        """)
-        for label, *_ in self._PRESETS:
-            self.res_combo.addItem(label)
-        self.res_combo.activated.connect(self._on_reconfigure)
-        header.addWidget(self.res_combo)
         layout.addLayout(header)
 
         self.image_label = QLabel()
@@ -763,12 +731,6 @@ class CameraScreen(QWidget):
         topic_label.setFont(QFont("monospace", 8))
         topic_label.setStyleSheet(f"color: {TEXT_DIM};")
         layout.addWidget(topic_label)
-
-    def _on_reconfigure(self, index: int):
-        if self._ros is None or index < 0 or index >= len(self._PRESETS):
-            return
-        _, w, h, fps = self._PRESETS[index]
-        self._ros.reconfigure_camera(w, h, fps)
 
     def update_status(self, status):
         rate = status.topic_rates.get("debug_image")
@@ -1072,36 +1034,6 @@ class DebugScreen(QWidget):
 
         layout.addWidget(session)
 
-        # ── Latency live strip ──
-        latency = QFrame()
-        latency.setFixedHeight(24)
-        latency.setStyleSheet(
-            f"background: {PANEL_BG}; border: 1px solid {BORDER}; border-radius: 4px;"
-        )
-        self.latency_panel = latency
-        ll = QHBoxLayout(latency)
-        ll.setContentsMargins(8, 2, 8, 2)
-        ll.setSpacing(16)
-        self.latency_layout = ll
-
-        self.joint_age_lbl = QLabel("Jt age: ---")
-        self.joint_age_lbl.setFont(QFont("monospace", 8))
-        self.joint_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        ll.addWidget(self.joint_age_lbl)
-
-        self.cmd_age_lbl = QLabel("Cmd age: ---")
-        self.cmd_age_lbl.setFont(QFont("monospace", 8))
-        self.cmd_age_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        ll.addWidget(self.cmd_age_lbl)
-
-        self.cmd_interval_lbl = QLabel("Interval: ---")
-        self.cmd_interval_lbl.setFont(QFont("monospace", 8))
-        self.cmd_interval_lbl.setStyleSheet(f"color: {TEXT}; border: none;")
-        ll.addWidget(self.cmd_interval_lbl)
-
-        ll.addStretch()
-        layout.addWidget(latency)
-
         # ── 2×2 graph grid ──
         grid = QHBoxLayout()
         grid.setSpacing(4)
@@ -1118,16 +1050,16 @@ class DebugScreen(QWidget):
             series=list(zip(["pan", "lift", "elbow", "wr1", "wr2", "wr3"], JOINT_COLORS)),
             auto_y=True,
         )
-        self.vel_graph.setMinimumHeight(85)
+        self.vel_graph.setMinimumHeight(70)
         left_col.addWidget(self.vel_graph, 1)
 
         self.rate_graph = RollingGraph(
             title="TOPIC HEALTH (%)",
             window_s=60.0,
             y_range=(0, 120),
-            series=[("joints", GREEN), ("vel_cmd", BLUE), ("headset", ORANGE)],
+            series=[("joints", GREEN), ("vel_cmd", BLUE), ("headset", ORANGE), ("camera", CYAN)],
         )
-        self.rate_graph.setMinimumHeight(65)
+        self.rate_graph.setMinimumHeight(55)
         left_col.addWidget(self.rate_graph, 1)
 
         self.age_graph = RollingGraph(
@@ -1137,7 +1069,7 @@ class DebugScreen(QWidget):
             series=[("jt_state", GREEN), ("vel_cmd", BLUE)],
             auto_y=True,
         )
-        self.age_graph.setMinimumHeight(85)
+        self.age_graph.setMinimumHeight(70)
         right_col.addWidget(self.age_graph, 1)
 
         self.interval_graph = RollingGraph(
@@ -1147,12 +1079,23 @@ class DebugScreen(QWidget):
             series=[("interval", ORANGE)],
             auto_y=True,
         )
-        self.interval_graph.setMinimumHeight(65)
+        self.interval_graph.setMinimumHeight(55)
         right_col.addWidget(self.interval_graph, 1)
 
         grid.addLayout(left_col, 1)
         grid.addLayout(right_col, 1)
-        layout.addLayout(grid, 1)
+        layout.addLayout(grid, 2)
+
+        # ── Video feed FPS (full-width row) ──
+        self.video_fps_graph = RollingGraph(
+            title="VIDEO FEED FPS",
+            window_s=60.0,
+            y_range=(0, 35),
+            series=[("camera", BLUE), ("headset", ORANGE)],
+            auto_y=False,
+        )
+        self.video_fps_graph.setMinimumHeight(90)
+        layout.addWidget(self.video_fps_graph, 1)
 
     def apply_scale(self, scale: float):
         self.session_panel.setFixedHeight(_scaled_px(28, scale, 22))
@@ -1161,13 +1104,8 @@ class DebugScreen(QWidget):
             _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
         )
         self.session_layout.setSpacing(_scaled_px(10, scale, 6))
-        self.latency_panel.setFixedHeight(_scaled_px(24, scale, 20))
-        self.latency_layout.setContentsMargins(
-            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
-            _scaled_px(8, scale, 4), _scaled_px(2, scale, 1),
-        )
-        self.latency_layout.setSpacing(_scaled_px(16, scale, 8))
-        for g in (self.vel_graph, self.rate_graph, self.age_graph, self.interval_graph):
+        for g in (self.vel_graph, self.rate_graph, self.age_graph, self.interval_graph,
+                   self.video_fps_graph):
             g.apply_scale(scale)
 
     def update_status(self, status):
@@ -1190,7 +1128,7 @@ class DebugScreen(QWidget):
                     parts.append(f"{short}:{pct:.0f}%")
             self.sess_breakdown.setText("  ".join(parts))
 
-        # Latency strip
+        # Latency data for graphs
         data = status.latency_history
         if data:
             latest = data[-1][1]
@@ -1199,23 +1137,6 @@ class DebugScreen(QWidget):
             def fmt(ms):
                 return "---" if ms < 0 else f"{ms:.0f}ms"
 
-            def age_color(ms):
-                if ms < 0: return TEXT_DIM
-                if ms < 50: return GREEN
-                if ms < 200: return YELLOW
-                return RED
-
-            self.joint_age_lbl.setText(f"Jt age: {fmt(joint_ms)}")
-            self.joint_age_lbl.setStyleSheet(f"color: {age_color(joint_ms)}; border: none;")
-
-            self.cmd_age_lbl.setText(f"Cmd age: {fmt(vel_ms)}")
-            self.cmd_age_lbl.setStyleSheet(f"color: {age_color(vel_ms)}; border: none;")
-
-            self.cmd_interval_lbl.setText(f"Interval: {fmt(interval_ms)}")
-            iv_color = GREEN if 0 < interval_ms < 30 else (YELLOW if 0 < interval_ms < 50 else TEXT_DIM)
-            self.cmd_interval_lbl.setStyleSheet(f"color: {iv_color}; border: none;")
-
-            # Dynamic graph titles with live values
             self.age_graph.title = f"MSG AGE (ms)   jt={fmt(joint_ms)} cmd={fmt(vel_ms)}"
             self.interval_graph.title = f"CMD INTERVAL (ms)   now={fmt(interval_ms)}"
 
@@ -1230,7 +1151,8 @@ class DebugScreen(QWidget):
         rate_data = status.rate_history
         if rate_data:
             lr = rate_data[-1][1]
-            self.rate_graph.title = f"TOPIC HEALTH (%)   jt={lr[0]:.0f}% vel={lr[1]:.0f}%"
+            cam_pct = lr[3] if len(lr) > 3 else 0.0
+            self.rate_graph.title = f"TOPIC HEALTH (%)   jt={lr[0]:.0f}% vel={lr[1]:.0f}% cam={cam_pct:.0f}%"
 
         # Feed graphs
         self.vel_graph.set_data(vel_data if vel_data else [])
@@ -1241,6 +1163,14 @@ class DebugScreen(QWidget):
 
         interval_data = [(t, [max(v[2], 0)]) for t, v in data]
         self.interval_graph.set_data(interval_data)
+
+        # Video feed FPS graph
+        video_fps_data = status.video_fps_history
+        if video_fps_data:
+            latest = video_fps_data[-1][1]
+            cam_hz, hmd_hz = latest[0], latest[1]
+            self.video_fps_graph.title = f"VIDEO FEED FPS   cam={cam_hz:.1f}  hmd={hmd_hz:.1f}"
+        self.video_fps_graph.set_data(video_fps_data if video_fps_data else [])
 
 
 # ── Screen: MoveIt Cube Pick/Place ─────────────────────────────────
@@ -1914,7 +1844,7 @@ class MainWindow(QMainWindow):
         self.headset_screen = HeadsetScreen()
         self.tabs.addTab(self.headset_screen, "HEADSET")
 
-        self.camera_screen = CameraScreen(ros)
+        self.camera_screen = CameraScreen()
         self.tabs.addTab(self.camera_screen, "CAMERA")
 
         self.debug_screen = DebugScreen()

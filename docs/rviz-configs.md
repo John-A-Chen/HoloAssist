@@ -1,12 +1,14 @@
 # RViz Configurations
 
+> **Updated 2026-05-29** — RViz now launches early (before the UR driver starts) so it loads in the background. See [changes-2026-05-29.md](changes-2026-05-29.md).
+
 Two RViz configs are used depending on launch mode.
 
 ---
 
-## 1. Perception RViz
-**File:** `ros2_ws/src/holoassist/perception/config/depth_tracker_visualization.rviz`  
-**Used when:** `--perception` flag (no `--moveit`)
+## 1. Perception RViz (primary)
+**File:** `ros2_ws/src/HoloAssist_Perception/rviz/holoassist_full.rviz`  
+**Used when:** `--perception` flag (with or without `--moveit`)
 
 **Fixed frame:** `base`
 
@@ -35,13 +37,10 @@ world
 ---
 
 ## 2. Robot / MoveIt RViz
-**File:** `ros2_ws/src/ur_onrobot/ur_onrobot_description/rviz/view_robot.rviz`  
-**Used when:** `--moveit` flag or driver-only (no `--perception`)
+**File:** `ros2_ws/install/holoassist_movement/share/holoassist_movement/rviz/view_robot.rviz`  
+**Used when:** `--moveit` only (no `--perception`), or driver-only
 
-Loads the full robot model with MotionPlanning plugin. Used by MoveIt to show:
-- Robot model (UR3e + RG2)
-- Planning scene (trolley mesh, collision objects)
-- Interactive motion planning markers
+Robot model display. Does **not** include the MoveIt MotionPlanning panel (that plugin is commented out in `holoassist_full.rviz` as of 2026-05-29 to speed up startup).
 
 ---
 

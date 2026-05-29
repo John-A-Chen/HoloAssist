@@ -153,22 +153,6 @@ def get_wifi_ip():
 
 # ── Process management ────────────────────────────────────────────────
 
-def _wait_for_driver(timeout: int = 30) -> bool:
-    """Poll until joint_state_broadcaster is active in controller_manager."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            r = subprocess.run(
-                ["bash", "-c", f"{SOURCE_CMD} && ros2 control list_controllers 2>/dev/null"],
-                capture_output=True, text=True, timeout=5,
-            )
-            if "joint_state_broadcaster" in r.stdout and "[active]" in r.stdout:
-                return True
-        except Exception:
-            pass
-        time.sleep(0.5)
-    return False
-
 
 def _preexec():
     os.setsid()  # new process group so cleanup() can kill the whole tree
@@ -469,44 +453,7 @@ def main():
         always_quiet=True,
     )
 
-    if _verbose:
-        print("\n>>> Waiting for UR driver (joint_state_broadcaster active)...")
-    else:
-        _pinfo("waiting for UR driver…")
-    if not _wait_for_driver(timeout=30):
-        _pinfo("warning: UR driver readiness check timed out (30s), continuing anyway")
-
-    # ── Phase 2: Controller switch (real hardware, teleop-only start) ──
-    # When --moveit is set, the driver already starts with scaled_joint_trajectory_controller
-    # active (the default), so MoveIt can use it immediately.  Switching to velocity
-    # controllers here would break MoveIt until the dashboard MOVEIT button is pressed.
-    # When --moveit is NOT set, switch to velocity + gripper controllers for teleop.
-    if args.moveit:
-        _pinfo("moveit mode — keeping trajectory controllers (scaled_joint + finger_width_traj)")
-    else:
-        switch_cmd = (
-            "ros2 service call /controller_manager/switch_controller"
-            " controller_manager_msgs/srv/SwitchController"
-            " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
-            " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
-            " strictness: 1}\""
-        )
-        run_once("Controller Switch", switch_cmd, retries=5, delay=3, timeout=20)
-
-    # ── Phase 3: Communication bridges ───────────────────────────────
-    subprocess.run(["bash", "-c", "fuser -k 10000/tcp 2>/dev/null"], capture_output=True)
-    time.sleep(0.5)
-    run(
-        "ROS-TCP Endpoint",
-        f"ros2 run ros_tcp_endpoint default_server_endpoint"
-        f" --ros-args -p ROS_IP:={args.ros_ip}",
-    )
-
-    beacon_path = os.path.join(SCRIPT_DIR, "beacon.py")
-    if os.path.exists(beacon_path):
-        run("IP Beacon", f"python3 {beacon_path} --ip {wifi_ip}")
-
-    # ── Phase 4: Perception (optional) ───────────────────────────────
+    # ── Phase 2: Perception (optional, no UR dependency — start in parallel) ─
     if args.perception:
         if _verbose:
             print(f"\n>>> Starting perception pipeline...")
@@ -581,7 +528,36 @@ def main():
             )
             time.sleep(5)
 
-    # ── Phase 5: MoveIt (optional) ───────────────────────────────────
+    # ── Phase 3: Wire up controllers + comms ─────────────────────────
+    # When --moveit is set, the driver already starts with scaled_joint_trajectory_controller
+    # active (the default), so MoveIt can use it immediately.  Switching to velocity
+    # controllers here would break MoveIt until the dashboard MOVEIT button is pressed.
+    # When --moveit is NOT set, switch to velocity + gripper controllers for teleop.
+    if args.moveit:
+        _pinfo("moveit mode — keeping trajectory controllers (scaled_joint + finger_width_traj)")
+    else:
+        switch_cmd = (
+            "ros2 service call /controller_manager/switch_controller"
+            " controller_manager_msgs/srv/SwitchController"
+            " \"{activate_controllers: ['forward_velocity_controller', 'finger_width_controller'],"
+            " deactivate_controllers: ['scaled_joint_trajectory_controller', 'finger_width_trajectory_controller'],"
+            " strictness: 1}\""
+        )
+        run_once("Controller Switch", switch_cmd, retries=5, delay=3, timeout=20)
+
+    subprocess.run(["bash", "-c", "fuser -k 10000/tcp 2>/dev/null"], capture_output=True)
+    time.sleep(0.5)
+    run(
+        "ROS-TCP Endpoint",
+        f"ros2 run ros_tcp_endpoint default_server_endpoint"
+        f" --ros-args -p ROS_IP:={args.ros_ip}",
+    )
+
+    beacon_path = os.path.join(SCRIPT_DIR, "beacon.py")
+    if os.path.exists(beacon_path):
+        run("IP Beacon", f"python3 {beacon_path} --ip {wifi_ip}")
+
+    # ── Phase 4: MoveIt (optional) ───────────────────────────────────
     if args.moveit:
         if _verbose:
             print("\n>>> Starting MoveIt stack...")

@@ -75,12 +75,6 @@ class BridgeServer:
             self.ros.pick_cube_to_bin(msg.get("cube_id"), msg.get("bin_id"))
         elif cmd == "calibration":
             self.ros.calibration_command(msg.get("action", ""))
-        elif cmd == "reconfigure_camera":
-            self.ros.reconfigure_camera(
-                int(msg.get("width", 640)),
-                int(msg.get("height", 480)),
-                float(msg.get("fps", 30)),
-            )
 
     def _build_payload(self, include_history: bool,
                        include_headset: bool) -> tuple:
@@ -210,6 +204,7 @@ class BridgeServer:
             d["velocity_history"] = status.velocity_history
             d["rate_history"] = status.rate_history
             d["latency_history"] = status.latency_history
+            d["video_fps_history"] = status.video_fps_history
 
         return d
 

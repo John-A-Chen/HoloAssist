@@ -8,7 +8,7 @@
     max_hamming: 1
     pose_estimation_method: pnp
     detector:
-      threads: 2
+      threads: 4
       decimate: 1.0
       blur: 0.0
       refine: true
