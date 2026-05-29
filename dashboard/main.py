@@ -88,7 +88,7 @@ def build_global_style(scale: float = 1.0) -> str:
             border-bottom: none;
             font-size: {tab_font}px;
             font-weight: bold;
-            min-width: 72px;
+            min-width: 90px;
         }}
         QTabBar::tab:selected {{
             background: {PANEL_BG};
@@ -1485,14 +1485,23 @@ class CalibrationScreen(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 10)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
 
+        # ── Header row ──────────────────────────────────────────────
         header = QHBoxLayout()
         title = QLabel("HAND-EYE CALIBRATION")
         title.setFont(QFont("monospace", 11, QFont.Bold))
         title.setStyleSheet(f"color: {BLUE};")
         header.addWidget(title)
         header.addStretch()
+        self.solver_label = QLabel("▶ PARK SOLVER")
+        self.solver_label.setFont(QFont("monospace", 8, QFont.Bold))
+        self.solver_label.setStyleSheet(
+            f"color: {GREEN}; background: #0d2b18; border: 1px solid {GREEN};"
+            " border-radius: 4px; padding: 2px 6px;"
+        )
+        header.addWidget(self.solver_label)
+        header.addSpacing(8)
         self.ready_label = QLabel("SERVER: WAITING")
         self.ready_label.setFont(QFont("monospace", 10, QFont.Bold))
         header.addWidget(self.ready_label)
@@ -1508,12 +1517,27 @@ class CalibrationScreen(QWidget):
         self.state_label.setWordWrap(True)
         layout.addWidget(self.state_label)
 
-        self.progress = QProgressBar()
-        self.progress.setRange(0, 1)
-        self.progress.setFormat("POSE %v / %m")
-        layout.addWidget(self.progress)
+        # ── Pose progress grid ───────────────────────────────────────
+        self._pose_squares = []
+        grid_frame = QFrame()
+        grid_frame.setStyleSheet(f"background: {PANEL_BG}; border-radius: 4px;")
+        grid_layout = QGridLayout(grid_frame)
+        grid_layout.setSpacing(3)
+        grid_layout.setContentsMargins(6, 6, 6, 6)
+        for i in range(32):
+            sq = QLabel(str(i + 1))
+            sq.setAlignment(Qt.AlignCenter)
+            sq.setFont(QFont("monospace", 7))
+            sq.setFixedSize(22, 22)
+            sq.setStyleSheet(
+                f"background: {DARK_BG}; color: {TEXT_DIM}; border: 1px solid {BORDER};"
+                " border-radius: 3px;"
+            )
+            self._pose_squares.append(sq)
+            grid_layout.addWidget(sq, i // 8, i % 8)
+        layout.addWidget(grid_frame)
 
-        self.sample_label = QLabel("Samples: 0")
+        self.sample_label = QLabel("Samples: 0  |  Result: not computed")
         self.sample_label.setFont(QFont("monospace", 10, QFont.Bold))
         layout.addWidget(self.sample_label)
 
@@ -1629,8 +1653,38 @@ class CalibrationScreen(QWidget):
         self.state_label.setText(f"{state}: {status.calibration_message or 'Waiting for status'}")
         self.state_label.setStyleSheet(f"color: {color};")
         self.tag_label.setText(f"Physical marker: {status.calibration_marker_frame}")
-        self.progress.setMaximum(max(status.calibration_pose_total, 1))
-        self.progress.setValue(status.calibration_pose_index)
+
+        # Solver pill
+        algo = getattr(status, "calibration_algorithm", "Park")
+        self.solver_label.setText(f"▶ {algo.upper()} SOLVER")
+
+        # Pose progress grid
+        done = status.calibration_sample_count
+        total = max(status.calibration_pose_total, 1)
+        current = status.calibration_pose_index
+        for i, sq in enumerate(self._pose_squares):
+            pose_num = i + 1
+            if pose_num <= done:
+                sq.setStyleSheet(
+                    f"background: {GREEN}; color: white; border: 1px solid {GREEN};"
+                    " border-radius: 3px;"
+                )
+            elif pose_num == current:
+                sq.setStyleSheet(
+                    f"background: {YELLOW}; color: black; border: 1px solid {YELLOW};"
+                    " border-radius: 3px;"
+                )
+            elif pose_num <= total:
+                sq.setStyleSheet(
+                    f"background: {DARK_BG}; color: {TEXT_DIM}; border: 1px solid {BORDER};"
+                    " border-radius: 3px;"
+                )
+            else:
+                sq.setStyleSheet(
+                    "background: transparent; color: transparent; border: 1px solid transparent;"
+                    " border-radius: 3px;"
+                )
+
         self.sample_label.setText(
             f"Samples: {status.calibration_sample_count}  |  "
             f"Result: {'computed' if status.calibration_computed else 'not computed'}"
@@ -1681,7 +1735,6 @@ class CalibrationScreen(QWidget):
             self.details.setPlainText(text)
 
     def apply_scale(self, scale: float):
-        self.progress.setFixedHeight(_scaled_px(32, scale, 26))
         for button in (
             self.start_btn,
             self.stop_btn,
