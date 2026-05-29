@@ -1033,6 +1033,7 @@ class RosInterface:
                 velocity_history=vel_hist,
                 rate_history=rate_hist,
                 latency_history=lat_hist,
+                camera_fps_history=cam_fps_hist,
                 camera_type=self._status.camera_type,
                 headset_type=self._status.headset_type,
                 cube_statuses=dict(self._status.cube_statuses),
@@ -1107,7 +1108,14 @@ class RosInterface:
         _run(
             "grid_calibration",
             f"python3 {root}/calibration/grid_calibration_node.py --ros-args"
-            " -p auto_start:=false",
+            " -p auto_start:=false"
+            # Tool pointing down (tilt=90°) — reachable from most UR3e configs
+            # Bounds tuned for UR3e on trolley: in front of robot, above surface
+            " -p tilt_deg:=90.0"
+            " -p x_min:=0.05 -p x_max:=0.35"
+            " -p y_min:=-0.20 -p y_max:=0.20"
+            " -p z_min:=0.25 -p z_max:=0.50"
+            " -p nx:=3 -p ny:=3 -p nz:=3",   # 3×3×3 = 27 poses
         )
         return True
 
@@ -1158,13 +1166,20 @@ class RosInterface:
         if not poses:
             self._add_event("Save poses: nothing recorded yet")
             return ""
+        import shutil, yaml
+        from datetime import datetime
         root = pathlib.Path(__file__).resolve().parent.parent
         out = root / "calibration" / "recorded_poses.yaml"
+        # Back up previous file before overwriting
+        if out.exists():
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup = out.with_name(f"recorded_poses_{ts}.yaml")
+            shutil.copy2(out, backup)
+            self._add_event(f"Backed up previous poses to {backup.name}")
         _ARM = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                 "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
         data = {"joint_names": _ARM, "poses_deg": poses}
         with open(out, "w") as f:
-            import yaml
             yaml.dump(data, f, default_flow_style=None)
         self._add_event(f"Saved {len(poses)} poses to {out}")
         return str(out)
