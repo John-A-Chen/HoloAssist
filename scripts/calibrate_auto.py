@@ -76,6 +76,12 @@ def main():
         action="store_true",
         help="Required with --auto-start: confirms reviewed poses and a cleared workspace",
     )
+    parser.add_argument(
+        "--algorithm",
+        default="Park",
+        choices=["Park", "OpenCV/Tsai-Lenz", "OpenCV/Andreff", "OpenCV/Daniilidis", "OpenCV/Horaud"],
+        help="Hand-eye calibration algorithm (default: Park)",
+    )
     args = parser.parse_args()
 
     poses_file = args.poses_file.expanduser().resolve()
@@ -158,7 +164,7 @@ def main():
         )
         start(
             "MoveIt calibration motion",
-            "ros2 launch holoassist_movement full_holoassist_hardware.launch.py"
+            "ros2 launch holoassist_movement movement.launch.py"
             f" robot_ip:={args.robot_ip} start_pick_place:=false"
             " use_calibrated_workspace:=false"
             f" velocity_scale:={args.velocity_scale}"
@@ -182,7 +188,15 @@ def main():
             "python3 calibration/coordinator_node.py --ros-args"
             f" -p poses_file:={poses_file}"
             f" -p auto_start:={'true' if args.auto_start else 'false'}"
-            " -p marker_frame:=tag36h11:1",
+            " -p marker_frame:=tag36h11:1"
+            f" -p algorithm:={args.algorithm}",
+        )
+        start(
+            "Waypoint publisher",
+            "python3 calibration/waypoint_publisher_node.py --ros-args"
+            f" -p poses_file:={poses_file}"
+            " -p base_frame:=base_link"
+            " -p ee_link:=tool0",
         )
         print("\n>>> Calibration stack is starting.")
         if args.auto_start:
