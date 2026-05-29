@@ -1105,17 +1105,25 @@ class RosInterface:
             " -p tracking_marker_frame:=tag36h11:1",
         )
         time.sleep(1.5)
+        # Use recorded joint poses if available (guaranteed reachable — user drove
+        # them via MoveIt), otherwise fall back to Cartesian grid.
+        recorded = root / "calibration" / "recorded_poses.yaml"
+        if recorded.exists():
+            extra = f" -p poses_file:={recorded}"
+            self._add_event(f"Using recorded poses from {recorded.name}")
+        else:
+            extra = (
+                " -p tilt_deg:=90.0"
+                " -p x_min:=0.05 -p x_max:=0.35"
+                " -p y_min:=-0.20 -p y_max:=0.20"
+                " -p z_min:=0.25 -p z_max:=0.50"
+                " -p nx:=3 -p ny:=3 -p nz:=3"
+            )
+            self._add_event("No recorded poses found — using Cartesian grid")
         _run(
             "grid_calibration",
             f"python3 {root}/calibration/grid_calibration_node.py --ros-args"
-            " -p auto_start:=false"
-            # Tool pointing down (tilt=90°) — reachable from most UR3e configs
-            # Bounds tuned for UR3e on trolley: in front of robot, above surface
-            " -p tilt_deg:=90.0"
-            " -p x_min:=0.05 -p x_max:=0.35"
-            " -p y_min:=-0.20 -p y_max:=0.20"
-            " -p z_min:=0.25 -p z_max:=0.50"
-            " -p nx:=3 -p ny:=3 -p nz:=3",   # 3×3×3 = 27 poses
+            f" -p auto_start:=false{extra}",
         )
         return True
 
