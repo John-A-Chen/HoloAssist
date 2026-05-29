@@ -23,3 +23,7 @@
 [submodule "ThirdParty/URDF-Importer"]
 	path = ThirdParty/URDF-Importer
 	url = https://github.com/Unity-Technologies/URDF-Importer.git
+[submodule "ThirdParty/Q3toROS"]
+	path = ThirdParty/Q3toROS
+	url = https://github.com/tonydle/Q3toROS.git
+	branch = main

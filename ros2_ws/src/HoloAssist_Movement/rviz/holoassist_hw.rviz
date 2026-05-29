@@ -358,6 +358,34 @@ Visualization Manager:
         Reliability Policy: Best Effort
         Value: /holoassist/perception/debug_image
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Calibration Waypoints
+      Namespaces:
+        calib_waypoints: true
+        calib_waypoint_labels: true
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/calibration/waypoint_markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Gripper Tag Mount
+      Namespaces:
+        tool_tag_mount: true
+        tool_tag_mount_label: true
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /holoassist/calibration/waypoint_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 34; 39; 43
