@@ -503,10 +503,36 @@ class MergedStatusScreen(QWidget):
         hsep.setStyleSheet(f"color: {BORDER};")
         tl.addWidget(hsep, 7, 0, 1, 3)
 
-        self.gripper_label = QLabel("Gripper: ---")
-        self.gripper_label.setFont(QFont("monospace", 9))
-        self.gripper_label.setStyleSheet(f"color: {TEXT}; border: none;")
-        tl.addWidget(self.gripper_label, 8, 0, 1, 3)
+        # Gripper bar
+        grip_hdr = QHBoxLayout()
+        grip_title = QLabel("GRIPPER")
+        grip_title.setFont(QFont("monospace", 8, QFont.Bold))
+        grip_title.setStyleSheet(f"color: {TEXT_DIM}; border: none;")
+        grip_hdr.addWidget(grip_title)
+        grip_hdr.addStretch()
+        self.gripper_pct_label = QLabel("---")
+        self.gripper_pct_label.setFont(QFont("monospace", 8, QFont.Bold))
+        self.gripper_pct_label.setStyleSheet(f"color: {TEXT}; border: none;")
+        grip_hdr.addWidget(self.gripper_pct_label)
+        tl.addLayout(grip_hdr, 8, 0, 1, 3)
+
+        self.gripper_bar = QProgressBar()
+        self.gripper_bar.setRange(0, 100)
+        self.gripper_bar.setValue(0)
+        self.gripper_bar.setTextVisible(False)
+        self.gripper_bar.setFixedHeight(10)
+        self.gripper_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {DARK_BG};
+                border: 1px solid {BORDER};
+                border-radius: 3px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {GREEN};
+                border-radius: 2px;
+            }}
+        """)
+        tl.addWidget(self.gripper_bar, 9, 0, 1, 3)
 
         left.addWidget(table)
         left.addSpacing(8)
@@ -590,10 +616,22 @@ class MergedStatusScreen(QWidget):
 
         g = status.gripper_value
         pct = int(g * 100)
-        bar = "|" * int(g * 10) + "." * (10 - int(g * 10))
-        grip_color = GREEN if g < 0.05 else (RED if g > 0.9 else TEXT)
-        self.gripper_label.setText(f"Gripper [{bar}] {pct}%")
-        self.gripper_label.setStyleSheet(f"color: {grip_color}; border: none;")
+        grip_color = GREEN if g < 0.05 else (RED if g > 0.9 else YELLOW)
+        grip_text = "OPEN" if g < 0.05 else ("CLOSED" if g > 0.9 else f"{pct}%")
+        self.gripper_pct_label.setText(grip_text)
+        self.gripper_pct_label.setStyleSheet(f"color: {grip_color}; border: none;")
+        self.gripper_bar.setValue(pct)
+        self.gripper_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {DARK_BG};
+                border: 1px solid {BORDER};
+                border-radius: 3px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {grip_color};
+                border-radius: 2px;
+            }}
+        """)
 
         # Session
         info = status.session_info
