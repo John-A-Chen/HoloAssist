@@ -30,7 +30,7 @@ class CalibrationCoordinator(Node):
     def __init__(self):
         super().__init__("holoassist_calibration_coordinator")
         self.declare_parameter("poses_file", "")
-        self.declare_parameter("algorithm", "OpenCV/Tsai-Lenz")
+        self.declare_parameter("algorithm", "Park")
         self.declare_parameter("settle_seconds", 0.8)
         self.declare_parameter("move_timeout_seconds", 60.0)
         self.declare_parameter("auto_save", True)
@@ -140,6 +140,7 @@ class CalibrationCoordinator(Node):
                 "archive_path": self._archive_path,
                 "error": self._error,
                 "marker_frame": self.marker_frame,
+                "algorithm": self.algorithm,
             }
         msg = String()
         msg.data = json.dumps(payload, sort_keys=True)
