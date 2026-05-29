@@ -1713,8 +1713,18 @@ class CalibrationScreen(QWidget):
         done = status.calibration_sample_count
         total = max(status.calibration_pose_total, 1)
         current = status.calibration_pose_index
+        poses_deg = getattr(status, "calibration_poses_deg", [])
+        _JNAMES = ["pan", "lift", "elbow", "w1", "w2", "w3"]
         for i, sq in enumerate(self._pose_squares):
             pose_num = i + 1
+            # Tooltip with joint angles when pose data is available
+            if i < len(poses_deg):
+                angles = poses_deg[i]
+                lines = [f"Pose {pose_num}:"]
+                lines += [f"  {n}: {v:+.1f}°" for n, v in zip(_JNAMES, angles)]
+                sq.setToolTip("\n".join(lines))
+            else:
+                sq.setToolTip("")
             if pose_num <= done:
                 sq.setStyleSheet(
                     f"background: {GREEN}; color: white; border: 1px solid {GREEN};"

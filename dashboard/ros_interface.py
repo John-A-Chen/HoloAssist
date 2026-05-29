@@ -137,6 +137,7 @@ class DashboardStatus:
     calibration_error: str = ""
     calibration_marker_frame: str = "tag36h11:1"
     calibration_algorithm: str = "Park"
+    calibration_poses_deg: list = field(default_factory=list)  # list of [6 deg floats]
     recorded_cal_poses: list = field(default_factory=list)  # list of joint-deg lists
     camera_type: str = ""   # "realsense", "webcam", "brio", or ""
     headset_type: str = ""  # "quest2", "quest3", or ""
@@ -681,6 +682,9 @@ class RosInterface:
                 payload.get("marker_frame", "tag36h11:1")
             )
             self._status.calibration_algorithm = str(payload.get("algorithm", "Park"))
+            raw_poses = payload.get("poses_deg", [])
+            if isinstance(raw_poses, list):
+                self._status.calibration_poses_deg = raw_poses
 
     _ARM_JOINT_NAMES = [
         "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
@@ -1016,6 +1020,7 @@ class RosInterface:
                 calibration_error=self._status.calibration_error,
                 calibration_marker_frame=self._status.calibration_marker_frame,
                 calibration_algorithm=self._status.calibration_algorithm,
+                calibration_poses_deg=list(self._status.calibration_poses_deg),
                 recorded_cal_poses=list(self._status.recorded_cal_poses),
                 velocity_history=vel_hist,
                 rate_history=rate_hist,

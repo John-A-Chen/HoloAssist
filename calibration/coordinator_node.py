@@ -141,6 +141,9 @@ class CalibrationCoordinator(Node):
                 "error": self._error,
                 "marker_frame": self.marker_frame,
                 "algorithm": self.algorithm,
+                "poses_deg": [
+                    [round(math.degrees(v), 1) for v in pose] for pose in self.poses
+                ],
             }
         msg = String()
         msg.data = json.dumps(payload, sort_keys=True)
