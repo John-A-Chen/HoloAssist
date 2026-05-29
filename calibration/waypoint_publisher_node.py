@@ -210,41 +210,36 @@ class WaypointPublisher(Node):
         return ColorRGBA(r=0.25, g=0.65, b=1.0, a=0.7)
 
     def _publish_tag_mount_tf(self):
-        tf = TransformStamped()
-        tf.header.stamp = self.get_clock().now().to_msg()
-        tf.header.frame_id = self._ee_link
-        tf.child_frame_id = "tool_tag_mount"
+        # Publish marker directly in ee_link frame with the offset baked in —
+        # avoids a separate TF frame that causes "unconnected trees" in RViz
+        # when the robot driver hasn't connected yet.
+        now = self.get_clock().now().to_msg()
         x, y, z = TAG_MOUNT_XYZ
-        tf.transform.translation.x = x
-        tf.transform.translation.y = y
-        tf.transform.translation.z = z
-        qx, qy, qz, qw = TAG_MOUNT_QUAT
-        tf.transform.rotation.x = qx
-        tf.transform.rotation.y = qy
-        tf.transform.rotation.z = qz
-        tf.transform.rotation.w = qw
-        self._tf_broadcaster.sendTransform([tf])
 
-        now = tf.header.stamp
         cube_m = Marker()
-        cube_m.header.frame_id = "tool_tag_mount"
+        cube_m.header.frame_id = self._ee_link
         cube_m.header.stamp = now
         cube_m.ns = "tool_tag_mount"
         cube_m.id = 0
         cube_m.type = Marker.CUBE
         cube_m.action = Marker.ADD
+        cube_m.pose.position.x = x
+        cube_m.pose.position.y = y
+        cube_m.pose.position.z = z
         cube_m.pose.orientation.w = 1.0
         cube_m.scale = Vector3(x=0.032, y=0.032, z=0.002)
         cube_m.color = ColorRGBA(r=1.0, g=0.4, b=0.0, a=0.85)
 
         label_m = Marker()
-        label_m.header.frame_id = "tool_tag_mount"
+        label_m.header.frame_id = self._ee_link
         label_m.header.stamp = now
         label_m.ns = "tool_tag_mount_label"
         label_m.id = 1
         label_m.type = Marker.TEXT_VIEW_FACING
         label_m.action = Marker.ADD
-        label_m.pose.position.z = 0.025
+        label_m.pose.position.x = x
+        label_m.pose.position.y = y
+        label_m.pose.position.z = z + 0.025
         label_m.pose.orientation.w = 1.0
         label_m.scale.z = 0.020
         label_m.color = ColorRGBA(r=1.0, g=1.0, b=1.0, a=1.0)
