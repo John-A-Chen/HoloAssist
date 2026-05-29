@@ -1644,7 +1644,23 @@ class CalibrationScreen(QWidget):
         stack_row.addWidget(self.shutdown_btn, 1)
         layout.addLayout(stack_row)
 
-        # Row 2: motion control
+        # Row 2a: dry run (motion validation, no camera needed)
+        dry_row = QHBoxLayout()
+        self.dry_run_btn = QPushButton("DRY RUN  ▶  TEST MOTION ONLY")
+        self.dry_run_btn.setFont(QFont("monospace", 10, QFont.Bold))
+        self.dry_run_btn.setCursor(Qt.PointingHandCursor)
+        self.dry_run_btn.setToolTip(
+            "Move through all calibration poses without sampling.\n"
+            "Use this in the simulator to verify the robot can reach every position\n"
+            "before running real calibration. Green = reached, Red = unreachable."
+        )
+        self.dry_run_btn.clicked.connect(
+            lambda: self.ros.calibration_command("dry_run")
+        )
+        dry_row.addWidget(self.dry_run_btn)
+        layout.addLayout(dry_row)
+
+        # Row 2b: motion control
         buttons = QHBoxLayout()
         self.start_btn = self._cmd_button("START AUTO", "start")
         self.stop_btn = self._cmd_button("STOP", "stop")
@@ -1815,6 +1831,16 @@ class CalibrationScreen(QWidget):
         self.sample_btn.setEnabled(ready and not running)
         self.compute_btn.setEnabled(ready and not running and status.calibration_sample_count >= 8)
         self.save_btn.setEnabled(ready and not running and status.calibration_computed)
+
+        dry_ready = getattr(status, "calibration_dry_run_ready", False)
+        self.dry_run_btn.setEnabled(dry_ready and not running)
+        self.dry_run_btn.setStyleSheet(
+            f"background-color: #2d1f00; color: {ORANGE}; border: 2px solid {ORANGE};"
+            " border-radius: 4px;"
+            if (dry_ready and not running) else
+            f"background-color: {DARK_BG}; color: {TEXT_DIM}; border: 1px solid {BORDER};"
+            " border-radius: 4px;"
+        )
 
         detail = [
             f"State: {state}",

@@ -137,6 +137,7 @@ class DashboardStatus:
     calibration_error: str = ""
     calibration_marker_frame: str = "tag36h11:1"
     calibration_algorithm: str = "Park"
+    calibration_dry_run_ready: bool = False
     calibration_poses_deg: list = field(default_factory=list)  # list of [6 deg floats]
     recorded_cal_poses: list = field(default_factory=list)  # list of joint-deg lists
     camera_type: str = ""   # "realsense", "webcam", "brio", or ""
@@ -145,6 +146,7 @@ class DashboardStatus:
     velocity_history: list = field(default_factory=list)   # [(t, [v0..v5])]
     rate_history: list = field(default_factory=list)        # [(t, [joint%, vel%, headset%])]
     latency_history: list = field(default_factory=list)     # [(t, [joint_age_ms, vel_age_ms, cmd_interval_ms])]
+    camera_fps_history: list = field(default_factory=list)  # [(t, [hz])]
     # Cube perception status — keyed by cube_id (1-4)
     # Each value: {"tags": [int, ...], "state": str, "bin": str|None}
     cube_statuses: dict = field(default_factory=dict)
@@ -205,9 +207,10 @@ class RosInterface:
         }
 
         # Rolling graph data (downsampled)
-        self._velocity_history: deque = deque(maxlen=300)   # 10Hz * 30s
-        self._rate_history: deque = deque(maxlen=120)       # 2Hz * 60s
-        self._latency_history: deque = deque(maxlen=300)    # 10Hz * 30s
+        self._velocity_history: deque = deque(maxlen=300)      # 10Hz * 30s
+        self._rate_history: deque = deque(maxlen=120)          # 2Hz * 60s
+        self._latency_history: deque = deque(maxlen=300)       # 10Hz * 30s
+        self._camera_fps_history: deque = deque(maxlen=120)    # 2Hz * 60s
         self._session_info: dict = {}
         self._pick_place_status_lines: deque = deque(maxlen=40)
         self._last_vel_cmd_time: float = 0.0                # timestamp of last velocity_cmd
@@ -682,6 +685,7 @@ class RosInterface:
                 payload.get("marker_frame", "tag36h11:1")
             )
             self._status.calibration_algorithm = str(payload.get("algorithm", "Park"))
+            self._status.calibration_dry_run_ready = bool(payload.get("dry_run_ready", False))
             raw_poses = payload.get("poses_deg", [])
             if isinstance(raw_poses, list):
                 self._status.calibration_poses_deg = raw_poses
@@ -716,12 +720,14 @@ class RosInterface:
 
     def _sample_rates(self):
         """Sample topic health as % of expected rate, for rolling graph."""
+        now = time.time()
         expected = [("joint_states", 500), ("velocity_cmd", 50), ("headset_image", 15)]
         pcts = []
         for topic, exp_hz in expected:
             hz = self._get_hz(topic)
             pcts.append(min(hz / exp_hz * 100, 120) if exp_hz > 0 else 0.0)
-        self._rate_history.append((time.time(), pcts))
+        self._rate_history.append((now, pcts))
+        self._camera_fps_history.append((now, [self._get_hz("debug_image")]))
 
     # ── E-STOP ──────────────────────────────────────────────────────
 
@@ -956,6 +962,7 @@ class RosInterface:
         vel_hist = list(self._velocity_history) if include_history else []
         rate_hist = list(self._rate_history) if include_history else []
         lat_hist = list(self._latency_history) if include_history else []
+        cam_fps_hist = list(self._camera_fps_history) if include_history else []
 
         with self._lock:
             session_info_copy = dict(self._session_info)
@@ -1020,6 +1027,7 @@ class RosInterface:
                 calibration_error=self._status.calibration_error,
                 calibration_marker_frame=self._status.calibration_marker_frame,
                 calibration_algorithm=self._status.calibration_algorithm,
+                calibration_dry_run_ready=self._status.calibration_dry_run_ready,
                 calibration_poses_deg=list(self._status.calibration_poses_deg),
                 recorded_cal_poses=list(self._status.recorded_cal_poses),
                 velocity_history=vel_hist,

@@ -249,6 +249,8 @@ class GridCalibrationNode(Node):
             return
         if cmd == "start" and not self._running:
             threading.Thread(target=self._run_sequence, daemon=True).start()
+        elif cmd == "dry_run" and not self._running:
+            threading.Thread(target=self._run_dry_run, daemon=True).start()
         elif cmd == "stop":
             self._cancel.set()
 
@@ -318,6 +320,7 @@ class GridCalibrationNode(Node):
         with self._lock:
             payload = {
                 "ready":        self._server_ready,
+                "dry_run_ready": not self._running,
                 "running":      self._running,
                 "state":        self._state,
                 "message":      self._message,
@@ -440,7 +443,7 @@ class GridCalibrationNode(Node):
         self._set_state("moving", "Starting grid calibration sequence")
         self.get_logger().info(f"Starting grid sequence: {len(self._poses)} poses")
 
-        for i, pose in enumerate(self._poses):
+        for i in range(len(self._poses)):
             if self._cancel.is_set():
                 self._set_state("cancelled", f"Cancelled after {self._samples} samples")
                 break
@@ -450,7 +453,7 @@ class GridCalibrationNode(Node):
                 self._flags[i] = self._ACTIVE
             self._set_state("moving", f"Moving to pose {i+1}/{len(self._poses)}")
 
-            result = self._move_to(pose)
+            result = self._move_to(i)
             if result != "COMPLETE":
                 self.get_logger().warning(f"Pose {i+1} move result: {result} — skipping")
                 with self._lock:
@@ -500,6 +503,59 @@ class GridCalibrationNode(Node):
                     f"Only {sampled} samples — need ≥8. Try rerunning.",
                     error=f"Insufficient samples: {sampled}",
                 )
+
+        with self._lock:
+            self._running = False
+
+
+    def _run_dry_run(self) -> None:
+        """Move through all poses without sampling — validates motion in sim/real."""
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._flags   = [self._PENDING] * len(self._poses)
+            self._pose_idx = 0
+            self._samples  = 0
+            self._computed = False
+            self._error    = ""
+        self._cancel.clear()
+
+        total = len(self._poses)
+        self._set_state("moving", f"DRY RUN: testing {total} poses — no sampling")
+        self.get_logger().info(f"Dry run started: {total} poses")
+
+        reached = 0
+        for i in range(total):
+            if self._cancel.is_set():
+                self._set_state("cancelled", f"Dry run cancelled at pose {i+1}/{total}")
+                break
+
+            with self._lock:
+                self._pose_idx = i
+                self._flags[i] = self._ACTIVE
+            self._set_state("moving", f"DRY RUN: pose {i+1}/{total}")
+
+            result = self._move_to(i)
+
+            if result == "COMPLETE":
+                with self._lock:
+                    self._flags[i] = self._SAMPLED   # green = reached OK
+                    self._samples += 1
+                reached += 1
+                self.get_logger().info(f"Dry run pose {i+1}: reached")
+            else:
+                with self._lock:
+                    self._flags[i] = self._SKIPPED   # red = unreachable / timeout
+                self.get_logger().warning(f"Dry run pose {i+1}: {result} — unreachable or timeout")
+
+        if not self._cancel.is_set():
+            failed = total - reached
+            msg = f"DRY RUN done: {reached}/{total} reachable"
+            if failed:
+                msg += f", {failed} unreachable (red in RViz)"
+            self._set_state("idle", msg)
+            self.get_logger().info(msg)
 
         with self._lock:
             self._running = False
