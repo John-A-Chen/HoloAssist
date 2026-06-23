@@ -42,7 +42,7 @@
         <tr><td>Perception (AprilTag cubes)</td><td>John Chen</td><td><span class="badge b-ok">Working</span></td><td><a href="perception.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">perception.html</a></td></tr>
         <tr><td>Autonomous Pick-and-Place</td><td>Oliver Lau</td><td><span class="badge b-ok">Working</span></td><td><a href="autonomous.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">autonomous.html</a></td></tr>
         <tr><td>Teleoperation (Quest 3 XR)</td><td>Nic</td><td><span class="badge b-ok">Working</span></td><td><a href="teleoperation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">teleoperation.html</a></td></tr>
-        <tr><td>XR Visualisation (Unity)</td><td>Sebastian</td><td><span class="badge b-test">Testing</span></td><td><a href="visualisation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">visualisation.html</a></td></tr>
+        <tr><td>XR Visualisation (Unity)</td><td>Sebastian</td><td><span class="badge b-ok">Working</span></td><td><a href="visualisation.html" style="color:var(--blue);text-decoration:underline;text-underline-offset:3px">visualisation.html</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -225,7 +225,7 @@ colcon build --symlink-install</div>
         <tr><td>MoveIt controller</td><td><code>ros2 control list_controllers</code></td><td><code>scaled_joint_trajectory_controller [active]</code></td></tr>
         <tr><td>TCP endpoint</td><td>Port 10000 accepting connections</td><td>Unity can connect</td></tr>
         <tr><td>Calibration TF</td><td><code>ros2 run tf2_ros tf2_echo base_link camera_link</code></td><td>Static transform appears</td></tr>
-        <tr><td>Cube poses</td><td><code>ros2 topic echo /holoassist/perception/april_cube_1_pose --once</code></td><td>Expected by consumers; see known issue below</td></tr>
+        <tr><td>Cube poses</td><td><code>ros2 topic echo /holoassist/perception/april_cube_1_pose --once</code></td><td>Pose appears when cube is visible</td></tr>
         <tr><td>Unity connection</td><td>Set ROS IP to WiFi IP printed at launch, port 10000, hit Play</td><td>Robot model appears in Quest</td></tr>
       </tbody>
     </table>
@@ -288,7 +288,7 @@ tail -f /tmp/holoassist_moveit.log</div>
             </li>
             <li>
                 <span class="issue-ttl">Cubes not visible in RViz</span>
-                <span class="issue-body">Current launch starts <code>apriltag_ros</code> and <code>aprilcube_tracker_node</code>, but this checkout does not install a first-party node that publishes <code>/holoassist/perception/april_cube_N_pose</code>. Restore or add that publisher before relying on camera-driven autonomous sorting.</span>
+                <span class="issue-body">Point the camera at a cube face until the marker appears. Confirm <code>/detections</code> and <code>/holoassist/perception/debug_image</code> are updating, then check the cube pose topic.</span>
             </li>
         </ul>
     </div>

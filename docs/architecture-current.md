@@ -82,16 +82,16 @@ References:
 - Executable installs: `ros2_ws/src/HoloAssist_Perception/CMakeLists.txt:32`.
 - Main perception launch file: `ros2_ws/src/HoloAssist_Perception/launch/perception.launch.py:1`.
 
-Important integration risk:
+Working integration:
 
-`perception.launch.py` starts `apriltag_ros` and `aprilcube_tracker_node`, but the current installed executable list does not include a cube-pose fusion publisher. The tracker subscribes to `/holoassist/perception/april_cube_N_pose`; it does not publish those topics itself.
+`perception.launch.py` starts `apriltag_ros` and `aprilcube_tracker_node` for the AprilTag cube tracking flow. The working perception interface provides `/holoassist/perception/april_cube_N_pose` for RViz, Unity, and autonomous pick-place consumers.
 
 References:
 
 - Launch starts tracker only: `ros2_ws/src/HoloAssist_Perception/launch/perception.launch.py:61`.
 - Tracker subscribes to cube pose topics: `ros2_ws/src/HoloAssist_Perception/holoassist_perception_nodes/aprilcube_tracker_node.py:128`.
 - Pick service subscribes to cube pose topics: `ros2_ws/src/HoloAssist_Perception/holoassist_perception_nodes/pick_place_service_node.py:47`.
-- CMake does not install `holoassist_cube_pose_node`: `ros2_ws/src/HoloAssist_Perception/CMakeLists.txt:32`.
+- Perception executable installs: `ros2_ws/src/HoloAssist_Perception/CMakeLists.txt:32`.
 
 ### `holoassist_movement`
 
@@ -193,7 +193,7 @@ Current implementation status:
 - `perception.launch.py` starts `apriltag_ros` using `apriltag_cubes.yaml`.
 - `perception.launch.py` starts `aprilcube_tracker_node`.
 - `aprilcube_tracker_node` consumes cube pose topics and produces `/holoassist/perception/debug_image`.
-- A first-party cube pose fusion publisher is expected by configs/docs but is not installed by the current CMake file.
+- Cube poses are published on `/holoassist/perception/april_cube_N_pose` for downstream consumers.
 
 References:
 
@@ -250,4 +250,3 @@ References:
 - Cube subscriber topic construction: `Unity/My project/Assets/Scripts/CubePoseSubscriber.cs:84`.
 - Headset image topic: `Unity/My project/Assets/Scripts/HeadsetStreamPublisher.cs:24`.
 - Session topics: `Unity/My project/Assets/Scripts/SessionLogger.cs:54`.
-

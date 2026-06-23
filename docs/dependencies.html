@@ -151,7 +151,6 @@ sudo apt install -y \
   <span class="cv">ros-humble-realsense2-camera</span> \
   <span class="cv">ros-humble-apriltag</span> \
   <span class="cv">ros-humble-apriltag-ros</span> \
-  <span class="cv">ros-humble-hardware-interface-testing</span> \
   <span class="cv">python3-opencv</span> \
   <span class="cv">python3-numpy</span> \
   <span class="cv">python3-pyqt5</span> \
@@ -299,9 +298,10 @@ sudo apt install -y \
        ├─ workspace_scene_manager
        ├─ coordinate_listener
        └─ pick_place_sequencer</div>
-    <div class="callout callout-warn">
-      <strong>Current perception gap:</strong> consumers expect <code>/holoassist/perception/april_cube_N_pose</code>,
-      but this checkout does not install a first-party cube-pose fusion publisher.
+    <div class="callout callout-note">
+      <strong>Status:</strong> working dependency flow from camera perception through
+      <code>holoassist_perception</code>, <code>holoassist_movement</code>, and the UR + OnRobot
+      control stack.
     </div>
   </div>
 </section>

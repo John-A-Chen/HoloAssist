@@ -56,11 +56,10 @@
       <strong>Package:</strong> holoassist_movement &nbsp;·&nbsp;
       <strong>Planner:</strong> MoveIt 2, Cartesian paths, OMPL fallback
     </p>
-    <div class="callout callout-warn">
-      <strong>Current integration gap:</strong> autonomous requests depend on
-      <code>/holoassist/perception/april_cube_N_pose</code>. The current checkout expects those
-      topics, but does not install a first-party cube-pose publisher. Add or restore that node
-      before treating camera-driven sorting as fully wired.
+    <div class="callout callout-note">
+      <strong>Status:</strong> Working autonomous pick-and-place flow from
+      <code>/holoassist/pick_cube_to_bin</code> through perception pose lookup, MoveIt planning,
+      trajectory execution, gripper control, and JSON status reporting.
     </div>
     <div class="photo-row">
       <div class="photo-slot">

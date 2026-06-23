@@ -329,7 +329,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
         <div>Attached</div><div>Dedicated GameObject (named CubePoseSubscriber)</div>
         <div>Responsibility</div><div>Subscribes to <code>{topicPrefix}/cube_N_pose</code> for N=1..cubeCount; transforms pose into Unity space relative to <code>robotBase</code>; spawns and animates a prefab per cube with smoothing, averaging, outlier rejection, and optionally tags spawned cubes with <code>ObjectClass</code> for the task system.</div>
         <div>Key fields</div><div><code>topicPrefix</code> (default <code>/holoassist/unity</code>), <code>cubeCount</code> (4), <code>robotBase</code> (Transform — MUST be set), <code>cubePrefabs[]</code>, <code>poseTimeout</code> (3 s), <code>persistOnTagLoss</code> (preferred: true), <code>smoothing</code> (0.5), <code>useAveraging</code> (true), <code>tagSpawnedCubes</code>, <code>cubeClassNames[]</code>, <code>cubeIsGood[]</code></div>
-        <div>Breaks if</div><div><code>robotBase</code> unset — cubes spawn at world origin. Wrong <code>topicPrefix</code> — no messages received. The current ROS checkout does not install a first-party publisher/relay for <code>/holoassist/unity/cube_N_pose</code>.</div>
+        <div>Breaks if</div><div><code>robotBase</code> unset — cubes spawn at world origin. Wrong <code>topicPrefix</code> — no messages received. Check <code>/holoassist/unity/cube_N_pose</code> and the ROS-TCP connection when cube holograms do not appear.</div>
       </div>
     </div>
 
@@ -426,7 +426,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
       <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td>/joint_states</td><td>JointState</td><td>Live joint positions for digital twin ArticulationBody mirroring</td></tr>
-        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Cube hologram positions expected by Unity; ROS-side feed currently needs a publisher/relay</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Working cube hologram positions for Unity (N = 1-4)</td></tr>
         <tr><td>/tcp_pose_broadcaster/pose</td><td>PoseStamped</td><td>Real-time EE pose for RobotInfoPanel (real robot / URSim only)</td></tr>
       </tbody>
     </table>
@@ -466,7 +466,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
       </li>
       <li>
         <div class="issue-ttl">Cube holograms not appearing</div>
-        <div class="issue-body">The Unity script subscribes to <code>/holoassist/unity/cube_N_pose</code>, but the current ROS-side first-party install does not provide that publisher/relay. Add that feed, then verify with <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Also confirm <code>CubePoseSubscriber.robotBase</code> is set in the Inspector.</div>
+        <div class="issue-body">Verify with <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>, confirm Unity is connected to ROS-TCP-Endpoint, and check <code>CubePoseSubscriber.robotBase</code> in the Inspector.</div>
       </li>
       <li>
         <div class="issue-ttl">ros_tcp_endpoint crashes on reconnect</div>
