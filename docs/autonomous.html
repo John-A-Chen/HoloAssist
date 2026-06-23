@@ -53,9 +53,15 @@
     </p>
     <p>
       <strong>Lead:</strong> Oliver Lau &nbsp;·&nbsp;
-      <strong>Package:</strong> moveit_robot_control &nbsp;·&nbsp;
+      <strong>Package:</strong> holoassist_movement &nbsp;·&nbsp;
       <strong>Planner:</strong> MoveIt 2, Cartesian paths, OMPL fallback
     </p>
+    <div class="callout callout-warn">
+      <strong>Current integration gap:</strong> autonomous requests depend on
+      <code>/holoassist/perception/april_cube_N_pose</code>. The current checkout expects those
+      topics, but does not install a first-party cube-pose publisher. Add or restore that node
+      before treating camera-driven sorting as fully wired.
+    </div>
     <div class="photo-row">
       <div class="photo-slot">
         <img src="../screenshots/dash_ollie.png" alt="Autonomous sorting dashboard">
@@ -136,12 +142,12 @@
     <h3>Trigger a pick</h3>
     <div class="code-block"><span class="cm"># Trigger cube 1 → bin 1</span>
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 
 <span class="cm"># Short form also accepted</span>
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: '1', bin_id: '1'}"</div>
   </div>
 </section>
@@ -151,7 +157,7 @@ ros2 service call /holoassist/pick_cube_to_bin \
     <div class="ph-line"></div>
     <div class="section-lbl">Parameters</div>
     <h2>Key tuning parameters</h2>
-    <p>Set in <code>full_holoassist_hardware.launch.py</code>. Relaunch after changing.</p>
+    <p>Set through <code>ros2 launch holoassist_movement movement.launch.py</code> and the movement package configs. Relaunch after changing.</p>
     <div class="cfg-table">
       <div class="cfg-row"><div>pregrasp_z_offset</div><div>0.10 m</div><div>Hover height above cube before descent</div></div>
       <div class="cfg-row"><div>grasp_z_absolute</div><div>0.05 m</div><div>Absolute Z for pick descent (set −1.0 to use offset mode instead)</div></div>
@@ -176,8 +182,10 @@ ros2 service call /holoassist/pick_cube_to_bin \
         <tr><td>/pick_place/command</td><td>String JSON</td><td>Sequencer command with block pose and destination bin</td></tr>
         <tr><td>/pick_place/mode</td><td>String</td><td><code>run</code>, <code>stop</code>, or <code>pause</code> state control</td></tr>
         <tr><td>/pick_place/status</td><td>String JSON</td><td>Block, bin, current step, state, timestamp, and error details</td></tr>
-        <tr><td>/moveit_robot_control/target_pose</td><td>Pose</td><td>Full pose goals from the sequencer to MoveIt</td></tr>
-        <tr><td>/moveit_robot_control/state</td><td>String</td><td><code>QUEUED → PLANNING → EXECUTING → COMPLETE/FAILED</code></td></tr>
+        <tr><td>/holoassist/movement/target_pose</td><td>Pose</td><td>Full pose goals from the sequencer to MoveIt</td></tr>
+        <tr><td>/holoassist/movement/target_point</td><td>Point</td><td>XYZ target point for manual motion tests</td></tr>
+        <tr><td>/holoassist/movement/state</td><td>String</td><td><code>QUEUED → PLANNING → EXECUTING → COMPLETE/FAILED</code></td></tr>
+        <tr><td>/holoassist/movement/debug</td><td>String JSON</td><td>Planning and execution diagnostics</td></tr>
         <tr><td>/finger_width_trajectory_controller/joint_trajectory</td><td>JointTrajectory</td><td>RG2 open/close width trajectory</td></tr>
       </tbody>
     </table>
@@ -189,7 +197,7 @@ ros2 service call /holoassist/pick_cube_to_bin \
     <div class="ph-line"></div>
     <div class="section-lbl">Configuration</div>
     <h2>Key parameters</h2>
-    <p>Current values are from <code>ros2_ws/src/moveit_robot_control</code> in the up-to-date HoloAssist tree.</p>
+    <p>Current values are from <code>ros2_ws/src/HoloAssist_Movement</code> in the up-to-date HoloAssist tree.</p>
     <div class="cfg-table">
       <div class="cfg-row"><div>cube_pose_topic_prefix</div><div>/holoassist/perception</div><div>Real cube pose source for the pick service</div></div>
       <div class="cfg-row"><div>bin_poses.json</div><div>bin_1..bin_4</div><div>Four parameterised drop targets in <code>base_link</code></div></div>

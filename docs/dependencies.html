@@ -23,7 +23,7 @@
     <div class="hero-meta">
       <div><span class="hero-meta-val">ROS 2</span>Humble</div>
       <div><span class="hero-meta-val">Ubuntu</span>22.04</div>
-      <div><span class="hero-meta-val">16</span>packages</div>
+      <div><span class="hero-meta-val">2</span>first-party ROS packages</div>
     </div>
   </div>
 </section>
@@ -190,9 +190,19 @@ sudo apt install -y \
           <td><code>ROS2v0.7.0</code></td>
         </tr>
         <tr>
-          <td><code>Universal_Robots_ROS2_Driver</code></td>
-          <td><code>github.com/UniversalRobots/Universal_Robots_ROS2_Driver</code></td>
-          <td><code>2.12.0</code></td>
+          <td><code>UR_OnRobot_ROS2</code></td>
+          <td><code>github.com/tonydle/UR_OnRobot_ROS2</code></td>
+          <td><code>9b5f7f8</code></td>
+        </tr>
+        <tr>
+          <td><code>onrobot_description</code></td>
+          <td><code>github.com/tonydle/OnRobot_ROS2_Description</code></td>
+          <td><code>29180b3</code></td>
+        </tr>
+        <tr>
+          <td><code>onrobot_driver</code></td>
+          <td><code>github.com/tonydle/OnRobot_ROS2_Driver</code></td>
+          <td><code>b99abac</code></td>
         </tr>
       </tbody>
     </table>
@@ -211,36 +221,6 @@ sudo apt install -y \
           <td><code>ros_tcp_endpoint</code></td>
           <td>0.7.0</td>
           <td>ROS &harr; Unity TCP bridge (port 10000)</td>
-        </tr>
-        <tr>
-          <td><code>ur_robot_driver</code></td>
-          <td>2.12.0</td>
-          <td>UR3e hardware driver</td>
-        </tr>
-        <tr>
-          <td><code>ur_controllers</code></td>
-          <td>2.12.0</td>
-          <td>Speed-scaled trajectory + velocity controllers</td>
-        </tr>
-        <tr>
-          <td><code>ur_bringup</code></td>
-          <td>2.12.0</td>
-          <td>UR launch/config helpers</td>
-        </tr>
-        <tr>
-          <td><code>ur_calibration</code></td>
-          <td>2.12.0</td>
-          <td>Factory calibration extraction</td>
-        </tr>
-        <tr>
-          <td><code>ur_dashboard_msgs</code></td>
-          <td>2.12.0</td>
-          <td>Dashboard/status message types</td>
-        </tr>
-        <tr>
-          <td><code>ur_moveit_config</code></td>
-          <td>2.12.0</td>
-          <td>Upstream UR MoveIt configs (reference)</td>
         </tr>
         <tr>
           <td><code>easy_handeye2</code></td>
@@ -278,34 +258,14 @@ sudo apt install -y \
           <td>MoveIt SRDF/config for UR + RG2</td>
         </tr>
         <tr>
-          <td><code>holo_assist_depth_tracker</code></td>
+          <td><code>holoassist_perception</code></td>
           <td>0.1.0</td>
-          <td>Real-camera perception, cube pose fusion</td>
+          <td>Camera launch, AprilTag integration, debug overlay, trolley marker publisher, pick-place service bridge, selected-cube adapter, custom perception interfaces</td>
         </tr>
         <tr>
-          <td><code>holo_assist_depth_tracker_sim</code></td>
+          <td><code>holoassist_movement</code></td>
           <td>0.1.0</td>
-          <td>Sim perception, pick/place service bridge</td>
-        </tr>
-        <tr>
-          <td><code>holo_assist_depth_tracker_sim_interfaces</code></td>
-          <td>0.1.0</td>
-          <td><code>PickCubeToBin</code> service + custom msgs</td>
-        </tr>
-        <tr>
-          <td><code>moveit_robot_control</code></td>
-          <td>0.0.1</td>
-          <td>MoveIt execution, workspace scene, pick/place sequencer</td>
-        </tr>
-        <tr>
-          <td><code>moveit_robot_control_msgs</code></td>
-          <td>0.0.1</td>
-          <td>Typed target/status messages</td>
-        </tr>
-        <tr>
-          <td><code>holoassist_unity_bridge</code></td>
-          <td>0.0.0</td>
-          <td>Unity integration hooks (WIP)</td>
+          <td>MoveIt execution, workspace scene, pick/place sequencer, movement interface messages</td>
         </tr>
       </tbody>
     </table>
@@ -318,25 +278,31 @@ sudo apt install -y \
     <div class="ph-line"></div>
     <div class="section-lbl">Dep Flow</div>
     <h2>Custom Package Dependency Flow</h2>
-    <p>How the custom HoloAssist packages depend on each other, from sensor input through to robot execution:</p>
-    <div class="code-block"><span class="cv">RealSense</span> / <span class="cv">apriltag_ros</span>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
-<span class="cv">holo_assist_depth_tracker</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">holo_assist_depth_tracker_sim</span>
-<span class="cm">(cube_pose_node &rarr; /holoassist/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">(sim truth / pick-place service</span>
-<span class="cm">&nbsp;perception/april_cube_N_pose)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">&nbsp;bridge &rarr; PickCubeToBin service)</span>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──────────────┬────────────────────────┘
-                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">moveit_robot_control</span>
-           &nbsp;&nbsp;&nbsp;<span class="cm">(coordinate_listener +</span>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">pick_place_sequencer +</span>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">workspace_scene_manager)</span>
-                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">ur_onrobot_control</span>
-           &nbsp;&nbsp;&nbsp;<span class="cm">(UR driver + controllers)</span>
-                       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
-                   &nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">UR3e robot</span></div>
+    <p>How the current HoloAssist packages depend on each other, from sensor input through to robot execution:</p>
+    <div class="code-block"><span class="cv">Unity / Quest 3</span>  <span class="cm">ROS-TCP Connector</span>
+  │ port 10000
+  ▼
+<span class="cv">ros_tcp_endpoint</span>
+  ├─ /forward_velocity_controller/commands
+  ├─ /finger_width_controller/commands
+  ├─ /joint_states
+  └─ /holoassist/unity/cube_N_pose <span class="cm">[expected Unity feed]</span>
+
+<span class="cv">scripts/launch.py</span>
+  ├─ <span class="cv">ur_onrobot_control</span> start_robot.launch.py
+  ├─ <span class="cv">holoassist_perception</span> perception.launch.py
+  │    ├─ camera launch / webcam publisher
+  │    ├─ apriltag_ros
+  │    └─ aprilcube_tracker_node
+  └─ <span class="cv">holoassist_movement</span> movement.launch.py
+       ├─ ur_onrobot_moveit_config
+       ├─ workspace_scene_manager
+       ├─ coordinate_listener
+       └─ pick_place_sequencer</div>
+    <div class="callout callout-warn">
+      <strong>Current perception gap:</strong> consumers expect <code>/holoassist/perception/april_cube_N_pose</code>,
+      but this checkout does not install a first-party cube-pose fusion publisher.
+    </div>
   </div>
 </section>
 

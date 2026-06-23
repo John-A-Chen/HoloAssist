@@ -47,12 +47,12 @@
         <div class="section-lbl">Running</div>
         <h2>Running calibration</h2>
         <div class="code-block">cd ~/git/RS2-HoloAssist/main
-./calibrate.sh</div>
+./scripts/calibrate.sh</div>
         <p>Uses easy_handeye2 to collect robot pose / camera pose pairs.</p>
         <h3>Process</h3>
         <ol>
             <li>Attach a calibration target (AprilTag board) to the robot end-effector</li>
-            <li>Run <code>./calibrate.sh</code> &mdash; RViz opens with the calibration GUI</li>
+            <li>Run <code>./scripts/calibrate.sh</code> &mdash; RViz opens with the calibration GUI</li>
             <li>Move the arm to each sample pose (the GUI shows where to move)</li>
             <li>Press <strong>Take Sample</strong> at each pose</li>
             <li>After 12&ndash;15 samples: press <strong>Compute</strong> &rarr; check reprojection error (&lt;&nbsp;2&nbsp;mm is good)</li>
@@ -108,7 +108,7 @@ parameters:
             </li>
             <li>
                 <span class="issue-ttl">When to re-calibrate</span>
-                <span class="issue-body">If the camera is physically moved or remounted. Re-run <code>./calibrate.sh</code>.</span>
+                <span class="issue-body">If the camera is physically moved or remounted. Re-run <code>./scripts/calibrate.sh</code>.</span>
             </li>
         </ul>
     </div>

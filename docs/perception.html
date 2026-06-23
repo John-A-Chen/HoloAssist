@@ -22,8 +22,8 @@
     <h1 class="hero-title">Per<span class="thin">cep</span><br>tion</h1>
     <p class="hero-desc">
       AprilTag-based cube detection running at <strong>20 Hz</strong> with single-tag support,
-      multi-face consensus fusion, and position freezing on tag loss. Resolves cube positions
-      into the robot <strong>base_link</strong> frame via a saved easy_handeye2 calibration.
+      AprilTag detection and debug overlay for cube tracking. Current consumers expect cube
+      positions in the robot <strong>base_link</strong> frame via a saved easy_handeye2 calibration.
     </p>
     <div class="hero-meta">
       <div><span class="hero-meta-val">20</span>Hz timer</div>
@@ -50,15 +50,22 @@
       the last known position is frozen in RViz even after tags leave the camera frame.
     </p>
     <p>
-      Cube poses are resolved into the robot <strong>base_link</strong> frame using the saved
-      easy_handeye2 calibration (base_link → camera_link transform). Poses are also relayed to Unity
-      so the Quest 3 XR scene can display cube holograms at the correct physical locations.
+      Cube poses are intended to resolve into the robot <strong>base_link</strong> frame using the saved
+      easy_handeye2 calibration (base_link → camera_link transform). The current launch starts
+      <code>apriltag_ros</code> and <code>aprilcube_tracker_node</code>; it does not install a first-party
+      cube-pose publisher in this checkout.
     </p>
     <p>
       <strong>Lead:</strong> John Chen &nbsp;·&nbsp;
-      <strong>Package:</strong> holo_assist_depth_tracker &nbsp;·&nbsp;
+      <strong>Package:</strong> holoassist_perception &nbsp;·&nbsp;
       <strong>Camera:</strong> Any camera — RealSense D435i, UVC webcam, or laptop webcam
     </p>
+    <div class="callout callout-warn">
+      <strong>Current implementation gap:</strong> <code>aprilcube_tracker_node</code> subscribes to
+      <code>/holoassist/perception/april_cube_N_pose</code> for overlays; it does not publish those
+      fused cube poses. Add or restore the cube-pose fusion publisher before claiming full
+      camera-driven autonomous sorting.
+    </div>
     <div class="photo-row">
       <div class="photo-slot">
         <img src="../screenshots/apriltest.png" alt="AprilTag detection debug view">
@@ -85,13 +92,13 @@
 <span class="cv">apriltag_ros</span>  <span class="cm">[36h11 family · tag size 0.032 m]</span>
   │  /detections
   ▼
-<span class="cv">holoassist_cube_pose_node</span>  <span class="cm">[20 Hz timer — TF-safe]</span>
+<span class="cv">cube pose fusion publisher</span>  <span class="cm">[expected by consumers; not installed currently]</span>
   │  /holoassist/perception/april_cube_N_pose    <span class="cm">← base_link frame</span>
   │  /holoassist/perception/april_cube_N_marker  <span class="cm">← RViz colour-coded marker</span>
   │  /holoassist/perception/april_cube_N_status
   │  /holoassist/perception/april_cube_N_bin_check
   ▼
-<span class="cv">cube_pose_relay.py</span>
+<span class="cv">Unity pose feed</span>  <span class="cm">[expected bridge/publisher]</span>
   │  /holoassist/unity/cube_N_pose  <span class="cm">← Unity-friendly relay</span>
   ▼
 <span class="cv">MoveIt pick-and-place</span>  ·  <span class="cv">Quest 3 Unity (CubePoseSubscriber.cs)</span></div>
@@ -112,7 +119,7 @@
       <div class="pipe-step">
         <div class="pipe-num">01</div>
         <h4>Camera Capture</h4>
-        <p>Any camera (RealSense D435i, UVC webcam, laptop webcam) via <code>camera_only.launch.py</code>. Publishes <code>/camera/color/image_raw</code>.</p>
+        <p>Any camera (RealSense D435i, UVC webcam, laptop webcam) via <code>camera.launch.py</code>. Publishes the color image stream consumed by <code>apriltag_ros</code>.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
@@ -124,7 +131,7 @@
       <div class="pipe-step">
         <div class="pipe-num">03</div>
         <h4>Cube Pose Fusion</h4>
-        <p>20 Hz timer groups tags by cube ID. Face-to-centre offset (20 mm) applied. Consensus filter averages multi-face estimates within 5 cm. 3 mm deadzone suppresses jitter.</p>
+        <p>Expected pose-fusion step groups tags by cube ID and publishes <code>/holoassist/perception/april_cube_N_pose</code>. This publisher is currently missing from installed first-party executables.</p>
         <div class="pipe-arrow">&rsaquo;</div>
       </div>
       <div class="pipe-step">
@@ -153,7 +160,7 @@
         <tr><td>Printed tag size</td><td>32 mm edge</td><td>Measure the black border — any mismatch causes proportional metric drift</td></tr>
         <tr><td>Cube edge length</td><td>40 mm</td><td>Sets face-to-centre offset at 20 mm in <code>cubes.yaml</code></td></tr>
         <tr><td>Tag IDs</td><td>10–33 (4 cubes × 6 faces)</td><td>Grouped per cube in <code>config/cubes.yaml</code></td></tr>
-        <tr><td>Calibration tag</td><td>ID 0, 36h11, 32 mm</td><td>Attached ~5 cm from gripper base at <code>tool0</code> during calibration only</td></tr>
+        <tr><td>Calibration tag</td><td>ID 1, 36h11, 32 mm</td><td>Current calibration script uses <code>tag36h11:1</code> during calibration</td></tr>
       </tbody>
     </table>
     <h3>Calibration steps</h3>
@@ -163,9 +170,9 @@ source /opt/ros/humble/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 
-<span class="cm"># 2. Attach calibration tag (ID 0) to the gripper, then start</span>
+<span class="cm"># 2. Attach calibration tag (ID 1) to the gripper, then start</span>
 cd ~/git/RS2-HoloAssist/main
-./calibrate.sh --robot-ip 192.168.0.192
+./scripts/calibrate.sh --robot-ip 192.168.0.194
 
 <span class="cm"># 3. Use the easy_handeye2 GUI
 #    - Start External Control on the teach pendant
@@ -199,20 +206,20 @@ ros2 run tf2_ros tf2_echo base_link camera_link</div>
     <div class="ph-line"></div>
     <div class="section-lbl">Code Structure</div>
     <h2>Key files and nodes</h2>
-    <p>Package: <code>holo_assist_depth_tracker</code> · Workspace: <code>ros2_ws/src/</code></p>
+    <p>Package: <code>holoassist_perception</code> · Workspace: <code>ros2_ws/src/HoloAssist_Perception</code></p>
     <table class="data-table">
       <thead><tr><th>File / Node</th><th>Path</th><th>Role</th></tr></thead>
       <tbody>
         <tr><td>launch.py</td><td>main/</td><td>Integrated launcher for robot, teleoperation, perception, and Unity relay</td></tr>
         <tr><td>launch.sh</td><td>main/</td><td>Shell wrapper that sources ROS and runs launch.py</td></tr>
         <tr><td>calibrate.py</td><td>main/</td><td>Starts robot driver, RealSense, apriltag_ros, and easy_handeye2 calibration GUI</td></tr>
-        <tr><td>camera_only.launch.py</td><td>main/ros2_ws/src/holo_assist_depth_tracker/launch/</td><td>Starts RealSense colour and depth streams</td></tr>
-        <tr><td>holoassist_cube_pose_node</td><td>main/ros2_ws/src/holo_assist_depth_tracker/</td><td>Merges visible face tags into one centre pose per cube at 20 Hz</td></tr>
-        <tr><td>cube_pose_relay.py</td><td>main/ros2_ws/</td><td>Relays perception cube poses to Unity-friendly topics</td></tr>
+        <tr><td>camera.launch.py</td><td>main/ros2_ws/src/HoloAssist_Perception/launch/</td><td>Starts RealSense camera streams when requested by perception launch</td></tr>
+        <tr><td>aprilcube_tracker_node</td><td>main/ros2_ws/src/HoloAssist_Perception/</td><td>Subscribes to cube poses and publishes the debug overlay image</td></tr>
+        <tr><td>pick_place_service_node</td><td>main/ros2_ws/src/HoloAssist_Perception/</td><td>Provides <code>/holoassist/pick_cube_to_bin</code> using <code>holoassist_perception/srv/PickCubeToBin</code></td></tr>
         <tr><td>CubePoseSubscriber.cs</td><td>main/Unity/MyProject/Assets/Scripts/</td><td>Unity-side subscriber that displays detected cubes in XR</td></tr>
         <tr><td>ROSAutoConnect.cs</td><td>main/Unity/MyProject/Assets/Scripts/</td><td>Auto-discovers the ROS endpoint for Unity</td></tr>
-        <tr><td>config/apriltag_all.yaml</td><td>main/ros2_ws/src/holo_assist_depth_tracker/config/</td><td>Defines AprilTag family (36h11) and physical tag size (32 mm)</td></tr>
-        <tr><td>config/cubes.yaml</td><td>main/ros2_ws/src/holo_assist_depth_tracker/config/</td><td>Defines cube tag ID groups (10–33) and face-to-centre offsets</td></tr>
+        <tr><td>config/apriltag_all.yaml</td><td>main/ros2_ws/src/HoloAssist_Perception/config/</td><td>Defines AprilTag family (36h11) and physical tag size (32 mm)</td></tr>
+        <tr><td>config/cubes.yaml</td><td>main/ros2_ws/src/HoloAssist_Perception/config/</td><td>Defines cube tag ID groups (10–33) and face-to-centre offsets</td></tr>
         <tr><td>holoassist_calibration.calib</td><td>~/.ros2/easy_handeye2/calibrations/</td><td>Saved camera-to-robot calibration result (base_link → camera_link)</td></tr>
       </tbody>
     </table>
@@ -225,17 +232,17 @@ ros2 run tf2_ros tf2_echo base_link camera_link</div>
     <div class="section-lbl">How to Run</div>
     <h2>Start perception with one command</h2>
     <p>
-      Perception is integrated with the main launcher. Pass <code>--perception</code> to start
-      the camera, AprilTag detector, cube pose node, and Unity relay in a single launch.
+      Perception is integrated with the main launcher and is enabled by default. Use
+      <code>--no-perception</code> only when you want to skip camera and AprilTag startup.
     </p>
     <div class="code-block"><span class="cm"># Confirm calibration file exists first</span>
 ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
 
 <span class="cm"># Real robot + camera + perception + Unity relay</span>
-./launch.sh --robot-ip 192.168.0.192 --perception
+./scripts/launch.sh --robot-ip 192.168.0.194
 
-<span class="cm"># Fake hardware + perception only (no real robot required)</span>
-./launch.sh --perception</div>
+<span class="cm"># Fake hardware + default perception stack</span>
+./scripts/launch.sh</div>
     <p>
       After launch: start External Control on the teach pendant, hit Play in Unity,
       then place AprilTag cubes (IDs 10–33) in camera view. Cube holograms appear
@@ -246,8 +253,8 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
       <thead><tr><th>Check</th><th>Command</th><th>Expected</th></tr></thead>
       <tbody>
         <tr><td>AprilTag detections</td><td><code>ros2 topic echo /detections --once</code></td><td>Detection array when cube face is visible</td></tr>
-        <tr><td>Cube 1 pose (base frame)</td><td><code>ros2 topic echo /holoassist/perception/april_cube_1_pose --once</code></td><td>PoseStamped in base_link frame</td></tr>
-        <tr><td>Cube 1 Unity relay</td><td><code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code></td><td>Relayed pose for Unity</td></tr>
+        <tr><td>Cube 1 pose (base frame)</td><td><code>ros2 topic echo /holoassist/perception/april_cube_1_pose --once</code></td><td>Expected by consumers; publisher currently missing</td></tr>
+        <tr><td>Cube 1 Unity feed</td><td><code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code></td><td>Expected by Unity; current ROS-side publisher/relay is not installed</td></tr>
         <tr><td>Calibration TF</td><td><code>ros2 run tf2_ros tf2_echo base_link camera_link</code></td><td>Static transform from saved calibration</td></tr>
         <tr><td>Full TF chain</td><td><code>ros2 run tf2_ros tf2_echo base_link tag36h11:10</code></td><td>Live transform when tag 10 is visible</td></tr>
         <tr><td>Publish rate</td><td><code>ros2 topic hz /holoassist/perception/april_cube_1_pose</code></td><td>~20 Hz while cube 1 is visible</td></tr>
@@ -262,15 +269,15 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
     <div class="section-lbl">Topics</div>
     <h2>ROS interface</h2>
     <h3>Published topics</h3>
-    <p>All topics published at 20 Hz. Replace <code>N</code> with cube number (1–4).</p>
+    <p>Replace <code>N</code> with cube number (1-4). Pose topics are expected by consumers but not published by an installed first-party node in the current checkout.</p>
     <table class="data-table">
       <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Cube centre resolved in robot base_link frame</td></tr>
+        <tr><td>/holoassist/perception/april_cube_N_pose</td><td>PoseStamped</td><td>Expected cube centre in robot base_link frame; publisher currently missing</td></tr>
         <tr><td>/holoassist/perception/april_cube_N_marker</td><td>Marker</td><td>RViz colour-coded cube marker (freezes on tag loss)</td></tr>
         <tr><td>/holoassist/perception/april_cube_N_status</td><td>String</td><td>Detection state, visible tags, method, and age</td></tr>
         <tr><td>/holoassist/perception/april_cube_N_bin_check</td><td>String</td><td>Bin verification result — sorted=true/false</td></tr>
-        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Relayed cube pose for Unity CubePoseSubscriber.cs</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Unity-facing cube pose expected by <code>CubePoseSubscriber.cs</code>; ROS-side feed currently missing</td></tr>
       </tbody>
     </table>
     <h3>Subscribed topics</h3>
@@ -291,7 +298,7 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
     <div class="ph-line"></div>
     <div class="section-lbl">Configuration</div>
     <h2>cubes.yaml parameters</h2>
-    <p>File at <code>ros2_ws/src/holo_assist_depth_tracker/config/cubes.yaml</code></p>
+    <p>File at <code>ros2_ws/src/HoloAssist_Perception/config/cubes.yaml</code></p>
     <div class="cfg-table">
       <div class="cfg-row"><div>cube_edge_size_m</div><div>0.040</div><div>Physical cube side length (m)</div></div>
       <div class="cfg-row"><div>cube_tag_size_m</div><div>0.032</div><div>Printed AprilTag edge length (m) — must match physical tag exactly</div></div>
@@ -317,11 +324,11 @@ ls ~/.ros2/easy_handeye2/calibrations/holoassist_calibration.calib
       </li>
       <li>
         <div class="issue-ttl">Detections but no cube poses</div>
-        <div class="issue-body"><code>holoassist_cube_pose_node</code> is not running or tag IDs do not match <code>config/cubes.yaml</code>. Run <code>ros2 node list | grep cube</code> and confirm face IDs 10–33 appear in <code>/detections</code>. The node only merges tags that match known cube ID groups.</div>
+        <div class="issue-body">This is a known current gap: <code>apriltag_ros</code> can publish detections, but no installed first-party executable currently publishes <code>/holoassist/perception/april_cube_N_pose</code>. Restore the cube-pose fusion publisher before depending on these topics.</div>
       </li>
       <li>
         <div class="issue-ttl">Cube poses published but not visible in Unity</div>
-        <div class="issue-body">The relay is not running or Unity is not connected. Check <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Unity reads the relayed topics — perception working does not guarantee Unity is receiving them.</div>
+        <div class="issue-body">The ROS-side Unity cube feed is not present in the current first-party install. Unity reads <code>/holoassist/unity/cube_N_pose</code>, so add a publisher/relay for those topics before expecting cube holograms.</div>
       </li>
       <li>
         <div class="issue-ttl">TF tree disconnected / calibration missing</div>

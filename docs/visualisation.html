@@ -114,11 +114,11 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
     <p>In the Project window navigate to <code>Assets/Scenes/SampleScene.unity</code> and open it. This is the only scene used for the demo.</p>
 
     <h3>Step 3 — Start the ROS side</h3>
-    <div class="code-block"><span class="cm"># Fake hardware + perception + dashboard</span>
-./launch.sh --perception --dashboard
+    <div class="code-block"><span class="cm"># Fake hardware + default perception, MoveIt, dashboard</span>
+./scripts/launch.sh
 
 <span class="cm"># OR — URSim + full stack</span>
-./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</div>
+./scripts/launch.sh --robot-ip 192.168.56.101 --fake-gripper</div>
     <p>Note the <strong>WiFi IP</strong> printed by the launcher — this is what Unity needs.</p>
 
     <h3>Step 4 — Connect Unity to ROS</h3>
@@ -329,7 +329,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
         <div>Attached</div><div>Dedicated GameObject (named CubePoseSubscriber)</div>
         <div>Responsibility</div><div>Subscribes to <code>{topicPrefix}/cube_N_pose</code> for N=1..cubeCount; transforms pose into Unity space relative to <code>robotBase</code>; spawns and animates a prefab per cube with smoothing, averaging, outlier rejection, and optionally tags spawned cubes with <code>ObjectClass</code> for the task system.</div>
         <div>Key fields</div><div><code>topicPrefix</code> (default <code>/holoassist/unity</code>), <code>cubeCount</code> (4), <code>robotBase</code> (Transform — MUST be set), <code>cubePrefabs[]</code>, <code>poseTimeout</code> (3 s), <code>persistOnTagLoss</code> (preferred: true), <code>smoothing</code> (0.5), <code>useAveraging</code> (true), <code>tagSpawnedCubes</code>, <code>cubeClassNames[]</code>, <code>cubeIsGood[]</code></div>
-        <div>Breaks if</div><div><code>robotBase</code> unset — cubes spawn at world origin. Wrong <code>topicPrefix</code> — no messages received. Missing <code>topic_tools</code> relay on ROS side — no messages on <code>/holoassist/unity/cube_N_pose</code>.</div>
+        <div>Breaks if</div><div><code>robotBase</code> unset — cubes spawn at world origin. Wrong <code>topicPrefix</code> — no messages received. The current ROS checkout does not install a first-party publisher/relay for <code>/holoassist/unity/cube_N_pose</code>.</div>
       </div>
     </div>
 
@@ -426,7 +426,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
       <thead><tr><th>Topic</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td>/joint_states</td><td>JointState</td><td>Live joint positions for digital twin ArticulationBody mirroring</td></tr>
-        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Cube hologram positions from perception relay (N = 1–4)</td></tr>
+        <tr><td>/holoassist/unity/cube_N_pose</td><td>PoseStamped</td><td>Cube hologram positions expected by Unity; ROS-side feed currently needs a publisher/relay</td></tr>
         <tr><td>/tcp_pose_broadcaster/pose</td><td>PoseStamped</td><td>Real-time EE pose for RobotInfoPanel (real robot / URSim only)</td></tr>
       </tbody>
     </table>
@@ -466,7 +466,7 @@ cd HoloAssist &amp;&amp; git checkout demo</div>
       </li>
       <li>
         <div class="issue-ttl">Cube holograms not appearing</div>
-        <div class="issue-body">Confirm <code>cube_pose_relay.py</code> is running on the ROS side: <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Also verify <code>CubePoseSubscriber.robotBase</code> is set in the Inspector — unset causes cubes to spawn at world origin, which may be outside the view.</div>
+        <div class="issue-body">The Unity script subscribes to <code>/holoassist/unity/cube_N_pose</code>, but the current ROS-side first-party install does not provide that publisher/relay. Add that feed, then verify with <code>ros2 topic echo /holoassist/unity/cube_1_pose --once</code>. Also confirm <code>CubePoseSubscriber.robotBase</code> is set in the Inspector.</div>
       </li>
       <li>
         <div class="issue-ttl">ros_tcp_endpoint crashes on reconnect</div>

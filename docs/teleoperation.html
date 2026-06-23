@@ -83,6 +83,17 @@
       Put on the Quest 3 headset, pick up the controllers, and use the <strong>radial menu</strong>
       to select your control mode and start moving the robot. That's it.
     </p>
+    <div class="code-block"><span class="cm"># Teleop controller mode</span>
+./scripts/launch.sh --robot-ip 192.168.0.194 --no-moveit
+
+<span class="cm"># Fake hardware teleop mode</span>
+./scripts/launch.sh --no-moveit</div>
+    <div class="callout callout-note">
+      <strong>Controller mode matters:</strong> teleoperation publishes to
+      <code>/forward_velocity_controller/commands</code> and
+      <code>/finger_width_controller/commands</code>. Those controllers are activated by the top-level
+      launcher when MoveIt is disabled with <code>--no-moveit</code>.
+    </div>
   </div>
 </section>
 
@@ -234,7 +245,7 @@
     <div class="ph-line"></div>
     <div class="section-lbl">Configuration</div>
     <h2>Key parameters</h2>
-    <p>Quest app ROS settings configured in Unity Inspector on <code>RobotController.cs</code>. Server-side config in <code>launch.sh</code>.</p>
+    <p>Quest app ROS settings are configured in Unity Inspector on <code>RobotController.cs</code>. Server-side launch config is handled by <code>scripts/launch.sh</code>.</p>
     <div class="cfg-table">
       <div class="cfg-row"><div>ROS Host IP</div><div>auto</div><div>ROSAutoConnect.cs TCP-scans 192.168.0.101–109:10000 — no manual entry needed</div></div>
       <div class="cfg-row"><div>ROS-TCP Port</div><div>10000</div><div>Fixed port for ROS-TCP-Endpoint — ros_tcp_endpoint listens on 0.0.0.0</div></div>
@@ -262,7 +273,7 @@
       </li>
       <li>
         <div class="issue-ttl">Arm unresponsive to controls</div>
-        <div class="issue-body">Both <code>forward_velocity_controller</code> and <code>finger_width_controller</code> must be active. Run <code>ros2 control list_controllers</code> to check. With URSim, External Control must be playing on the teach pendant.</div>
+        <div class="issue-body">Both <code>forward_velocity_controller</code> and <code>finger_width_controller</code> must be active. Launch with <code>--no-moveit</code>, then run <code>ros2 control list_controllers</code> to check. With URSim, External Control must be playing on the teach pendant.</div>
       </li>
       <li>
         <div class="issue-ttl">ros_tcp_endpoint crashes on reconnect</div>

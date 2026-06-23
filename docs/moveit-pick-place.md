@@ -1,7 +1,7 @@
 # MoveIt Pick-and-Place — Reference
 
-**Package:** `moveit_robot_control`  
-**Entrypoint:** `./launch.sh --robot-ip <IP> --perception --moveit`
+**Package:** `holoassist_movement`
+**Entrypoint:** `./scripts/launch.sh --robot-ip <IP>`
 
 ---
 
@@ -28,7 +28,7 @@
 
 ```bash
 ros2 service call /holoassist/pick_cube_to_bin \
-  holo_assist_depth_tracker_sim_interfaces/srv/PickCubeToBin \
+  holoassist_perception/srv/PickCubeToBin \
   "{cube_name: 'april_cube_1', bin_id: 'bin_1'}"
 ```
 
@@ -51,7 +51,7 @@ Cartesian path attempted first; falls back to MoveIt pose-goal (OMPL) on failure
 
 ---
 
-## Key Parameters (`full_holoassist_hardware.launch.py`)
+## Key Parameters (`movement.launch.py`)
 
 | Param | Default | Effect |
 |---|---|---|
@@ -97,19 +97,19 @@ The `workspace_scene_manager` adds the trolley mesh to the MoveIt planning scene
 
 **Monitor:**
 ```bash
-ros2 topic echo /moveit_robot_control/state    # lifecycle state
+ros2 topic echo /holoassist/movement/state    # lifecycle state
 ros2 topic echo /pick_place/status             # step-level progress
-ros2 topic echo /moveit_robot_control/debug    # JSON planning details
+ros2 topic echo /holoassist/movement/debug    # JSON planning details
 ```
 
 **Manual target (no service):**
 ```bash
 # Point only
-ros2 topic pub --once /moveit_robot_control/target_point \
+ros2 topic pub --once /holoassist/movement/target_point \
   geometry_msgs/msg/Point "{x: 0.20, y: -0.30, z: 0.15}"
 
 # Full pose
-ros2 topic pub --once /moveit_robot_control/target_pose \
+ros2 topic pub --once /holoassist/movement/target_pose \
   geometry_msgs/msg/PoseStamped \
   "{header: {frame_id: base_link}, pose: {position: {x: 0.20, y: -0.30, z: 0.025}, orientation: {w: 1.0}}}"
 ```
@@ -120,7 +120,7 @@ ros2 topic pub --once /moveit_robot_control/target_pose \
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Service returns `success: false` immediately | No cube pose on topic | Check `--perception` is running, cube visible |
+| Service returns `success: false` immediately | No cube pose on topic | Confirm perception is enabled and the cube-pose publisher exists |
 | State stuck at PLANNING | Goal unreachable or in collision | Open RViz, inspect planning scene; increase `pose_goal_planning_time` |
 | Robot plans but doesn't move | Controller inactive or UR program not running | `ros2 control list_controllers`; check teach pendant |
 | Gripper closes but cube falls | Grasp too high or `close_width` too loose | Reduce `grasp_z_absolute`; check cube pose accuracy |

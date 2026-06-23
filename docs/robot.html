@@ -33,7 +33,7 @@
         <div class="ph-line"></div>
         <div class="section-lbl">Hardware</div>
         <h2>UR3e + OnRobot RG2</h2>
-        <p>Package: <code>ur_onrobot_control</code>, <code>moveit_robot_control</code></p>
+        <p>Packages: <code>ur_onrobot_control</code> for the UR + OnRobot driver, and <code>holoassist_movement</code> for MoveIt execution, workspace scene management, and pick/place sequencing.</p>
         <table class="data-table">
             <thead>
                 <tr>
@@ -78,7 +78,7 @@
         <div class="section-lbl">Launch Modes</div>
         <h2>Starting the System</h2>
         <h3>Real robot</h3>
-        <div class="code-block">./launch.sh --robot-ip 192.168.0.194 --perception --moveit --dashboard</div>
+        <div class="code-block">./scripts/launch.sh --robot-ip 192.168.0.194</div>
         <h3>URSim (simulated)</h3>
         <div class="code-block"><span class="cm"># Terminal 2 &mdash; start URSim</span>
 docker run --rm -it \
@@ -88,7 +88,7 @@ docker run --rm -it \
   --name ursim universalrobots/ursim_e-series
 
 <span class="cm"># Terminal 1 &mdash; launch</span>
-./launch.sh --robot-ip 192.168.56.101 --fake-gripper --perception --moveit --dashboard</div>
+./scripts/launch.sh --robot-ip 192.168.56.101 --fake-gripper</div>
         <div class="callout callout-note">After <code>&#x2713;&nbsp; UR + OnRobot Driver</code> appears, click Play &rarr; External Control in Polyscope (<code>http://localhost:6080</code>). URSim does not emulate port 54321 &mdash; <strong>--fake-gripper is required</strong>.</div>
     </div>
 </section>
@@ -116,7 +116,7 @@ docker run --rm -it \
         <div class="ph-line"></div>
         <div class="section-lbl">MoveIt</div>
         <h2>Pick-and-place pipeline</h2>
-        <p>Enabled with <code>--moveit</code>. Launches <code>full_holoassist_hardware.launch.py</code> which starts MoveIt move_group, trajectory execution, and the planning scene.</p>
+        <p>MoveIt is enabled by default. The top-level launcher starts <code>ur_onrobot_control start_robot.launch.py</code> first, then launches <code>holoassist_movement movement.launch.py</code> for MoveIt, trajectory execution, and the planning scene. Pass <code>--no-moveit</code> to switch into Unity teleop controller mode.</p>
         <h3>Cube sorting flow</h3>
         <ol>
             <li>Perception node detects cube poses &rarr; publishes to <code>/holoassist/perception/april_cube_N_pose</code></li>
@@ -147,18 +147,18 @@ docker run --rm -it \
                 </tr>
                 <tr>
                     <td>forward_velocity_controller</td>
-                    <td>Active (teleop)</td>
-                    <td>Teleop velocity control</td>
+                    <td>Active only with <code>--no-moveit</code></td>
+                    <td>Unity teleop velocity control</td>
                 </tr>
                 <tr>
                     <td>finger_width_trajectory_controller</td>
-                    <td>Active</td>
+                    <td>Active (MoveIt)</td>
                     <td>Gripper position trajectory</td>
                 </tr>
                 <tr>
                     <td>finger_width_controller</td>
-                    <td>Inactive</td>
-                    <td>Direct gripper width control</td>
+                    <td>Active only with <code>--no-moveit</code></td>
+                    <td>Unity direct gripper width control</td>
                 </tr>
             </tbody>
         </table>

@@ -29,7 +29,7 @@
         <div class="ph-line"></div>
         <div class="section-lbl">Perception</div>
         <h2>Perception topics</h2>
-        <p>All published at 20&nbsp;Hz. Replace <code>N</code> with cube number (1&ndash;4).</p>
+        <p>Replace <code>N</code> with cube number (1&ndash;4). The cube-pose topics are current integration expectations; this checkout still needs a first-party publisher restored or added for them.</p>
         <table class="data-table">
             <thead>
                 <tr>
@@ -43,43 +43,43 @@
                 <tr>
                     <td>/holoassist/perception/april_cube_1_pose</td>
                     <td>PoseStamped</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Cube 1 centre (tags 10&ndash;15)</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_2_pose</td>
                     <td>PoseStamped</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Cube 2 centre (tags 16&ndash;21)</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_3_pose</td>
                     <td>PoseStamped</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Cube 3 centre (tags 22&ndash;27)</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_4_pose</td>
                     <td>PoseStamped</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Cube 4 centre (tags 28&ndash;33)</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_N_marker</td>
                     <td>Marker</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>RViz cube marker (N&nbsp;=&nbsp;1&ndash;4)</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_N_status</td>
                     <td>String</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Detection state + diagnostics</td>
                 </tr>
                 <tr>
                     <td>/holoassist/perception/april_cube_N_bin_check</td>
                     <td>String</td>
-                    <td>cube_pose_node</td>
+                    <td>expected cube-pose publisher</td>
                     <td>Bin verification result</td>
                 </tr>
                 <tr>
@@ -159,17 +159,17 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>/moveit_robot_control/target_pose</td>
+                    <td>/holoassist/movement/target_pose</td>
                     <td>Pose</td>
                     <td>Command arm to Cartesian pose</td>
                 </tr>
                 <tr>
-                    <td>/moveit_robot_control/target_point</td>
+                    <td>/holoassist/movement/target_point</td>
                     <td>Point</td>
                     <td>Command arm to XYZ position</td>
                 </tr>
                 <tr>
-                    <td>/moveit_robot_control/status</td>
+                    <td>/holoassist/movement/status</td>
                     <td>String</td>
                     <td>Execution status</td>
                 </tr>
@@ -198,6 +198,11 @@
                 </tr>
             </thead>
             <tbody>
+                <tr>
+                    <td>/holoassist/pick_cube_to_bin</td>
+                    <td>holoassist_perception/srv/PickCubeToBin</td>
+                    <td>Queue autonomous cube-to-bin sorting request</td>
+                </tr>
                 <tr>
                     <td>/controller_manager/switch_controller</td>
                     <td>SwitchController</td>

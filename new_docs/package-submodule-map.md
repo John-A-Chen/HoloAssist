@@ -94,3 +94,4 @@ The local patch is documented at `docs/ur_onrobot_ros2_local_patches.md:1`.
 Best long-term website note:
 
 > `UR_OnRobot_ROS2` should be forked or patched explicitly because HoloAssist currently carries a local fake-gripper integration patch inside the submodule. Until that patch is committed to a fork, clean clones or submodule resets need the patch reapplied.
+

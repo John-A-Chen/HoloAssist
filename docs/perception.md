@@ -1,8 +1,8 @@
 # Perception — Reference
 
-**Package:** `holo_assist_depth_tracker`  
-**Entrypoint (real camera):** `./launch.sh --perception`  
-**Entrypoint (sim):** `./launch.sh --perception` with no camera connected
+**Package:** `holoassist_perception`
+**Entrypoint (real camera):** `./scripts/launch.sh --robot-ip <IP>`
+**Entrypoint (fake hardware):** `./scripts/launch.sh`
 
 ---
 
@@ -37,8 +37,8 @@ world → base_link → camera_link → camera_color_optical_frame → tag36h11:
 
 Face order per cube (index 0–5): `+X, -X, +Y, -Y, +Z, -Z`
 
-Physical tag size: **32 mm** (`cube_tag_size_m: 0.032`)  
-Cube edge size: **40 mm** (`cube_edge_size_m: 0.040`)  
+Physical tag size: **32 mm** (`cube_tag_size_m: 0.032`)
+Cube edge size: **40 mm** (`cube_edge_size_m: 0.040`)
 Face-to-centre offset: **20 mm** (`cube_face_offset_m: 0.020`)
 
 ---
@@ -63,18 +63,18 @@ Face-to-centre offset: **20 mm** (`cube_face_offset_m: 0.020`)
 | `/holoassist/perception/april_cube_N_pose` | `PoseStamped` | ~20 Hz |
 | `/holoassist/perception/april_cube_N_marker` | `Marker` | ~20 Hz |
 | `/holoassist/perception/april_cube_pose` (legacy) | `PoseStamped` | ~20 Hz |
-| `/holo_assist_depth_tracker/debug_image` | `Image` | camera rate |
+| `/holoassist/perception/debug_image` | `Image` | camera rate |
 
 ---
 
-## RViz Config (`config/depth_tracker_visualization.rviz`)
+## RViz Config (`config/holoassist_full.rviz`)
 
-Fixed frame: `base`  
+Fixed frame: `base`
 Displays:
 - Grid (XY plane, 0.1 m cells)
 - Marker per cube (namespaces `holoassist_april_cube_1..4`)
 - TF tree (all robot + camera + tag frames)
-- Image: `/holo_assist_depth_tracker/debug_image` (RGB overlay with tag detections)
+- Image: `/holoassist/perception/debug_image` (RGB overlay with tag detections)
 - Image: `/camera/camera/color/image_raw` (disabled by default)
 
 ---
@@ -83,7 +83,7 @@ Displays:
 
 | File | What it does |
 |---|---|
-| `camera_only.launch.py` | RealSense color + depth streams only |
+| `camera.launch.py` | RealSense color + depth streams only |
 | `visualize_depth_tracker.launch.py` | camera + apriltag + cube_pose + RViz |
 | `holoassist_4tag_board_4cube.launch.py` | apriltag + cube_pose; camera optional via `start_camera:=` |
 | `sim_holoassist_trolley.launch.py` | Sim-only scene with trolley |
@@ -97,5 +97,5 @@ Displays:
 | No detections | `ros2 topic echo /detections_all --once` | Lighting, tag family, printed size must be 32 mm |
 | Detections but no cube poses | `ros2 node list \| grep cube_pose` | Node not running; tag IDs must be 10–33 |
 | Cube poses but Unity not showing | `ros2 topic echo /holoassist/unity/cube_1_pose` | Run topic_tools relay (see run-guide.md §4) |
-| TF disconnected | `ros2 run tf2_ros tf2_echo base_link camera_link` | Re-run `./calibrate.sh` |
+| TF disconnected | `ros2 run tf2_ros tf2_echo base_link camera_link` | Re-run `./scripts/calibrate.sh` |
 | Pose offset/scale wrong | Measure printed tag edge | Update `size:` in `apriltag_all.yaml` |
